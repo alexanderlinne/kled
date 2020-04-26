@@ -4,7 +4,13 @@ pub trait Subscriber<Item, Error>: core::Observer<Item, Error> {
     fn is_unsubscribed(&self) -> bool;
 }
 
-impl<Item, Error> core::Observer<Item, Error> for Box<dyn Subscriber<Item, Error>> {
+impl<Item, Error> core::Observer<Item, Error>
+    for Box<dyn Subscriber<Item, Error>>
+{
+    fn on_subscribe(&mut self, subscription: Box<dyn core::observable::Subscription>) {
+        (&mut **self).on_subscribe(subscription)
+    }
+
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
     }
@@ -18,7 +24,9 @@ impl<Item, Error> core::Observer<Item, Error> for Box<dyn Subscriber<Item, Error
     }
 }
 
-impl<Item, Error> Subscriber<Item, Error> for Box<dyn Subscriber<Item, Error>> {
+impl<Item, Error> Subscriber<Item, Error>
+    for Box<dyn Subscriber<Item, Error>>
+{
     fn is_unsubscribed(&self) -> bool {
         (&**self).is_unsubscribed()
     }

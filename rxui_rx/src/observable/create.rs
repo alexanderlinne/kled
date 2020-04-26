@@ -1,4 +1,5 @@
 use crate::core;
+use crate::core::Observer;
 use crate::subscriber::*;
 use std::marker::PhantomData;
 
@@ -25,16 +26,14 @@ where
 {
     type Item = Item;
     type Error = Error;
-    type SubscriptionType = UnsubscribeMemorizingSubscription;
 
-    fn subscribe<ObserverType>(self, observer: ObserverType) -> UnsubscribeMemorizingSubscription
+    fn subscribe<ObserverType>(self, observer: ObserverType)
     where
         ObserverType: core::Observer<Self::Item, Self::Error> + Send + Sync + 'static,
     {
-        let subscriber = UnsubscribeMemorizingSubscriber::new(observer);
-        let subscription = subscriber.create_subscription();
+        let mut subscriber = UnsubscribeMemorizingSubscriber::new(observer);
+        subscriber.on_subscribe(Box::new(subscriber.create_subscription()));
         (self.subscriber_consumer)(Box::new(subscriber));
-        subscription
     }
 }
 

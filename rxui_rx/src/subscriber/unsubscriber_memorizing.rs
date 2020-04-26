@@ -9,7 +9,8 @@ pub struct UnsubscribeMemorizingSubscriber<ObserverType, Item, Error> {
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<ObserverType, Item, Error> UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
+impl<ObserverType, Item, Error>
+    UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
@@ -41,6 +42,10 @@ impl<ObserverType, Item, Error> core::Observer<Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
+    fn on_subscribe(&mut self, subscription: Box<dyn core::observable::Subscription>) {
+        self.observer.on_subscribe(subscription);
+    }
+
     fn on_next(&mut self, item: Item) {
         self.observer.on_next(item);
     }
