@@ -9,8 +9,7 @@ pub struct UnsubscribeMemorizingSubscriber<ObserverType, Item, Error> {
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<ObserverType, Item, Error>
-    UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
+impl<ObserverType, Item, Error> UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
@@ -72,5 +71,28 @@ impl UnsubscribeMemorizingSubscription {
 impl core::observable::Subscription for UnsubscribeMemorizingSubscription {
     fn unsubscribe(&mut self) {
         self.subscribed.store(false, Ordering::Release);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::observer;
+    use crate::prelude::*;
+    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn unsubscribe() {
+        let vec = vec![0, 1, 2, 3];
+        let sum = Arc::new(Mutex::new(0));
+        let sum_move = sum.clone();
+        vec.into_observable().subscribe(observer::from_fn(
+            |mut sub| {
+                sub.unsubscribe();
+            },
+            move |v| (*sum_move.lock().unwrap()) += v,
+            |_| {},
+            || {},
+        ));
+        assert_eq!((*sum.lock().unwrap()), 0);
     }
 }

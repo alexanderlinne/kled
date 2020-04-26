@@ -1,5 +1,5 @@
 pub mod observable;
-pub use observable::{Observable, IntoObservable};
+pub use observable::{IntoObservable, Observable};
 
 pub mod observer;
 pub use observer::*;

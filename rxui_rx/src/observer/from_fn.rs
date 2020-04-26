@@ -70,9 +70,7 @@ where
     )
 }
 
-pub fn from_next_fn<NextFn, Item>(
-    item_consumer: NextFn,
-) -> impl core::Observer<Item, ()>
+pub fn from_next_fn<NextFn, Item>(item_consumer: NextFn) -> impl core::Observer<Item, ()>
 where
     NextFn: Fn(Item) + Send + Sync + 'static,
 {

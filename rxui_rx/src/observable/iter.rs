@@ -49,7 +49,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::observer;
     use crate::prelude::*;
     use std::sync::{Arc, Mutex};

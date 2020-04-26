@@ -7,9 +7,7 @@ pub trait Observer<Item, Error> {
     fn on_completed(&mut self);
 }
 
-impl<Item, Error> Observer<Item, Error>
-    for Box<dyn Observer<Item, Error> + Send + Sync + 'static>
-{
+impl<Item, Error> Observer<Item, Error> for Box<dyn Observer<Item, Error> + Send + Sync + 'static> {
     fn on_subscribe(&mut self, subscription: Box<dyn core::observable::Subscription>) {
         (&mut **self).on_subscribe(subscription)
     }

@@ -149,7 +149,9 @@ impl<Input, Output> ConnectionBase for ConnectionInfo<Input, Output> {
     }
 }
 
-impl<Input, Output> ConnectionInfoMutexHelper<Input, Output> for Mutex<ConnectionInfo<Input, Output>> {
+impl<Input, Output> ConnectionInfoMutexHelper<Input, Output>
+    for Mutex<ConnectionInfo<Input, Output>>
+{
     fn call(&self, arg: &Input) -> Option<Output> {
         let info = self.lock().unwrap();
         if info.connected {
