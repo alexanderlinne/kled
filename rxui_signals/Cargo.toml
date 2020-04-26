@@ -1,0 +1,7 @@
+[package]
+name = "rxui_signals"
+version = "0.1.0"
+authors = ["Alexander Linne <alexander.linne@outlook.com>"]
+edition = "2018"
+
+[dependencies]
