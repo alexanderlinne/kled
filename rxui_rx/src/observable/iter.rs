@@ -1,6 +1,6 @@
 use crate::core;
-use crate::core::{Observer, Subscriber};
-use crate::subscriber::UnsubscribeMemorizingSubscriber;
+use crate::core::{Observer, AutoUnsubscribeObserver};
+use crate::observer;
 
 pub struct IntoIterObservable<IntoIter> {
     iterable: IntoIter,
@@ -26,14 +26,18 @@ where
     where
         ObserverType: core::Observer<Self::Item, Self::Error> + Send + Sync + 'static,
     {
-        let mut subscriber = UnsubscribeMemorizingSubscriber::new(observer);
-        subscriber.on_subscribe(Box::new(subscriber.create_subscription()));
+        let mut observer = observer::AutoUnscubscribe::new(observer);
+        observer.on_subscribe(Box::new(observer.create_subscription()));
         for v in self.iterable.into_iter() {
-            if !subscriber.is_unsubscribed() {
-                subscriber.on_next(v);
+            if !observer.is_unsubscribed() {
+                observer.on_next(v);
+            } else {
+                break;
             }
         }
-        subscriber.on_completed();
+        if !observer.is_unsubscribed() {
+            observer.on_completed();
+        }
     }
 }
 

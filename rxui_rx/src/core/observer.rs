@@ -24,3 +24,7 @@ impl<Item, Error> Observer<Item, Error> for Box<dyn Observer<Item, Error> + Send
         (&mut **self).on_completed()
     }
 }
+
+pub trait AutoUnsubscribeObserver<Item, Error>: Observer<Item, Error> {
+    fn is_unsubscribed(&self) -> bool;
+}

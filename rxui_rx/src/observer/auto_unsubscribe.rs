@@ -1,15 +1,16 @@
 use crate::core;
+use crate::core::AutoUnsubscribeObserver;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-pub struct UnsubscribeMemorizingSubscriber<ObserverType, Item, Error> {
+pub struct AutoUnscubscribe<ObserverType, Item, Error> {
     observer: ObserverType,
     subscribed: Arc<AtomicBool>,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<ObserverType, Item, Error> UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
+impl<ObserverType, Item, Error> AutoUnscubscribe<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
@@ -21,13 +22,13 @@ where
         }
     }
 
-    pub fn create_subscription(&self) -> UnsubscribeMemorizingSubscription {
-        UnsubscribeMemorizingSubscription::new(self.subscribed.clone())
+    pub fn create_subscription(&self) -> AutoUnscubscribeSubscription {
+        AutoUnscubscribeSubscription::new(self.subscribed.clone())
     }
 }
 
-impl<ObserverType, Item, Error> core::Subscriber<Item, Error>
-    for UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
+impl<ObserverType, Item, Error> core::AutoUnsubscribeObserver<Item, Error>
+    for AutoUnscubscribe<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
@@ -37,38 +38,46 @@ where
 }
 
 impl<ObserverType, Item, Error> core::Observer<Item, Error>
-    for UnsubscribeMemorizingSubscriber<ObserverType, Item, Error>
+    for AutoUnscubscribe<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<Item, Error> + Send + Sync + 'static,
 {
     fn on_subscribe(&mut self, subscription: Box<dyn core::observable::Subscription>) {
-        self.observer.on_subscribe(subscription);
+        if !self.is_unsubscribed() {
+            self.observer.on_subscribe(subscription);
+        }
     }
 
     fn on_next(&mut self, item: Item) {
-        self.observer.on_next(item);
+        if !self.is_unsubscribed() {
+            self.observer.on_next(item);
+        }
     }
 
     fn on_error(&mut self, error: Error) {
-        self.observer.on_error(error);
+        if !self.is_unsubscribed() {
+            self.observer.on_error(error);
+        }
     }
 
     fn on_completed(&mut self) {
-        self.observer.on_completed();
+        if !self.is_unsubscribed() {
+            self.observer.on_completed();
+        }
     }
 }
 
-pub struct UnsubscribeMemorizingSubscription {
+pub struct AutoUnscubscribeSubscription {
     subscribed: Arc<AtomicBool>,
 }
 
-impl UnsubscribeMemorizingSubscription {
+impl AutoUnscubscribeSubscription {
     pub(crate) fn new(subscribed: Arc<AtomicBool>) -> Self {
         Self { subscribed }
     }
 }
 
-impl core::observable::Subscription for UnsubscribeMemorizingSubscription {
+impl core::observable::Subscription for AutoUnscubscribeSubscription {
     fn unsubscribe(&mut self) {
         self.subscribed.store(false, Ordering::Release);
     }

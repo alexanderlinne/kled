@@ -3,6 +3,3 @@ pub use observable::{IntoObservable, Observable};
 
 pub mod observer;
 pub use observer::*;
-
-pub mod subscriber;
-pub use subscriber::*;
