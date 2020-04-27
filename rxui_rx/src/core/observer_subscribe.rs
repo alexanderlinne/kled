@@ -6,7 +6,7 @@ pub trait ObserverSubscribe<'o, Observer> {
 
 impl<'o, Observer, Observable> ObserverSubscribe<'o, Observer> for Observable
 where
-    Observer: core::Observer<Observable::Subscription, Observable::Item, Observable::Error> + 'o,
+    Observer: core::Observer<Observable::Observation, Observable::Item, Observable::Error> + 'o,
     Observable: core::LocalObservable<'o> + 'o,
 {
     fn subscribe(self, observer: Observer) {
@@ -16,7 +16,7 @@ where
 
 impl<'o, Observer, Observable> ObserverSubscribe<'o, Observer> for core::Shared<Observable>
 where
-    Observer: core::Observer<Observable::Subscription, Observable::Item, Observable::Error>
+    Observer: core::Observer<Observable::Observation, Observable::Item, Observable::Error>
         + Send
         + Sync
         + 'static,

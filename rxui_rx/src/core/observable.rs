@@ -9,6 +9,6 @@ pub trait IntoObservable {
     fn into_observable(self) -> Self::ObservableType;
 }
 
-pub trait Subscription {
-    fn unsubscribe(self);
+pub trait Observation {
+    fn cancel(self);
 }

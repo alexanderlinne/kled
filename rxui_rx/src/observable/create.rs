@@ -1,6 +1,5 @@
 use crate::core;
-use crate::core::Observer;
-use crate::observer;
+use crate::emitter;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -25,44 +24,35 @@ impl<F, Item, Error> core::Observable for FnObservable<F, Item, Error> {
 
 impl<'o, F, Item, Error> core::LocalObservable<'o> for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::AutoUnsubscribeObserver<core::LocalSubscription, Item, Error> + 'o>),
+    F: FnOnce(Box<dyn core::UnsubscribableEmitter<Item, Error> + 'o>),
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = core::LocalSubscription;
+    type Observation = core::LocalObservation;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Observation, Self::Item, Self::Error> + 'o,
     {
-        let mut observer = observer::local::AutoUnscubscribe::new(observer);
-        observer.on_subscribe(observer.create_subscription());
+        let observer = emitter::local::AutoOnSubscribeEmitter::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }
 
 impl<F, Item, Error> core::SharedObservable for FnObservable<F, Item, Error>
 where
-    F: FnOnce(
-        Box<
-            dyn core::AutoUnsubscribeObserver<core::SharedSubscription, Item, Error>
-                + Send
-                + Sync
-                + 'static,
-        >,
-    ),
+    F: FnOnce(Box<dyn core::UnsubscribableEmitter<Item, Error> + Send + Sync + 'static>),
     Item: Send + Sync + 'static,
     Error: Send + Sync + 'static,
 {
-    type Subscription = core::SharedSubscription;
+    type Observation = core::SharedObservation;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+            core::Observer<Self::Observation, Self::Item, Self::Error> + Send + Sync + 'static,
     {
-        let mut observer = observer::shared::AutoUnscubscribe::new(observer);
-        observer.on_subscribe(observer.create_subscription());
+        let observer = emitter::shared::AutoOnSubscribeEmitter::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }
