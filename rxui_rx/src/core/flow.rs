@@ -9,7 +9,7 @@ pub trait Flow {
         SubscriberType: core::Subscriber<Self::Item, Self::Error> + Send + Sync + 'static;
 }
 
-pub trait Subscription {
+pub trait RequestableSubscription {
     fn unsubscribe(&mut self);
 
     fn request(&mut self, count: usize);

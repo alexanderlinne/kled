@@ -1,10 +1,30 @@
 use crate::core;
 
-struct FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
+pub struct FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
     subscription_consumer: SubscriptionFn,
     item_consumer: NextFn,
     error_consumer: ErrorFn,
     completed_consumer: CompletedFn,
+}
+
+unsafe impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn> Send
+    for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
+where
+    SubscriptionFn: Send,
+    NextFn: Send,
+    ErrorFn: Send,
+    CompletedFn: Send,
+{
+}
+
+unsafe impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn> Sync
+    for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
+where
+    SubscriptionFn: Sync,
+    NextFn: Sync,
+    ErrorFn: Sync,
+    CompletedFn: Sync,
+{
 }
 
 impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
@@ -25,15 +45,16 @@ impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
     }
 }
 
-impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn, Item, Error> core::Observer<Item, Error>
+impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
+    core::Observer<Subscription, Item, Error>
     for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
 where
-    SubscriptionFn: FnMut(Box<dyn core::observable::Subscription>) + Send + Sync + 'static,
-    NextFn: FnMut(Item) + Send + Sync + 'static,
-    ErrorFn: FnMut(Error) + Send + Sync + 'static,
-    CompletedFn: FnMut() + Send + Sync + 'static,
+    SubscriptionFn: FnMut(Subscription),
+    NextFn: FnMut(Item),
+    ErrorFn: FnMut(Error),
+    CompletedFn: FnMut(),
 {
-    fn on_subscribe(&mut self, subscription: Box<dyn core::observable::Subscription>) {
+    fn on_subscribe(&mut self, subscription: Subscription) {
         (self.subscription_consumer)(subscription)
     }
 
@@ -50,29 +71,16 @@ where
     }
 }
 
-pub fn from_fn<SubscriptionFn, NextFn, ErrorFn, CompletedFn, Item, Error>(
+pub fn from_fn<SubscriptionFn, NextFn, ErrorFn, CompletedFn>(
     subscription_consumer: SubscriptionFn,
     item_consumer: NextFn,
     error_consumer: ErrorFn,
     completed_consumer: CompletedFn,
-) -> impl core::Observer<Item, Error>
-where
-    SubscriptionFn: FnMut(Box<dyn core::observable::Subscription>) + Send + Sync + 'static,
-    NextFn: Fn(Item) + Send + Sync + 'static,
-    ErrorFn: Fn(Error) + Send + Sync + 'static,
-    CompletedFn: Fn() + Send + Sync + 'static,
-{
+) -> FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
     FnObserver::new(
         subscription_consumer,
         item_consumer,
         error_consumer,
         completed_consumer,
     )
-}
-
-pub fn from_next_fn<NextFn, Item>(item_consumer: NextFn) -> impl core::Observer<Item, ()>
-where
-    NextFn: Fn(Item) + Send + Sync + 'static,
-{
-    FnObserver::new(|_| {}, item_consumer, |_| {}, || {})
 }

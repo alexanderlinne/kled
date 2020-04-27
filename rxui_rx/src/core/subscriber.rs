@@ -1,14 +1,16 @@
 use crate::core;
 
 pub trait Subscriber<Item, Error> {
-    fn on_subscribe(&mut self, subscription: Box<dyn core::flow::Subscription>);
+    fn on_subscribe(&mut self, subscription: Box<dyn core::flow::RequestableSubscription>);
     fn on_next(&mut self, item: Item);
     fn on_error(&mut self, errpr: Error);
     fn on_completed(&mut self);
 }
 
-impl<Item, Error> Subscriber<Item, Error> for Box<dyn Subscriber<Item, Error> + Send + Sync + 'static> {
-    fn on_subscribe(&mut self, subscription: Box<dyn core::flow::Subscription>) {
+impl<Item, Error> Subscriber<Item, Error>
+    for Box<dyn Subscriber<Item, Error> + Send + Sync + 'static>
+{
+    fn on_subscribe(&mut self, subscription: Box<dyn core::flow::RequestableSubscription>) {
         (&mut **self).on_subscribe(subscription)
     }
 

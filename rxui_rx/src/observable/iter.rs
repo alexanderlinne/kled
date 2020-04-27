@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::{Observer, AutoUnsubscribeObserver};
+use crate::core::{AutoUnsubscribeObserver, Observer};
 use crate::observer;
 
 pub struct IntoIterObservable<IntoIter> {
@@ -21,13 +21,46 @@ where
 {
     type Item = IntoIter::Item;
     type Error = ();
+}
 
-    fn subscribe<ObserverType>(self, observer: ObserverType)
+impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>
+where
+    IntoIter: IntoIterator,
+{
+    type Subscription = core::LocalSubscription;
+
+    fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        ObserverType: core::Observer<Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
     {
-        let mut observer = observer::AutoUnscubscribe::new(observer);
-        observer.on_subscribe(Box::new(observer.create_subscription()));
+        let mut observer = observer::local::AutoUnscubscribe::new(observer);
+        observer.on_subscribe(observer.create_subscription());
+        for v in self.iterable.into_iter() {
+            if !observer.is_unsubscribed() {
+                observer.on_next(v);
+            } else {
+                break;
+            }
+        }
+        if !observer.is_unsubscribed() {
+            observer.on_completed();
+        }
+    }
+}
+
+impl<IntoIter> core::SharedObservable for IntoIterObservable<IntoIter>
+where
+    IntoIter: IntoIterator,
+{
+    type Subscription = core::SharedSubscription;
+
+    fn actual_subscribe<Observer>(self, observer: Observer)
+    where
+        Observer:
+            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+    {
+        let mut observer = observer::shared::AutoUnscubscribe::new(observer);
+        observer.on_subscribe(observer.create_subscription());
         for v in self.iterable.into_iter() {
             if !observer.is_unsubscribed() {
                 observer.on_next(v);
@@ -47,7 +80,7 @@ where
 {
     type ObservableType = IntoIterObservable<IntoIter>;
 
-    fn into_observable(self) -> <Self as core::observable::IntoObservable>::ObservableType {
+    fn into_observable(self) -> Self::ObservableType {
         IntoIterObservable::new(self)
     }
 }
@@ -56,17 +89,18 @@ where
 mod test {
     use crate::observer;
     use crate::prelude::*;
-    use std::sync::{Arc, Mutex};
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     #[test]
     fn iterable_into_observable() {
         let vec = vec![0, 1, 2, 3];
-        let sum = Arc::new(Mutex::new(0));
+        let sum = Rc::new(RefCell::new(0));
         let sum_move = sum.clone();
         vec.into_observable()
             .subscribe(observer::from_next_fn(move |v| {
-                (*sum_move.lock().unwrap()) += v
+                (*sum_move.borrow_mut()) += v
             }));
-        assert_eq!((*sum.lock().unwrap()), 6);
+        assert_eq!(*sum.borrow(), 6);
     }
 }
