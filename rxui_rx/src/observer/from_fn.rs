@@ -7,26 +7,6 @@ pub struct FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
     completed_consumer: CompletedFn,
 }
 
-unsafe impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn> Send
-    for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
-where
-    SubscriptionFn: Send,
-    NextFn: Send,
-    ErrorFn: Send,
-    CompletedFn: Send,
-{
-}
-
-unsafe impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn> Sync
-    for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
-where
-    SubscriptionFn: Sync,
-    NextFn: Sync,
-    ErrorFn: Sync,
-    CompletedFn: Sync,
-{
-}
-
 impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
     FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
 {

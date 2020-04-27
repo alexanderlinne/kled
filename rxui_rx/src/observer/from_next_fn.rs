@@ -4,10 +4,6 @@ pub struct NextFnObserver<NextFn> {
     item_consumer: NextFn,
 }
 
-unsafe impl<NextFn> Send for NextFnObserver<NextFn> where NextFn: Send {}
-
-unsafe impl<NextFn> Sync for NextFnObserver<NextFn> where NextFn: Sync {}
-
 impl<NextFn> NextFnObserver<NextFn> {
     pub fn new(item_consumer: NextFn) -> Self {
         Self { item_consumer }
