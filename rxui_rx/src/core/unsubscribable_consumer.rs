@@ -1,11 +1,11 @@
 use crate::core;
 
-pub trait UnsubscribableEmitter<Item, Error>: core::Emitter<Item, Error> {
+pub trait UnsubscribableConsumer<Item, Error>: core::Consumer<Item, Error> {
     fn is_unsubscribed(&self) -> bool;
 }
 
-impl<'o, Item, Error> core::Emitter<Item, Error>
-    for Box<dyn UnsubscribableEmitter<Item, Error> + 'o>
+impl<'o, Item, Error> core::Consumer<Item, Error>
+    for Box<dyn UnsubscribableConsumer<Item, Error> + 'o>
 {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
@@ -20,16 +20,16 @@ impl<'o, Item, Error> core::Emitter<Item, Error>
     }
 }
 
-impl<'o, Item, Error> UnsubscribableEmitter<Item, Error>
-    for Box<dyn UnsubscribableEmitter<Item, Error> + 'o>
+impl<'o, Item, Error> UnsubscribableConsumer<Item, Error>
+    for Box<dyn UnsubscribableConsumer<Item, Error> + 'o>
 {
     fn is_unsubscribed(&self) -> bool {
         (&**self).is_unsubscribed()
     }
 }
 
-impl<Item, Error> core::Emitter<Item, Error>
-    for Box<dyn UnsubscribableEmitter<Item, Error> + Send + Sync + 'static>
+impl<Item, Error> core::Consumer<Item, Error>
+    for Box<dyn UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>
 {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
@@ -44,8 +44,8 @@ impl<Item, Error> core::Emitter<Item, Error>
     }
 }
 
-impl<Item, Error> UnsubscribableEmitter<Item, Error>
-    for Box<dyn UnsubscribableEmitter<Item, Error> + Send + Sync + 'static>
+impl<Item, Error> UnsubscribableConsumer<Item, Error>
+    for Box<dyn UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>
 {
     fn is_unsubscribed(&self) -> bool {
         (&**self).is_unsubscribed()

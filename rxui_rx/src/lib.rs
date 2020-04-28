@@ -5,4 +5,5 @@ pub mod observable;
 pub mod observer;
 pub mod subscriber;
 
+#[doc(hidden)]
 pub mod prelude;

@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::{Emitter, UnsubscribableEmitter};
+use crate::core::{Consumer, UnsubscribableConsumer};
 use crate::emitter;
 
 pub struct IntoIterObservable<IntoIter> {
@@ -76,9 +76,9 @@ impl<IntoIter> core::IntoObservable for IntoIter
 where
     IntoIter: IntoIterator,
 {
-    type ObservableType = IntoIterObservable<IntoIter>;
+    type Observable = IntoIterObservable<IntoIter>;
 
-    fn into_observable(self) -> Self::ObservableType {
+    fn into_observable(self) -> Self::Observable {
         IntoIterObservable::new(self)
     }
 }

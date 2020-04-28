@@ -24,7 +24,7 @@ where
     }
 }
 
-impl<'o, Observer, Item, Error> core::Emitter<Item, Error>
+impl<'o, Observer, Item, Error> core::Consumer<Item, Error>
     for AutoOnSubscribeEmitter<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalObservation, Item, Error> + 'o,
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<'o, Observer, Item, Error> core::UnsubscribableEmitter<Item, Error>
+impl<'o, Observer, Item, Error> core::UnsubscribableConsumer<Item, Error>
     for AutoOnSubscribeEmitter<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalObservation, Item, Error> + 'o,

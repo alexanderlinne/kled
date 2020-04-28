@@ -24,7 +24,7 @@ impl<F, Item, Error> core::Observable for FnObservable<F, Item, Error> {
 
 impl<'o, F, Item, Error> core::LocalObservable<'o> for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::UnsubscribableEmitter<Item, Error> + 'o>),
+    F: FnOnce(Box<dyn core::UnsubscribableConsumer<Item, Error> + 'o>),
     Item: 'o,
     Error: 'o,
 {
@@ -41,7 +41,7 @@ where
 
 impl<F, Item, Error> core::SharedObservable for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::UnsubscribableEmitter<Item, Error> + Send + Sync + 'static>),
+    F: FnOnce(Box<dyn core::UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>),
     Item: Send + Sync + 'static,
     Error: Send + Sync + 'static,
 {

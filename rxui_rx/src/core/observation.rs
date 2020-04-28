@@ -4,6 +4,10 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+pub trait Observation {
+    fn cancel(self);
+}
+
 pub struct LocalObservation {
     observed: Rc<RefCell<bool>>,
 }

@@ -24,7 +24,7 @@ where
     }
 }
 
-impl<ObserverType, Item, Error> core::Emitter<Item, Error>
+impl<ObserverType, Item, Error> core::Consumer<Item, Error>
     for AutoOnSubscribeEmitter<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<core::SharedObservation, Item, Error>,
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<ObserverType, Item, Error> core::UnsubscribableEmitter<Item, Error>
+impl<ObserverType, Item, Error> core::UnsubscribableConsumer<Item, Error>
     for AutoOnSubscribeEmitter<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<core::SharedObservation, Item, Error>,
