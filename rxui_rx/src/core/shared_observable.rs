@@ -1,12 +1,12 @@
 use crate::core;
 
 pub trait SharedObservable: core::Observable {
-    type Observation;
+    type Subscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::Observer<Self::Observation, Self::Item, Self::Error> + Send + Sync + 'static;
+            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static;
 
     fn into_shared(self) -> core::Shared<Self>
     where

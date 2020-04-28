@@ -1,14 +1,14 @@
-pub trait Observer<Observation, Item, Error> {
-    fn on_subscribe(&mut self, subscription: Observation);
+pub trait Observer<Subscription, Item, Error> {
+    fn on_subscribe(&mut self, subscription: Subscription);
     fn on_next(&mut self, item: Item);
     fn on_error(&mut self, errpr: Error);
     fn on_completed(&mut self);
 }
 
-impl<'o, Observation, Item, Error> Observer<Observation, Item, Error>
-    for Box<dyn Observer<Observation, Item, Error> + 'o>
+impl<'o, Subscription, Item, Error> Observer<Subscription, Item, Error>
+    for Box<dyn Observer<Subscription, Item, Error> + 'o>
 {
-    fn on_subscribe(&mut self, subscription: Observation) {
+    fn on_subscribe(&mut self, subscription: Subscription) {
         (&mut **self).on_subscribe(subscription)
     }
 
@@ -25,10 +25,10 @@ impl<'o, Observation, Item, Error> Observer<Observation, Item, Error>
     }
 }
 
-impl<Observation, Item, Error> Observer<Observation, Item, Error>
-    for Box<dyn Observer<Observation, Item, Error> + Send + Sync + 'static>
+impl<Subscription, Item, Error> Observer<Subscription, Item, Error>
+    for Box<dyn Observer<Subscription, Item, Error> + Send + Sync + 'static>
 {
-    fn on_subscribe(&mut self, subscription: Observation) {
+    fn on_subscribe(&mut self, subscription: Subscription) {
         (&mut **self).on_subscribe(subscription)
     }
 

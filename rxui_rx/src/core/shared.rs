@@ -16,12 +16,12 @@ impl<T> core::SharedObservable for Shared<T>
 where
     T: core::SharedObservable,
 {
-    type Observation = T::Observation;
+    type Subscription = T::Subscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::observer::Observer<T::Observation, T::Item, T::Error> + Send + Sync + 'static,
+            core::observer::Observer<T::Subscription, T::Item, T::Error> + Send + Sync + 'static,
     {
         self.actual_observable.actual_subscribe(observer)
     }

@@ -9,7 +9,7 @@ pub trait IntoFlow {
     fn into_flow(self) -> Self::FlowType;
 }
 
-pub trait Subscription {
+pub trait FlowSubscription {
     fn cancel(self);
 
     fn request(&self, count: usize);

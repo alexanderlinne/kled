@@ -1,5 +1,5 @@
+use crate::consumer;
 use crate::core;
-use crate::emitter;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -28,13 +28,13 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Observation = core::LocalObservation;
+    type Subscription = core::LocalSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Observation, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
     {
-        let observer = emitter::local::AutoOnSubscribeEmitter::new(observer);
+        let observer = consumer::local::AutoOnSubscribe::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }
@@ -45,14 +45,14 @@ where
     Item: Send + Sync + 'static,
     Error: Send + Sync + 'static,
 {
-    type Observation = core::SharedObservation;
+    type Subscription = core::SharedSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::Observer<Self::Observation, Self::Item, Self::Error> + Send + Sync + 'static,
+            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
     {
-        let observer = emitter::shared::AutoOnSubscribeEmitter::new(observer);
+        let observer = consumer::shared::AutoOnSubscribe::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }

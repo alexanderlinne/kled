@@ -1,6 +1,6 @@
+use crate::consumer;
 use crate::core;
 use crate::core::{Consumer, UnsubscribableConsumer};
-use crate::emitter;
 
 pub struct IntoIterObservable<IntoIter> {
     iterable: IntoIter,
@@ -27,13 +27,13 @@ impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator,
 {
-    type Observation = core::LocalObservation;
+    type Subscription = core::LocalSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Observation, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
     {
-        let mut observer = emitter::local::AutoOnSubscribeEmitter::new(observer);
+        let mut observer = consumer::local::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
             if !observer.is_unsubscribed() {
                 observer.on_next(v);
@@ -51,14 +51,14 @@ impl<IntoIter> core::SharedObservable for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator,
 {
-    type Observation = core::SharedObservation;
+    type Subscription = core::SharedSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::Observer<Self::Observation, Self::Item, Self::Error> + Send + Sync + 'static,
+            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
     {
-        let mut observer = emitter::shared::AutoOnSubscribeEmitter::new(observer);
+        let mut observer = consumer::shared::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
             if !observer.is_unsubscribed() {
                 observer.on_next(v);
