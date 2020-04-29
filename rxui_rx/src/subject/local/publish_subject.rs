@@ -9,7 +9,6 @@ struct Data<'o, Subscription, Item, Error> {
     observers: Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + 'o>>,
 }
 
-#[derive(Clone)]
 pub struct PublishSubject<'o, Subscription, Item, Error> {
     data: Rc<RefCell<Data<'o, Subscription, Item, Error>>>,
 }
@@ -21,6 +20,14 @@ impl<'o, Subscription, Item, Error> Default for PublishSubject<'o, Subscription,
                 subscription: None,
                 observers: vec![],
             })),
+        }
+    }
+}
+
+impl<'o, Subscription, Item, Error> Clone for PublishSubject<'o, Subscription, Item, Error> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
         }
     }
 }
@@ -80,4 +87,37 @@ impl<'o, Subscription, Item, Error> core::Observable
 {
     type Item = Item;
     type Error = Error;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PublishSubject;
+    use crate::prelude::*;
+    use crate::util;
+
+    #[test]
+    fn publish_subject() {
+        let subject = PublishSubject::default();
+
+        let test_observer1 = util::local::TestObserver::default();
+        subject.clone().subscribe(test_observer1.clone());
+
+        vec![0, 1, 2, 3]
+            .into_observable()
+            .subscribe(subject.clone());
+
+        let test_observer2 = util::local::TestObserver::default();
+        subject.subscribe(test_observer2.clone());
+
+        assert_eq!(
+            test_observer1.status(),
+            util::local::ObserverStatus::Completed
+        );
+        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
+        assert_eq!(
+            test_observer2.status(),
+            util::local::ObserverStatus::Subscribed
+        );
+        assert_eq!(test_observer2.items(), vec![]);
+    }
 }
