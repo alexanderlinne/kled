@@ -2,7 +2,7 @@ use crate::core;
 use crate::util::distribute_value;
 
 impl<'o, Item, Error> core::Consumer<Item, Error>
-    for Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + 'o>>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
 where
     Item: Copy,
     Error: Copy,
@@ -20,21 +20,21 @@ where
     }
 }
 
-impl<'o, Item, Error> core::UnsubscribableConsumer<Item, Error>
-    for Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + 'o>>
+impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
 where
     Item: Copy,
     Error: Copy,
 {
-    fn is_unsubscribed(&self) -> bool {
+    fn is_cancelled(&self) -> bool {
         self.iter().fold(true, |is_unsubscribed, item| {
-            is_unsubscribed && item.is_unsubscribed()
+            is_unsubscribed && item.is_cancelled()
         })
     }
 }
 
 impl<Item, Error> core::Consumer<Item, Error>
-    for Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
 where
     Item: Copy,
     Error: Copy,
@@ -52,15 +52,15 @@ where
     }
 }
 
-impl<'o, Item, Error> core::UnsubscribableConsumer<Item, Error>
-    for Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>>
+impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
 where
     Item: Copy,
     Error: Copy,
 {
-    fn is_unsubscribed(&self) -> bool {
+    fn is_cancelled(&self) -> bool {
         self.iter().fold(true, |is_unsubscribed, item| {
-            is_unsubscribed && item.is_unsubscribed()
+            is_unsubscribed && item.is_cancelled()
         })
     }
 }

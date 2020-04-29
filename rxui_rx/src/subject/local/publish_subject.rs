@@ -4,13 +4,13 @@ use crate::core::Consumer;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-struct Data<'o, Subscription, Item, Error> {
-    subscription: Option<Subscription>,
-    observers: Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + 'o>>,
-}
-
 pub struct PublishSubject<'o, Subscription, Item, Error> {
     data: Rc<RefCell<Data<'o, Subscription, Item, Error>>>,
+}
+
+struct Data<'o, Subscription, Item, Error> {
+    subscription: Option<Subscription>,
+    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>,
 }
 
 impl<'o, Subscription, Item, Error> Default for PublishSubject<'o, Subscription, Item, Error> {
@@ -96,7 +96,7 @@ mod tests {
     use crate::util;
 
     #[test]
-    fn publish_subject() {
+    fn publish_subject_simpl() {
         let subject = PublishSubject::default();
 
         let test_observer1 = util::local::TestObserver::default();
@@ -119,5 +119,34 @@ mod tests {
             util::local::ObserverStatus::Subscribed
         );
         assert_eq!(test_observer2.items(), vec![]);
+    }
+
+    #[test]
+    fn publish_subject_interleaved() {
+        let subject = PublishSubject::default();
+        let test_observable = util::local::TestObservable::default().annotate_error_type(());
+        test_observable.clone().subscribe(subject.clone());
+
+        let test_observer1 = util::local::TestObserver::default();
+        subject.clone().subscribe(test_observer1.clone());
+
+        test_observable.emit(0);
+
+        let test_observer2 = util::local::TestObserver::default();
+        subject.subscribe(test_observer2.clone());
+
+        test_observable.emit_all(vec![1, 2, 3]);
+        test_observable.emit_on_completed();
+
+        assert_eq!(
+            test_observer1.status(),
+            util::local::ObserverStatus::Completed
+        );
+        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
+        assert_eq!(
+            test_observer2.status(),
+            util::local::ObserverStatus::Completed
+        );
+        assert_eq!(test_observer2.items(), vec![1, 2, 3]);
     }
 }

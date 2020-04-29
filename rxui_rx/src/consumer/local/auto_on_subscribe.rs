@@ -42,12 +42,12 @@ where
     }
 }
 
-impl<'o, Observer, Item, Error> core::UnsubscribableConsumer<Item, Error>
+impl<'o, Observer, Item, Error> core::CancellableConsumer<Item, Error>
     for AutoOnSubscribe<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalSubscription, Item, Error> + 'o,
 {
-    fn is_unsubscribed(&self) -> bool {
+    fn is_cancelled(&self) -> bool {
         !*self.observed.borrow()
     }
 }

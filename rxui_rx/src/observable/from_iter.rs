@@ -1,6 +1,6 @@
 use crate::consumer;
 use crate::core;
-use crate::core::{Consumer, UnsubscribableConsumer};
+use crate::core::{CancellableConsumer, Consumer};
 
 pub struct IntoIterObservable<IntoIter> {
     iterable: IntoIter,
@@ -35,13 +35,13 @@ where
     {
         let mut observer = consumer::local::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
-            if !observer.is_unsubscribed() {
+            if !observer.is_cancelled() {
                 observer.on_next(v);
             } else {
                 break;
             }
         }
-        if !observer.is_unsubscribed() {
+        if !observer.is_cancelled() {
             observer.on_completed();
         }
     }
@@ -60,13 +60,13 @@ where
     {
         let mut observer = consumer::shared::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
-            if !observer.is_unsubscribed() {
+            if !observer.is_cancelled() {
                 observer.on_next(v);
             } else {
                 break;
             }
         }
-        if !observer.is_unsubscribed() {
+        if !observer.is_cancelled() {
             observer.on_completed();
         }
     }

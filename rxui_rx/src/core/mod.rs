@@ -1,3 +1,4 @@
+mod cancellable_consumer;
 mod consumer;
 mod flow;
 mod into_observable;
@@ -12,8 +13,8 @@ mod subject;
 mod subscribe;
 mod subscriber;
 mod subscription;
-mod unsubscribable_consumer;
 
+pub use cancellable_consumer::*;
 pub use consumer::*;
 pub use flow::*;
 pub use into_observable::*;
@@ -28,4 +29,3 @@ pub use subject::*;
 pub use subscribe::*;
 pub use subscriber::*;
 pub use subscription::*;
-pub use unsubscribable_consumer::*;

@@ -42,12 +42,12 @@ where
     }
 }
 
-impl<ObserverType, Item, Error> core::UnsubscribableConsumer<Item, Error>
+impl<ObserverType, Item, Error> core::CancellableConsumer<Item, Error>
     for AutoOnSubscribe<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<core::SharedSubscription, Item, Error>,
 {
-    fn is_unsubscribed(&self) -> bool {
+    fn is_cancelled(&self) -> bool {
         !self.observed.load(Ordering::Acquire)
     }
 }

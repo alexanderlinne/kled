@@ -3,14 +3,14 @@ use crate::core;
 use crate::core::Consumer;
 use std::sync::{Arc, Mutex};
 
-struct Data<Subscription, Item, Error> {
-    subscription: Option<Subscription>,
-    observers: Vec<Box<dyn core::UnsubscribableConsumer<Item, Error> + Send + Sync + 'static>>,
-}
-
 #[derive(Clone)]
 pub struct PublishSubject<Subscription, Item, Error> {
     data: Arc<Mutex<Data<Subscription, Item, Error>>>,
+}
+
+struct Data<Subscription, Item, Error> {
+    subscription: Option<Subscription>,
+    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>,
 }
 
 impl<Subscription, Item, Error> Default for PublishSubject<Subscription, Item, Error> {
