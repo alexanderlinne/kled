@@ -96,7 +96,7 @@ mod tests {
     use crate::util::local::*;
 
     #[test]
-    fn publish_subject_simple() {
+    fn simple() {
         let subject = PublishSubject::default();
 
         let test_observer1 = TestObserver::default();
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[test]
-    fn publish_subject_interleaved() {
+    fn interleaved() {
         let subject = PublishSubject::default();
         let test_observable = TestObservable::default().annotate_error_type(());
         test_observable.clone().subscribe(subject.clone());
@@ -136,5 +136,25 @@ mod tests {
         assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
         assert_eq!(test_observer2.status(), ObserverStatus::Completed);
         assert_eq!(test_observer2.items(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn error() {
+        let subject = PublishSubject::default();
+        let test_observable = TestObservable::default().annotate_item_type(());
+        test_observable.clone().subscribe(subject.clone());
+
+        let test_observer1 = TestObserver::default();
+        subject.clone().subscribe(test_observer1.clone());
+
+        test_observable.emit_error(0);
+
+        let test_observer2 = TestObserver::default();
+        subject.subscribe(test_observer2.clone());
+
+        assert_eq!(test_observer1.status(), ObserverStatus::Error);
+        assert_eq!(test_observer1.error(), Some(0));
+        assert_eq!(test_observer2.status(), ObserverStatus::Subscribed);
+        assert_eq!(test_observer2.error(), None);
     }
 }
