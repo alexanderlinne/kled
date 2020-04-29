@@ -1,4 +1,5 @@
 pub mod local;
+pub mod shared;
 
 pub(crate) fn distribute_value<T, F, Value>(vec: &mut Vec<T>, f: F, value: Value)
 where

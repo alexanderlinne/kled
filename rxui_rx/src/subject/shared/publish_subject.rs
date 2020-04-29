@@ -3,7 +3,6 @@ use crate::core;
 use crate::core::Consumer;
 use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
 pub struct PublishSubject<Subscription, Item, Error> {
     data: Arc<Mutex<Data<Subscription, Item, Error>>>,
 }
@@ -20,6 +19,14 @@ impl<Subscription, Item, Error> Default for PublishSubject<Subscription, Item, E
                 subscription: None,
                 observers: vec![],
             })),
+        }
+    }
+}
+
+impl<Subscription, Item, Error> Clone for PublishSubject<Subscription, Item, Error> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
         }
     }
 }
@@ -78,4 +85,63 @@ where
 impl<Subscription, Item, Error> core::Observable for PublishSubject<Subscription, Item, Error> {
     type Item = Item;
     type Error = Error;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PublishSubject;
+    use crate::prelude::*;
+    use crate::util::shared::*;
+    use std::thread;
+
+    #[test]
+    fn publish_subject_simple() {
+        let subject = PublishSubject::default().into_shared();
+
+        let subject2 = subject.clone();
+        let handle = thread::spawn(move || {
+            vec![0, 1, 2, 3]
+                .into_shared_observable()
+                .subscribe(subject2)
+        });
+
+        let test_observer1 = TestObserver::default();
+        subject.clone().subscribe(test_observer1.clone());
+
+        handle.join().unwrap();
+
+        let test_observer2 = TestObserver::default();
+        subject.subscribe(test_observer2.clone());
+
+        assert_eq!(test_observer1.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_observer2.status(), ObserverStatus::Subscribed);
+        assert_eq!(test_observer2.items(), vec![]);
+    }
+
+    #[test]
+    fn publish_subject_interleaved() {
+        let subject = PublishSubject::default().into_shared();
+        let test_observable = TestObservable::default().annotate_error_type(());
+        test_observable
+            .clone()
+            .into_shared()
+            .subscribe(subject.clone());
+
+        let test_observer1 = TestObserver::default();
+        subject.clone().subscribe(test_observer1.clone());
+
+        test_observable.emit(0);
+
+        let test_observer2 = TestObserver::default();
+        subject.subscribe(test_observer2.clone());
+
+        test_observable.emit_all(vec![1, 2, 3]);
+        test_observable.emit_on_completed();
+
+        assert_eq!(test_observer1.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_observer2.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer2.items(), vec![1, 2, 3]);
+    }
 }

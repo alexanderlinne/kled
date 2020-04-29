@@ -12,8 +12,6 @@ pub trait SharedObservable: core::Observable {
     where
         Self: Sized,
     {
-        core::Shared {
-            actual_observable: self,
-        }
+        core::Shared::new(self)
     }
 }
