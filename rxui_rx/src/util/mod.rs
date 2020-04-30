@@ -6,9 +6,14 @@ where
     F: Fn(&mut T, Value),
     Value: Copy,
 {
-    let len = vec.len();
-    for t in vec.iter_mut().take(len - 1) {
-        f(t, value.clone());
+    match vec.len() {
+        0 => (),
+        1 => f(&mut vec[0], value),
+        len => {
+            for t in vec.iter_mut().take(len - 1) {
+                f(t, value.clone());
+            }
+            f(&mut vec[len - 1], value);
+        }
     }
-    f(&mut vec[len - 1], value);
 }

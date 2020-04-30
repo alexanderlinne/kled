@@ -157,4 +157,22 @@ mod tests {
         assert_eq!(test_observer2.status(), ObserverStatus::Subscribed);
         assert_eq!(test_observer2.error(), None);
     }
+
+    #[test]
+    fn no_subscriber() {
+        let subject = PublishSubject::default();
+        let test_observable = TestObservable::default().annotate_error_type(());
+        test_observable.clone().subscribe(subject.clone());
+        test_observable.emit(0);
+    }
+
+    #[test]
+    fn single_subscriber() {
+        let subject = PublishSubject::default();
+        let test_observable = TestObservable::default().annotate_error_type(());
+        test_observable.clone().subscribe(subject.clone());
+        test_observable.emit(0);
+        let test_observer = TestObserver::default();
+        subject.subscribe(test_observer.clone());
+    }
 }
