@@ -34,7 +34,7 @@ where
 }
 
 impl<Item, Error> core::Consumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>
 where
     Item: Clone,
     Error: Clone,
@@ -53,7 +53,7 @@ where
 }
 
 impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
+    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>
 where
     Item: Clone,
     Error: Clone,

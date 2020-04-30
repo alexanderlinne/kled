@@ -18,7 +18,7 @@ impl<'o, Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + 
     }
 }
 
-impl<Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + Send + Sync + 'static> {
+impl<Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + Send + 'static> {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
     }

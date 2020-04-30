@@ -1,10 +1,9 @@
 use crate::consumer;
 use crate::core;
-use crate::core::{CancellableConsumer, Consumer};
 use std::sync::{Arc, Mutex};
 
 pub struct Data<Item, Error> {
-    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>,
+    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
 }
 
 pub struct TestObservable<Item, Error> {
@@ -84,15 +83,14 @@ impl<Item, Error> TestObservable<Item, Error> {
 
 impl<Item, Error> core::SharedObservable for TestObservable<Item, Error>
 where
-    Item: Send + Sync + 'static,
-    Error: Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
 {
     type Subscription = core::SharedSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
         self.data.lock().unwrap().consumer =

@@ -9,7 +9,7 @@ pub struct PublishSubject<Subscription, Item, Error> {
 
 struct Data<Subscription, Item, Error> {
     subscription: Option<Subscription>,
-    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>,
+    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
 }
 
 impl<Subscription, Item, Error> Default for PublishSubject<Subscription, Item, Error> {
@@ -57,22 +57,21 @@ where
 impl<Subscription, Item, Error> core::SharedSubject<Subscription, Item, Error>
     for PublishSubject<Subscription, Item, Error>
 where
-    Item: Clone + Send + Sync + 'static,
-    Error: Clone + Send + Sync + 'static,
+    Item: Clone + Send + 'static,
+    Error: Clone + Send + 'static,
 {
 }
 
 impl<Subscription, Item, Error> core::SharedObservable for PublishSubject<Subscription, Item, Error>
 where
-    Item: Send + Sync + 'static,
-    Error: Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
 {
     type Subscription = core::SharedSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         self.data
             .lock()

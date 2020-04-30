@@ -41,16 +41,15 @@ where
 
 impl<F, Item, Error> core::SharedObservable for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>),
-    Item: Send + Sync + 'static,
-    Error: Send + Sync + 'static,
+    F: FnOnce(Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>),
+    Item: Send + 'static,
+    Error: Send + 'static,
 {
     type Subscription = core::SharedSubscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         let observer = consumer::shared::AutoOnSubscribe::new(observer);
         (self.subscriber_consumer)(Box::new(observer));

@@ -29,7 +29,7 @@ impl<'o, Item, Error> CancellableConsumer<Item, Error>
 }
 
 impl<Item, Error> core::Consumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + Send + Sync + 'static>
+    for Box<dyn CancellableConsumer<Item, Error> + Send + 'static>
 {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
@@ -45,7 +45,7 @@ impl<Item, Error> core::Consumer<Item, Error>
 }
 
 impl<Item, Error> CancellableConsumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + Send + Sync + 'static>
+    for Box<dyn CancellableConsumer<Item, Error> + Send + 'static>
 {
     fn is_cancelled(&self) -> bool {
         (&**self).is_cancelled()

@@ -27,8 +27,7 @@ where
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::observer::Observer<T::Subscription, T::Item, T::Error> + Send + Sync + 'static,
+        Observer: core::observer::Observer<T::Subscription, T::Item, T::Error> + Send + 'static,
     {
         self.actual_observable.actual_subscribe(observer)
     }

@@ -39,15 +39,14 @@ where
 impl<Observable, ItemOut, BinaryOp> core::SharedObservable for Scan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::SharedObservable,
-    ItemOut: Clone + Send + Sync + 'static,
-    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + Send + Sync + 'static,
+    ItemOut: Clone + Send + 'static,
+    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + Send + 'static,
 {
     type Subscription = Observable::Subscription;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         self.observable.actual_subscribe(ScanObserver {
             observer,

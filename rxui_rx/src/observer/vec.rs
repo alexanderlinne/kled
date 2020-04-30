@@ -26,7 +26,7 @@ where
 }
 
 impl<Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for Vec<Box<dyn core::Observer<Subscription, Item, Error> + Send + Sync + 'static>>
+    for Vec<Box<dyn core::Observer<Subscription, Item, Error> + Send + 'static>>
 where
     Subscription: Copy,
     Item: Copy,

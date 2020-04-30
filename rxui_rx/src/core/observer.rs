@@ -26,7 +26,7 @@ impl<'o, Subscription, Item, Error> Observer<Subscription, Item, Error>
 }
 
 impl<Subscription, Item, Error> Observer<Subscription, Item, Error>
-    for Box<dyn Observer<Subscription, Item, Error> + Send + Sync + 'static>
+    for Box<dyn Observer<Subscription, Item, Error> + Send + 'static>
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         (&mut **self).on_subscribe(subscription)

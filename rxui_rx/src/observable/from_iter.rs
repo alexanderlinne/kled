@@ -55,8 +55,7 @@ where
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + Sync + 'static,
+        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         let mut observer = consumer::shared::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
