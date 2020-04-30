@@ -92,6 +92,7 @@ mod tests {
     use super::PublishSubject;
     use crate::prelude::*;
     use crate::util::shared::*;
+    use std::sync::{Arc, Barrier};
     use std::thread;
 
     #[test]
@@ -99,7 +100,10 @@ mod tests {
         let subject = PublishSubject::default().into_shared();
 
         let subject2 = subject.clone();
+        let barrier = Arc::new(Barrier::new(1));
+        let barrier2 = barrier.clone();
         let handle = thread::spawn(move || {
+            barrier2.wait();
             vec![0, 1, 2, 3]
                 .into_shared_observable()
                 .subscribe(subject2)
@@ -108,6 +112,7 @@ mod tests {
         let test_observer1 = TestObserver::default();
         subject.clone().subscribe(test_observer1.clone());
 
+        barrier.wait();
         handle.join().unwrap();
 
         let test_observer2 = TestObserver::default();

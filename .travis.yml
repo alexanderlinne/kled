@@ -17,7 +17,7 @@ before_script:
   - rustup component add rustfmt
 script:
   - cargo build --verbose --all
-  - cargo test --verbose --all
+  - RUST_BACKTRACE=1 cargo test --verbose --all
   - cargo fmt -- --check
 after_success:
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
