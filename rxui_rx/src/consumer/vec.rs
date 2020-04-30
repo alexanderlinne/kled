@@ -4,8 +4,8 @@ use crate::util::distribute_value;
 impl<'o, Item, Error> core::Consumer<Item, Error>
     for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
 where
-    Item: Copy,
-    Error: Copy,
+    Item: Clone,
+    Error: Clone,
 {
     fn on_next(&mut self, item: Item) {
         distribute_value(self, |o, i| o.on_next(i), item);
@@ -23,8 +23,8 @@ where
 impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
     for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
 where
-    Item: Copy,
-    Error: Copy,
+    Item: Clone,
+    Error: Clone,
 {
     fn is_cancelled(&self) -> bool {
         self.iter().fold(true, |is_unsubscribed, item| {
@@ -36,8 +36,8 @@ where
 impl<Item, Error> core::Consumer<Item, Error>
     for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
 where
-    Item: Copy,
-    Error: Copy,
+    Item: Clone,
+    Error: Clone,
 {
     fn on_next(&mut self, item: Item) {
         distribute_value(self, |o, i| o.on_next(i), item);
@@ -55,8 +55,8 @@ where
 impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
     for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + Sync + 'static>>
 where
-    Item: Copy,
-    Error: Copy,
+    Item: Clone,
+    Error: Clone,
 {
     fn is_cancelled(&self) -> bool {
         self.iter().fold(true, |is_unsubscribed, item| {

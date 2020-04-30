@@ -4,7 +4,7 @@ pub mod shared;
 pub(crate) fn distribute_value<T, F, Value>(vec: &mut Vec<T>, f: F, value: Value)
 where
     F: Fn(&mut T, Value),
-    Value: Copy,
+    Value: Clone,
 {
     match vec.len() {
         0 => (),

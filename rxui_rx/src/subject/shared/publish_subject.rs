@@ -34,8 +34,8 @@ impl<Subscription, Item, Error> Clone for PublishSubject<Subscription, Item, Err
 impl<Subscription, Item, Error> core::Observer<Subscription, Item, Error>
     for PublishSubject<Subscription, Item, Error>
 where
-    Item: Copy,
-    Error: Copy,
+    Item: Clone,
+    Error: Clone,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         self.data.lock().unwrap().subscription = Some(subscription);
@@ -57,8 +57,8 @@ where
 impl<Subscription, Item, Error> core::SharedSubject<Subscription, Item, Error>
     for PublishSubject<Subscription, Item, Error>
 where
-    Item: Copy + Send + Sync + 'static,
-    Error: Copy + Send + Sync + 'static,
+    Item: Clone + Send + Sync + 'static,
+    Error: Clone + Send + Sync + 'static,
 {
 }
 
