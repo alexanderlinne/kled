@@ -2,12 +2,12 @@ use crate::consumer;
 use crate::core;
 use std::sync::{Arc, Mutex};
 
-pub struct Data<Item, Error> {
-    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
-}
-
 pub struct TestObservable<Item, Error> {
     data: Arc<Mutex<Data<Item, Error>>>,
+}
+
+struct Data<Item, Error> {
+    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
 }
 
 impl<'o, Item, Error> Default for TestObservable<Item, Error> {

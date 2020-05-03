@@ -4,12 +4,12 @@ use crate::core::{CancellableConsumer, Consumer};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct Data<'o, Item, Error> {
-    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>,
-}
-
 pub struct TestObservable<'o, Item, Error> {
     data: Rc<RefCell<Data<'o, Item, Error>>>,
+}
+
+struct Data<'o, Item, Error> {
+    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>,
 }
 
 impl<'o, Item, Error> Default for TestObservable<'o, Item, Error> {

@@ -10,9 +10,9 @@ where
         0 => (),
         1 => f(&mut vec[0], value),
         len => {
-            for t in vec.iter_mut().take(len - 1) {
-                f(t, value.clone());
-            }
+            vec.iter_mut()
+                .take(len - 1)
+                .for_each(|t| f(t, value.clone()));
             f(&mut vec[len - 1], value);
         }
     }

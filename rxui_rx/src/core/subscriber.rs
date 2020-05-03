@@ -44,9 +44,3 @@ impl<Subscription, Item, Error> Subscriber<Subscription, Item, Error>
         (&mut **self).on_completed()
     }
 }
-
-pub trait AutoUnsubscribeSubscribe<Subscription, Item, Error>:
-    Subscriber<Subscription, Item, Error>
-{
-    fn is_unsubscribed(&self) -> bool;
-}
