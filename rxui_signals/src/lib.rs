@@ -1,13 +1,8 @@
-#![feature(fn_traits, unboxed_closures, trait_alias)]
-
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, Weak};
 
-pub trait SlotFn<Input, Output> = Fn(&Input) -> Output + Send;
-pub trait CombinatorFn<T> = Fn(T, T) -> T + Send;
-
 pub struct SignalBuilder<Input, Output> {
-    combinator: Option<Box<dyn CombinatorFn<Option<Output>>>>,
+    combinator: Option<Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>>,
     phantom: PhantomData<Input>,
 }
 
@@ -21,7 +16,7 @@ impl<Input: 'static, Output: 'static> SignalBuilder<Input, Output> {
 
     pub fn with_combinator<F: 'static>(mut self, combinator: F) -> Self
     where
-        F: CombinatorFn<Output>,
+        F: Fn(Output, Output) -> Output + Send,
     {
         self.combinator = Some(Box::new(lift_combinator(combinator)));
         self
@@ -56,7 +51,7 @@ impl<Input: 'static, Output: 'static> Signal<Input, Output> {
             .fold(None, &data.combinator)
     }
 
-    pub fn connect(&mut self, slot: Box<dyn SlotFn<Input, Output>>) -> Connection {
+    pub fn connect(&mut self, slot: Box<dyn Fn(&Input) -> Output + Send>) -> Connection {
         self.data.lock().unwrap().connect(slot)
     }
 
@@ -71,11 +66,13 @@ impl<Input: 'static, Output: 'static> Signal<Input, Output> {
 
 struct SignalData<Input, Output> {
     slots: Vec<Arc<Mutex<ConnectionInfo<Input, Output>>>>,
-    combinator: Box<dyn CombinatorFn<Option<Output>>>,
+    combinator: Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>,
 }
 
 impl<Input: 'static, Output: 'static> SignalData<Input, Output> {
-    fn new(combinator: Option<Box<dyn CombinatorFn<Option<Output>>>>) -> Self {
+    fn new(
+        combinator: Option<Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>>,
+    ) -> Self {
         let combinator = match combinator {
             Some(c) => c,
             None => Box::new(lift_combinator(|_, t| t)),
@@ -86,7 +83,7 @@ impl<Input: 'static, Output: 'static> SignalData<Input, Output> {
         }
     }
 
-    pub fn connect(&mut self, slot: Box<dyn SlotFn<Input, Output>>) -> Connection {
+    pub fn connect(&mut self, slot: Box<dyn Fn(&Input) -> Output + Send>) -> Connection {
         let info = Arc::new(Mutex::new(ConnectionInfo::new(slot)));
         let base = info.clone() as Arc<Mutex<dyn ConnectionBase + Send>>;
         self.slots.push(info);
@@ -96,9 +93,9 @@ impl<Input: 'static, Output: 'static> SignalData<Input, Output> {
 
 fn lift_combinator<F: 'static, Output: 'static>(
     combinator: F,
-) -> Box<dyn CombinatorFn<Option<Output>>>
+) -> Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>
 where
-    F: CombinatorFn<Output>,
+    F: Fn(Output, Output) -> Output + Send,
 {
     Box::new(
         move |rhs: Option<Output>, lhs: Option<Output>| match (rhs, lhs) {
@@ -129,12 +126,12 @@ impl Connection {
 }
 
 struct ConnectionInfo<Input, Output> {
-    slot: Box<dyn SlotFn<Input, Output>>,
+    slot: Box<dyn Fn(&Input) -> Output + Send>,
     connected: bool,
 }
 
 impl<Input, Output> ConnectionInfo<Input, Output> {
-    fn new(slot: Box<dyn SlotFn<Input, Output>>) -> Self {
+    fn new(slot: Box<dyn Fn(&Input) -> Output + Send>) -> Self {
         Self {
             slot,
             connected: true,
@@ -185,7 +182,7 @@ impl<Input: 'static, Output: 'static> SignalConnector<Input, Output> {
         Self { data }
     }
 
-    pub fn connect(&mut self, slot: Box<dyn SlotFn<Input, Output>>) -> Connection {
+    pub fn connect(&mut self, slot: Box<dyn Fn(&Input) -> Output + Send>) -> Connection {
         self.data.lock().unwrap().connect(slot)
     }
 }

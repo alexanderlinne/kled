@@ -5,6 +5,8 @@ cache:
   apt: true
   cargo: true
 rust:
+  - stable
+  - beta
   - nightly
 addons:
   apt:
