@@ -1,23 +1,23 @@
 use crate::core;
 use std::sync::{Arc, Mutex};
 
-pub struct TestObserver<Subscription, Item, Error> {
-    data: Arc<Mutex<Data<Subscription, Item, Error>>>,
+pub struct TestObserver<Cancellable, Item, Error> {
+    data: Arc<Mutex<Data<Cancellable, Item, Error>>>,
 }
 
-struct Data<Subscription, Item, Error> {
-    subscription: Option<Subscription>,
+struct Data<Cancellable, Item, Error> {
+    cancellable: Option<Cancellable>,
     items: Vec<Item>,
     error: Option<Error>,
     is_completed: bool,
     is_cancelled: bool,
 }
 
-impl<Subscription, Item, Error> Default for TestObserver<Subscription, Item, Error> {
+impl<Cancellable, Item, Error> Default for TestObserver<Cancellable, Item, Error> {
     fn default() -> Self {
         Self {
             data: Arc::new(Mutex::new(Data {
-                subscription: None,
+                cancellable: None,
                 items: vec![],
                 error: None,
                 is_completed: false,
@@ -27,7 +27,7 @@ impl<Subscription, Item, Error> Default for TestObserver<Subscription, Item, Err
     }
 }
 
-impl<Subscription, Item, Error> Clone for TestObserver<Subscription, Item, Error> {
+impl<Cancellable, Item, Error> Clone for TestObserver<Cancellable, Item, Error> {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
@@ -44,9 +44,9 @@ pub enum ObserverStatus {
     Cancelled,
 }
 
-impl<Subscription, Item, Error> TestObserver<Subscription, Item, Error>
+impl<Cancellable, Item, Error> TestObserver<Cancellable, Item, Error>
 where
-    Subscription: core::ObservableSubscription,
+    Cancellable: core::Cancellable,
 {
     pub fn status(&self) -> ObserverStatus {
         if self.data.lock().unwrap().is_cancelled {
@@ -69,13 +69,13 @@ where
     }
 
     pub fn is_subscribed(&self) -> bool {
-        self.data.lock().unwrap().subscription.is_some()
+        self.data.lock().unwrap().cancellable.is_some()
     }
 
-    pub fn cancel_subscription(&mut self) {
+    pub fn cancel_cancellable(&mut self) {
         assert!(self.is_subscribed());
         let mut data = self.data.lock().unwrap();
-        data.subscription.take().unwrap().cancel();
+        data.cancellable.take().unwrap().cancel();
         data.is_cancelled = true;
     }
 
@@ -88,7 +88,7 @@ where
     }
 }
 
-impl<Subscription, Item, Error> TestObserver<Subscription, Item, Error>
+impl<Cancellable, Item, Error> TestObserver<Cancellable, Item, Error>
 where
     Item: Clone,
     Error: Clone,
@@ -102,14 +102,14 @@ where
     }
 }
 
-impl<Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for TestObserver<Subscription, Item, Error>
+impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+    for TestObserver<Cancellable, Item, Error>
 where
-    Subscription: core::ObservableSubscription,
+    Cancellable: core::Cancellable,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
         assert_eq!(self.status(), ObserverStatus::Unsubscribed);
-        self.data.lock().unwrap().subscription = Some(subscription);
+        self.data.lock().unwrap().cancellable = Some(cancellable);
     }
     fn on_next(&mut self, item: Item) {
         assert_eq!(self.status(), ObserverStatus::Subscribed);

@@ -4,27 +4,27 @@ use crate::core::Consumer;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct PublishSubject<'o, Subscription, Item, Error> {
-    data: Rc<RefCell<Data<'o, Subscription, Item, Error>>>,
+pub struct PublishSubject<'o, Cancellable, Item, Error> {
+    data: Rc<RefCell<Data<'o, Cancellable, Item, Error>>>,
 }
 
-struct Data<'o, Subscription, Item, Error> {
-    subscription: Option<Subscription>,
+struct Data<'o, Cancellable, Item, Error> {
+    cancellable: Option<Cancellable>,
     observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>,
 }
 
-impl<'o, Subscription, Item, Error> Default for PublishSubject<'o, Subscription, Item, Error> {
+impl<'o, Cancellable, Item, Error> Default for PublishSubject<'o, Cancellable, Item, Error> {
     fn default() -> Self {
         Self {
             data: Rc::new(RefCell::new(Data {
-                subscription: None,
+                cancellable: None,
                 observers: vec![],
             })),
         }
     }
 }
 
-impl<'o, Subscription, Item, Error> Clone for PublishSubject<'o, Subscription, Item, Error> {
+impl<'o, Cancellable, Item, Error> Clone for PublishSubject<'o, Cancellable, Item, Error> {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
@@ -32,14 +32,14 @@ impl<'o, Subscription, Item, Error> Clone for PublishSubject<'o, Subscription, I
     }
 }
 
-impl<'o, Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for PublishSubject<'o, Subscription, Item, Error>
+impl<'o, Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+    for PublishSubject<'o, Cancellable, Item, Error>
 where
     Item: Copy,
     Error: Copy,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.data.borrow_mut().subscription = Some(subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.data.borrow_mut().cancellable = Some(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
@@ -55,25 +55,25 @@ where
     }
 }
 
-impl<'o, Subscription, Item, Error> core::LocalSubject<'o, Subscription, Item, Error>
-    for PublishSubject<'o, Subscription, Item, Error>
+impl<'o, Cancellable, Item, Error> core::LocalSubject<'o, Cancellable, Item, Error>
+    for PublishSubject<'o, Cancellable, Item, Error>
 where
     Item: Copy + 'o,
     Error: Copy + 'o,
 {
 }
 
-impl<'o, Subscription, Item, Error> core::LocalObservable<'o>
-    for PublishSubject<'o, Subscription, Item, Error>
+impl<'o, Cancellable, Item, Error> core::LocalObservable<'o>
+    for PublishSubject<'o, Cancellable, Item, Error>
 where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = core::LocalSubscription;
+    type Cancellable = core::LocalCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         self.data
             .borrow_mut()
@@ -82,8 +82,8 @@ where
     }
 }
 
-impl<'o, Subscription, Item, Error> core::Observable
-    for PublishSubject<'o, Subscription, Item, Error>
+impl<'o, Cancellable, Item, Error> core::Observable
+    for PublishSubject<'o, Cancellable, Item, Error>
 {
     type Item = Item;
     type Error = Error;

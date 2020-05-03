@@ -1,23 +1,23 @@
 use crate::core;
 
-pub struct FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
-    subscription_consumer: SubscriptionFn,
+pub struct FnObserver<CancellableFn, NextFn, ErrorFn, CompletedFn> {
+    cancellable_consumer: CancellableFn,
     item_consumer: NextFn,
     error_consumer: ErrorFn,
     completed_consumer: CompletedFn,
 }
 
-impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
-    FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
+impl<CancellableFn, NextFn, ErrorFn, CompletedFn>
+    FnObserver<CancellableFn, NextFn, ErrorFn, CompletedFn>
 {
     pub fn new(
-        subscription_consumer: SubscriptionFn,
+        cancellable_consumer: CancellableFn,
         item_consumer: NextFn,
         error_consumer: ErrorFn,
         completed_consumer: CompletedFn,
     ) -> Self {
         Self {
-            subscription_consumer,
+            cancellable_consumer,
             item_consumer,
             error_consumer,
             completed_consumer,
@@ -25,17 +25,17 @@ impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
     }
 }
 
-impl<SubscriptionFn, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
-    core::Observer<Subscription, Item, Error>
-    for FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn>
+impl<CancellableFn, NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
+    core::Observer<Cancellable, Item, Error>
+    for FnObserver<CancellableFn, NextFn, ErrorFn, CompletedFn>
 where
-    SubscriptionFn: FnMut(Subscription),
+    CancellableFn: FnMut(Cancellable),
     NextFn: FnMut(Item),
     ErrorFn: FnMut(Error),
     CompletedFn: FnMut(),
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        (self.subscription_consumer)(subscription)
+    fn on_subscribe(&mut self, subscription: Cancellable) {
+        (self.cancellable_consumer)(subscription)
     }
 
     fn on_next(&mut self, item: Item) {
@@ -51,14 +51,14 @@ where
     }
 }
 
-pub fn from_fn<SubscriptionFn, NextFn, ErrorFn, CompletedFn>(
-    subscription_consumer: SubscriptionFn,
+pub fn from_fn<CancellableFn, NextFn, ErrorFn, CompletedFn>(
+    cancellable_consumer: CancellableFn,
     item_consumer: NextFn,
     error_consumer: ErrorFn,
     completed_consumer: CompletedFn,
-) -> FnObserver<SubscriptionFn, NextFn, ErrorFn, CompletedFn> {
+) -> FnObserver<CancellableFn, NextFn, ErrorFn, CompletedFn> {
     FnObserver::new(
-        subscription_consumer,
+        cancellable_consumer,
         item_consumer,
         error_consumer,
         completed_consumer,

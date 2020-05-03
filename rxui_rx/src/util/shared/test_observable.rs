@@ -86,11 +86,11 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = core::SharedSubscription;
+    type Cancellable = core::SharedCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
         self.data.lock().unwrap().consumer =

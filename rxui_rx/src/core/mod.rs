@@ -1,3 +1,4 @@
+mod cancellable;
 mod cancellable_consumer;
 mod consumer;
 mod flow;
@@ -14,6 +15,7 @@ mod subscribe;
 mod subscriber;
 mod subscription;
 
+pub use cancellable::*;
 pub use cancellable_consumer::*;
 pub use consumer::*;
 pub use flow::*;
@@ -29,3 +31,7 @@ pub use subject::*;
 pub use subscribe::*;
 pub use subscriber::*;
 pub use subscription::*;
+
+mod private {
+    pub trait Sealed {}
+}

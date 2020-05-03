@@ -27,11 +27,11 @@ impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator,
 {
-    type Subscription = core::LocalSubscription;
+    type Cancellable = core::LocalCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         let mut observer = consumer::local::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {
@@ -51,11 +51,11 @@ impl<IntoIter> core::SharedObservable for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator,
 {
-    type Subscription = core::SharedSubscription;
+    type Cancellable = core::SharedCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         let mut observer = consumer::shared::AutoOnSubscribe::new(observer);
         for v in self.iterable.into_iter() {

@@ -27,8 +27,8 @@ where
     Error: Clone,
 {
     fn is_cancelled(&self) -> bool {
-        self.iter().fold(true, |is_unsubscribed, item| {
-            is_unsubscribed && item.is_cancelled()
+        self.iter().fold(true, |is_cancelled, item| {
+            is_cancelled && item.is_cancelled()
         })
     }
 }
@@ -59,8 +59,8 @@ where
     Error: Clone,
 {
     fn is_cancelled(&self) -> bool {
-        self.iter().fold(true, |is_unsubscribed, item| {
-            is_unsubscribed && item.is_cancelled()
+        self.iter().fold(true, |is_cancelled, item| {
+            is_cancelled && item.is_cancelled()
         })
     }
 }

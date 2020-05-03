@@ -3,27 +3,27 @@ use crate::core;
 use crate::core::Consumer;
 use std::sync::{Arc, Mutex};
 
-pub struct PublishSubject<Subscription, Item, Error> {
-    data: Arc<Mutex<Data<Subscription, Item, Error>>>,
+pub struct PublishSubject<Cancellable, Item, Error> {
+    data: Arc<Mutex<Data<Cancellable, Item, Error>>>,
 }
 
-struct Data<Subscription, Item, Error> {
-    subscription: Option<Subscription>,
+struct Data<Cancellable, Item, Error> {
+    cancellable: Option<Cancellable>,
     observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
 }
 
-impl<Subscription, Item, Error> Default for PublishSubject<Subscription, Item, Error> {
+impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
     fn default() -> Self {
         Self {
             data: Arc::new(Mutex::new(Data {
-                subscription: None,
+                cancellable: None,
                 observers: vec![],
             })),
         }
     }
 }
 
-impl<Subscription, Item, Error> Clone for PublishSubject<Subscription, Item, Error> {
+impl<Cancellable, Item, Error> Clone for PublishSubject<Cancellable, Item, Error> {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
@@ -31,14 +31,14 @@ impl<Subscription, Item, Error> Clone for PublishSubject<Subscription, Item, Err
     }
 }
 
-impl<Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for PublishSubject<Subscription, Item, Error>
+impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+    for PublishSubject<Cancellable, Item, Error>
 where
     Item: Clone,
     Error: Clone,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.data.lock().unwrap().subscription = Some(subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.data.lock().unwrap().cancellable = Some(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
@@ -54,24 +54,24 @@ where
     }
 }
 
-impl<Subscription, Item, Error> core::SharedSubject<Subscription, Item, Error>
-    for PublishSubject<Subscription, Item, Error>
+impl<Cancellable, Item, Error> core::SharedSubject<Cancellable, Item, Error>
+    for PublishSubject<Cancellable, Item, Error>
 where
     Item: Clone + Send + 'static,
     Error: Clone + Send + 'static,
 {
 }
 
-impl<Subscription, Item, Error> core::SharedObservable for PublishSubject<Subscription, Item, Error>
+impl<Cancellable, Item, Error> core::SharedObservable for PublishSubject<Cancellable, Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = core::SharedSubscription;
+    type Cancellable = core::SharedCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         self.data
             .lock()
@@ -81,7 +81,7 @@ where
     }
 }
 
-impl<Subscription, Item, Error> core::Observable for PublishSubject<Subscription, Item, Error> {
+impl<Cancellable, Item, Error> core::Observable for PublishSubject<Cancellable, Item, Error> {
     type Item = Item;
     type Error = Error;
 }

@@ -1,3 +1,5 @@
+#![deny(intra_doc_link_resolution_failure)]
+
 pub mod consumer;
 pub mod core;
 pub mod flow;

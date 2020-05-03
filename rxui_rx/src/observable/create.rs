@@ -28,11 +28,11 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = core::LocalSubscription;
+    type Cancellable = core::LocalCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         let observer = consumer::local::AutoOnSubscribe::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
@@ -45,17 +45,17 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = core::SharedSubscription;
+    type Cancellable = core::SharedCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         let observer = consumer::shared::AutoOnSubscribe::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }
 
-pub fn create<F, Subscription, Item, Error>(observer_consumer: F) -> FnObservable<F, Item, Error> {
+pub fn create<F, Item, Error>(observer_consumer: F) -> FnObservable<F, Item, Error> {
     FnObservable::new(observer_consumer)
 }

@@ -11,11 +11,11 @@ pub struct AutoOnSubscribe<Observer, Item, Error> {
 
 impl<Observer, Item, Error> AutoOnSubscribe<Observer, Item, Error>
 where
-    Observer: core::Observer<core::SharedSubscription, Item, Error>,
+    Observer: core::Observer<core::SharedCancellable, Item, Error>,
 {
     pub fn new(mut observer: Observer) -> Self {
         let observed = Arc::new(AtomicBool::new(true));
-        observer.on_subscribe(core::SharedSubscription::new(observed.clone()));
+        observer.on_subscribe(core::SharedCancellable::new(observed.clone()));
         Self {
             observer,
             observed,
@@ -27,7 +27,7 @@ where
 impl<ObserverType, Item, Error> core::Consumer<Item, Error>
     for AutoOnSubscribe<ObserverType, Item, Error>
 where
-    ObserverType: core::Observer<core::SharedSubscription, Item, Error>,
+    ObserverType: core::Observer<core::SharedCancellable, Item, Error>,
 {
     fn on_next(&mut self, item: Item) {
         self.observer.on_next(item);
@@ -45,7 +45,7 @@ where
 impl<ObserverType, Item, Error> core::CancellableConsumer<Item, Error>
     for AutoOnSubscribe<ObserverType, Item, Error>
 where
-    ObserverType: core::Observer<core::SharedSubscription, Item, Error>,
+    ObserverType: core::Observer<core::SharedCancellable, Item, Error>,
 {
     fn is_cancelled(&self) -> bool {
         !self.observed.load(Ordering::Acquire)
@@ -66,7 +66,7 @@ mod tests {
         vec.into_observable()
             .into_shared()
             .subscribe(observer::from_fn(
-                |sub: SharedSubscription| {
+                |sub: SharedCancellable| {
                     sub.cancel();
                 },
                 move |v| *sum_move.lock().unwrap() += v,

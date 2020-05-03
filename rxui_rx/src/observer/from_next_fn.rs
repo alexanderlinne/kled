@@ -10,11 +10,11 @@ impl<NextFn> NextFnObserver<NextFn> {
     }
 }
 
-impl<NextFn, Subscription, Item> core::Observer<Subscription, Item, ()> for NextFnObserver<NextFn>
+impl<NextFn, Cancellable, Item> core::Observer<Cancellable, Item, ()> for NextFnObserver<NextFn>
 where
     NextFn: FnMut(Item),
 {
-    fn on_subscribe(&mut self, _: Subscription) {}
+    fn on_subscribe(&mut self, _: Cancellable) {}
 
     fn on_next(&mut self, item: Item) {
         (self.item_consumer)(item)

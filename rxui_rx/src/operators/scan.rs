@@ -23,10 +23,10 @@ where
     ItemOut: Clone + 'o,
     BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + 'o,
 {
-    type Subscription = Observable::Subscription;
+    type Cancellable = Observable::Cancellable;
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         self.observable.actual_subscribe(ScanObserver {
             observer,
@@ -42,11 +42,11 @@ where
     ItemOut: Clone + Send + 'static,
     BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + Send + 'static,
 {
-    type Subscription = Observable::Subscription;
+    type Cancellable = Observable::Cancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         self.observable.actual_subscribe(ScanObserver {
             observer,
@@ -70,15 +70,15 @@ struct ScanObserver<Observer, ItemOut, BinaryOp> {
     binary_op: BinaryOp,
 }
 
-impl<Subscription, Item, Observer, ItemOut, Error, BinaryOp>
-    core::Observer<Subscription, Item, Error> for ScanObserver<Observer, ItemOut, BinaryOp>
+impl<Cancellable, Item, Observer, ItemOut, Error, BinaryOp> core::Observer<Cancellable, Item, Error>
+    for ScanObserver<Observer, ItemOut, BinaryOp>
 where
-    Observer: core::Observer<Subscription, ItemOut, Error>,
+    Observer: core::Observer<Cancellable, ItemOut, Error>,
     BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
     ItemOut: Clone,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.observer.on_subscribe(subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.observer.on_subscribe(cancellable);
     }
     fn on_next(&mut self, item: Item) {
         self.previous_value = (self.binary_op)(self.previous_value.clone(), item);

@@ -1,7 +1,7 @@
 use crate::core;
 
 pub trait SharedFlow: core::Flow {
-    type Subscription;
+    type Subscription: core::Subscription;
 
     fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where

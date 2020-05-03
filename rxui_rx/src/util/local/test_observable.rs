@@ -88,11 +88,11 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = core::LocalSubscription;
+    type Cancellable = core::LocalCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         assert!(!self.has_observer());
         self.data.borrow_mut().consumer =

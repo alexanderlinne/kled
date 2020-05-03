@@ -11,11 +11,11 @@ pub struct AutoOnSubscribe<Observer, Item, Error> {
 
 impl<'o, Observer, Item, Error> AutoOnSubscribe<Observer, Item, Error>
 where
-    Observer: core::Observer<core::LocalSubscription, Item, Error> + 'o,
+    Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
     pub fn new(mut observer: Observer) -> Self {
         let observed = Rc::new(RefCell::new(true));
-        observer.on_subscribe(core::LocalSubscription::new(observed.clone()));
+        observer.on_subscribe(core::LocalCancellable::new(observed.clone()));
         Self {
             observer,
             observed,
@@ -27,7 +27,7 @@ where
 impl<'o, Observer, Item, Error> core::Consumer<Item, Error>
     for AutoOnSubscribe<Observer, Item, Error>
 where
-    Observer: core::Observer<core::LocalSubscription, Item, Error> + 'o,
+    Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
     fn on_next(&mut self, item: Item) {
         self.observer.on_next(item);
@@ -45,7 +45,7 @@ where
 impl<'o, Observer, Item, Error> core::CancellableConsumer<Item, Error>
     for AutoOnSubscribe<Observer, Item, Error>
 where
-    Observer: core::Observer<core::LocalSubscription, Item, Error> + 'o,
+    Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
     fn is_cancelled(&self) -> bool {
         !*self.observed.borrow()
@@ -65,7 +65,7 @@ mod tests {
         let sum = Rc::new(RefCell::new(0));
         let sum_move = sum.clone();
         vec.into_observable().subscribe(observer::from_fn(
-            |sub: LocalSubscription| {
+            |sub: LocalCancellable| {
                 sub.cancel();
             },
             move |v| *sum_move.borrow_mut() += v,

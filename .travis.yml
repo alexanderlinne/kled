@@ -17,6 +17,7 @@ before_script:
   - rustup component add rustfmt
 script:
   - cargo build --verbose --all
+  - cargo doc --verbose --all
   - RUST_BACKTRACE=1 cargo test --verbose --all
   - cargo fmt -- --check
 after_success:

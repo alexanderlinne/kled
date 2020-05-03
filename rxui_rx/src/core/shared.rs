@@ -23,27 +23,27 @@ impl<T> core::SharedObservable for Shared<T>
 where
     T: core::SharedObservable,
 {
-    type Subscription = T::Subscription;
+    type Cancellable = T::Cancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::observer::Observer<T::Subscription, T::Item, T::Error> + Send + 'static,
+        Observer: core::observer::Observer<T::Cancellable, T::Item, T::Error> + Send + 'static,
     {
         self.actual_observable.actual_subscribe(observer)
     }
 }
 
-impl<SubscriptionIn, Item, Error, T> core::SharedSubject<SubscriptionIn, Item, Error> for Shared<T> where
-    T: core::SharedSubject<SubscriptionIn, Item, Error>
+impl<CancellableIn, Item, Error, T> core::SharedSubject<CancellableIn, Item, Error> for Shared<T> where
+    T: core::SharedSubject<CancellableIn, Item, Error>
 {
 }
 
-impl<Subscription, Item, Error, T> core::Observer<Subscription, Item, Error> for Shared<T>
+impl<Cancellable, Item, Error, T> core::Observer<Cancellable, Item, Error> for Shared<T>
 where
-    T: core::Observer<Subscription, Item, Error>,
+    T: core::Observer<Cancellable, Item, Error>,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.actual_observable.on_subscribe(subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.actual_observable.on_subscribe(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {

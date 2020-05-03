@@ -1,15 +1,15 @@
 use crate::core;
 use crate::util::distribute_value;
 
-impl<'o, Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for Vec<Box<dyn core::Observer<Subscription, Item, Error> + 'o>>
+impl<'o, Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+    for Vec<Box<dyn core::Observer<Cancellable, Item, Error> + 'o>>
 where
-    Subscription: Copy,
+    Cancellable: Copy,
     Item: Copy,
     Error: Copy,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        distribute_value(self, |o, s| o.on_subscribe(s), subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        distribute_value(self, |o, s| o.on_subscribe(s), cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
@@ -25,15 +25,15 @@ where
     }
 }
 
-impl<Subscription, Item, Error> core::Observer<Subscription, Item, Error>
-    for Vec<Box<dyn core::Observer<Subscription, Item, Error> + Send + 'static>>
+impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+    for Vec<Box<dyn core::Observer<Cancellable, Item, Error> + Send + 'static>>
 where
-    Subscription: Copy,
+    Cancellable: Copy,
     Item: Copy,
     Error: Copy,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        distribute_value(self, |o, s| o.on_subscribe(s), subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        distribute_value(self, |o, s| o.on_subscribe(s), cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
