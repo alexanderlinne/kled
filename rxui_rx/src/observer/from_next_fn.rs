@@ -1,4 +1,5 @@
 use crate::core;
+use crate::util;
 
 pub struct NextFnObserver<NextFn> {
     item_consumer: NextFn,
@@ -10,7 +11,8 @@ impl<NextFn> NextFnObserver<NextFn> {
     }
 }
 
-impl<NextFn, Cancellable, Item> core::Observer<Cancellable, Item, ()> for NextFnObserver<NextFn>
+impl<NextFn, Cancellable, Item> core::Observer<Cancellable, Item, util::Infallible>
+    for NextFnObserver<NextFn>
 where
     NextFn: FnMut(Item),
 {
@@ -20,7 +22,7 @@ where
         (self.item_consumer)(item)
     }
 
-    fn on_error(&mut self, _: ()) {
+    fn on_error(&mut self, _: util::Infallible) {
         panic!()
     }
 

@@ -1,6 +1,7 @@
 use crate::consumer;
 use crate::core;
 use crate::core::{CancellableConsumer, Consumer};
+use crate::util;
 
 pub struct IntoIterObservable<IntoIter> {
     iterable: IntoIter,
@@ -20,7 +21,7 @@ where
     IntoIter: IntoIterator,
 {
     type Item = IntoIter::Item;
-    type Error = ();
+    type Error = util::Infallible;
 }
 
 impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>

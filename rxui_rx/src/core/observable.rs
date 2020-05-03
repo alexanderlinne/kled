@@ -18,10 +18,7 @@ pub trait Observable {
     /// The type of items emitted by this observable.
     type Item;
 
-    /// The type of error which may be emitted by this observable. By design, the type `()`
-    /// is defined as a no-error guarantee, i.e. that [`Observer::on_error`] is never called.
-    ///
-    /// [`Observer::on_error`]: trait.Observer.html#tymethod.on_error
+    /// The type of error which may be emitted by this observable.
     type Error;
 
     fn scan<ItemOut, BinaryOp>(
