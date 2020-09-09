@@ -1,3 +1,4 @@
+use crate::core;
 use crate::operators;
 
 /// A non-backpressured source of [`Item`]s to which an [`Observer`] may subscribe.
@@ -20,6 +21,20 @@ pub trait Observable {
 
     /// The type of error which may be emitted by this observable.
     type Error;
+
+    fn observe_on<Scheduler>(
+        self,
+        scheduler: &Scheduler,
+    ) -> operators::ObserveOn<Self, Scheduler::Worker>
+    where
+        Self: core::SharedObservable + Sized + 'static,
+        <Self as core::SharedObservable>::Cancellable: Send,
+        Self::Item: Send,
+        Self::Error: Send,
+        Scheduler: core::Scheduler,
+    {
+        operators::ObserveOn::new(self, scheduler.create_worker())
+    }
 
     fn scan<ItemOut, BinaryOp>(
         self,

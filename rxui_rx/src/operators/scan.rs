@@ -99,16 +99,28 @@ mod tests {
 
     #[test]
     fn local_scan() {
-        let test_observer = util::local::TestObserver::default();
+        use util::local::*;
+        let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
             .scan(0, |a, b| a + b)
             .subscribe(test_observer.clone());
 
-        assert_eq!(
-            test_observer.status(),
-            util::local::ObserverStatus::Completed
-        );
+        assert_eq!(test_observer.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer.items(), vec![0, 1, 3, 6]);
+    }
+
+    #[test]
+    fn shared_scan() {
+        use util::shared::*;
+        let test_observer = TestObserver::default();
+        vec![0, 1, 2, 3]
+            .into_observable()
+            .scan(0, |a, b| a + b)
+            .into_shared()
+            .subscribe(test_observer.clone());
+
+        assert_eq!(test_observer.status(), ObserverStatus::Completed);
         assert_eq!(test_observer.items(), vec![0, 1, 3, 6]);
     }
 }
