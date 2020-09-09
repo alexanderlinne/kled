@@ -25,25 +25,11 @@ pub trait Observable {
     fn observe_on<Scheduler>(
         self,
         scheduler: &Scheduler,
-    ) -> operators::ObserveOn<Self, Scheduler::Worker>
-    where
-        Self: core::SharedObservable + Sized + 'static,
-        <Self as core::SharedObservable>::Cancellable: Send,
-        Self::Item: Send,
-        Self::Error: Send,
-        Scheduler: core::Scheduler,
-    {
-        operators::ObserveOn::new(self, scheduler.create_worker())
-    }
-
-    fn scan<ItemOut, BinaryOp>(
-        self,
-        initial_value: ItemOut,
-        binary_op: BinaryOp,
-    ) -> operators::Scan<Self, ItemOut, BinaryOp>
+    ) -> core::Shared<operators::ObserveOn<Self, Scheduler::Worker>>
     where
         Self: Sized,
+        Scheduler: core::Scheduler,
     {
-        operators::Scan::new(self, initial_value, binary_op)
+        core::Shared::new(operators::ObserveOn::new(self, scheduler.create_worker()))
     }
 }

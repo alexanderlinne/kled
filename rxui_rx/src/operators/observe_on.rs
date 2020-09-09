@@ -11,10 +11,6 @@ pub struct ObserveOn<Observable, Worker> {
 
 impl<Observable, Worker> ObserveOn<Observable, Worker>
 where
-    Observable: core::SharedObservable + 'static,
-    <Observable as core::SharedObservable>::Cancellable: Send,
-    <Observable as core::Observable>::Item: Send,
-    <Observable as core::Observable>::Error: Send,
     Worker: core::Worker + Send + 'static,
 {
     pub fn new(observable: Observable, worker: Worker) -> Self {
@@ -207,7 +203,6 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .observe_on(&scheduler)
-            .into_shared()
             .subscribe(test_observer.clone());
         scheduler.join();
         assert_eq!(test_observer.status(), ObserverStatus::Completed);

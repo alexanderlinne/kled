@@ -1,4 +1,5 @@
 use crate::core;
+use crate::operators;
 
 #[derive(Clone)]
 pub struct Shared<Observable> {
@@ -9,33 +10,35 @@ impl<Observable> Shared<Observable> {
     pub fn new(actual_observable: Observable) -> Self {
         Self { actual_observable }
     }
-}
 
-impl<T> core::Observable for Shared<T>
-where
-    T: core::Observable,
-{
-    type Item = T::Item;
-    type Error = T::Error;
-}
-
-impl<T> core::SharedObservable for Shared<T>
-where
-    T: core::SharedObservable,
-{
-    type Cancellable = T::Cancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+    pub fn observe_on<Scheduler>(
+        self,
+        scheduler: &Scheduler,
+    ) -> Shared<operators::ObserveOn<Observable, Scheduler::Worker>>
     where
-        Observer: core::observer::Observer<T::Cancellable, T::Item, T::Error> + Send + 'static,
+        Self: Sized,
+        Scheduler: core::Scheduler,
     {
-        self.actual_observable.actual_subscribe(observer)
+        Shared::new(operators::ObserveOn::new(
+            self.actual_observable,
+            scheduler.create_worker(),
+        ))
     }
-}
 
-impl<CancellableIn, Item, Error, T> core::SharedSubject<CancellableIn, Item, Error> for Shared<T> where
-    T: core::SharedSubject<CancellableIn, Item, Error>
-{
+    pub fn scan<ItemOut, BinaryOp>(
+        self,
+        initial_value: ItemOut,
+        binary_op: BinaryOp,
+    ) -> Shared<operators::Scan<Observable, ItemOut, BinaryOp>>
+    where
+        Self: Sized,
+    {
+        Shared::new(operators::Scan::new(
+            self.actual_observable,
+            initial_value,
+            binary_op,
+        ))
+    }
 }
 
 impl<Cancellable, Item, Error, T> core::Observer<Cancellable, Item, Error> for Shared<T>

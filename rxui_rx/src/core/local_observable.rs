@@ -1,4 +1,5 @@
 use crate::core;
+use crate::operators;
 
 pub trait LocalObservable<'o>: core::Observable {
     type Cancellable: core::Cancellable;
@@ -6,4 +7,15 @@ pub trait LocalObservable<'o>: core::Observable {
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o;
+
+    fn scan<ItemOut, BinaryOp>(
+        self,
+        initial_value: ItemOut,
+        binary_op: BinaryOp,
+    ) -> operators::Scan<Self, ItemOut, BinaryOp>
+    where
+        Self: Sized,
+    {
+        operators::Scan::new(self, initial_value, binary_op)
+    }
 }
