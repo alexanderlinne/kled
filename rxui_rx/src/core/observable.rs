@@ -32,4 +32,15 @@ pub trait Observable {
     {
         core::Shared::new(operators::ObserveOn::new(self, scheduler.create_worker()))
     }
+
+    fn subscribe_on<Scheduler>(
+        self,
+        scheduler: &Scheduler,
+    ) -> core::Shared<operators::SubscribeOn<Self, Scheduler::Worker>>
+    where
+        Self: Sized,
+        Scheduler: core::Scheduler,
+    {
+        core::Shared::new(operators::SubscribeOn::new(self, scheduler.create_worker()))
+    }
 }

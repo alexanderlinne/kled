@@ -208,4 +208,17 @@ mod tests {
         assert_eq!(test_observer.status(), ObserverStatus::Completed);
         assert_eq!(test_observer.items(), vec![0, 1, 2, 3]);
     }
+
+    #[test]
+    fn observe_on_shared() {
+        let scheduler = scheduler::ThreadPoolScheduler::default();
+        let test_observer = TestObserver::default();
+        vec![0, 1, 2, 3]
+            .into_shared_observable()
+            .observe_on(&scheduler)
+            .subscribe(test_observer.clone());
+        scheduler.join();
+        assert_eq!(test_observer.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer.items(), vec![0, 1, 2, 3]);
+    }
 }

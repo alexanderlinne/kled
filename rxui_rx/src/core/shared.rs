@@ -39,6 +39,20 @@ impl<Observable> Shared<Observable> {
             binary_op,
         ))
     }
+
+    pub fn subscribe_on<Scheduler>(
+        self,
+        scheduler: &Scheduler,
+    ) -> Shared<operators::SubscribeOn<Observable, Scheduler::Worker>>
+    where
+        Self: Sized,
+        Scheduler: core::Scheduler,
+    {
+        Shared::new(operators::SubscribeOn::new(
+            self.actual_observable,
+            scheduler.create_worker(),
+        ))
+    }
 }
 
 impl<Cancellable, Item, Error, T> core::Observer<Cancellable, Item, Error> for Shared<T>
