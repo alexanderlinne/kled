@@ -1,6 +1,6 @@
-use crate::consumer;
 use crate::core;
-use crate::core::Consumer;
+use crate::core::Emitter;
+use crate::emitter;
 use std::sync::{Arc, Mutex};
 
 pub struct PublishSubject<Cancellable, Item, Error> {
@@ -9,7 +9,7 @@ pub struct PublishSubject<Cancellable, Item, Error> {
 
 struct Data<Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
+    emitters: Vec<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>,
 }
 
 impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
@@ -17,7 +17,7 @@ impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Err
         Self {
             data: Arc::new(Mutex::new(Data {
                 cancellable: None,
-                observers: vec![],
+                emitters: vec![],
             })),
         }
     }
@@ -42,15 +42,15 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        &mut self.data.lock().unwrap().observers.on_next(item);
+        &mut self.data.lock().unwrap().emitters.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        &mut self.data.lock().unwrap().observers.on_error(error);
+        &mut self.data.lock().unwrap().emitters.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        &mut self.data.lock().unwrap().observers.on_completed();
+        &mut self.data.lock().unwrap().emitters.on_completed();
     }
 }
 
@@ -76,8 +76,8 @@ where
         self.data
             .lock()
             .unwrap()
-            .observers
-            .push(Box::new(consumer::shared::AutoOnSubscribe::new(observer)))
+            .emitters
+            .push(Box::new(emitter::shared::FromObserver::new(observer)))
     }
 }
 

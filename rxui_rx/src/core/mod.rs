@@ -1,6 +1,6 @@
 mod cancellable;
-mod cancellable_consumer;
-mod consumer;
+mod cancellable_emitter;
+mod emitter;
 mod flow;
 mod into_observable;
 mod local_flow;
@@ -17,8 +17,8 @@ mod subscriber;
 mod subscription;
 
 pub use cancellable::*;
-pub use cancellable_consumer::*;
-pub use consumer::*;
+pub use cancellable_emitter::*;
+pub use emitter::*;
 pub use flow::*;
 pub use into_observable::*;
 pub use local_flow::*;

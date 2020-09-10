@@ -1,5 +1,5 @@
-use crate::consumer;
 use crate::core;
+use crate::emitter;
 use std::sync::{Arc, Mutex};
 
 pub struct TestObservable<Item, Error> {
@@ -7,13 +7,13 @@ pub struct TestObservable<Item, Error> {
 }
 
 struct Data<Item, Error> {
-    consumer: Option<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>,
+    emitter: Option<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>,
 }
 
 impl<'o, Item, Error> Default for TestObservable<Item, Error> {
     fn default() -> Self {
         Self {
-            data: Arc::new(Mutex::new(Data { consumer: None })),
+            data: Arc::new(Mutex::new(Data { emitter: None })),
         }
     }
 }
@@ -36,12 +36,12 @@ impl<Item, Error> TestObservable<Item, Error> {
     }
 
     pub fn has_observer(&self) -> bool {
-        self.data.lock().unwrap().consumer.is_some()
+        self.data.lock().unwrap().emitter.is_some()
     }
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().consumer {
+        match self.data.lock().unwrap().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -49,7 +49,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().consumer {
+        match self.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -66,7 +66,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().consumer {
+        match self.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -74,7 +74,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().consumer {
+        match self.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
@@ -93,8 +93,8 @@ where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        self.data.lock().unwrap().consumer =
-            Some(Box::new(consumer::shared::AutoOnSubscribe::new(observer)));
+        self.data.lock().unwrap().emitter =
+            Some(Box::new(emitter::shared::FromObserver::new(observer)));
     }
 }
 

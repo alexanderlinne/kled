@@ -1,6 +1,6 @@
-use crate::consumer;
 use crate::core;
-use crate::core::Consumer;
+use crate::core::Emitter;
+use crate::emitter;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -10,7 +10,7 @@ pub struct PublishSubject<'o, Cancellable, Item, Error> {
 
 struct Data<'o, Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    observers: Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>,
+    emitters: Vec<Box<dyn core::CancellableEmitter<Item, Error> + 'o>>,
 }
 
 impl<'o, Cancellable, Item, Error> Default for PublishSubject<'o, Cancellable, Item, Error> {
@@ -18,7 +18,7 @@ impl<'o, Cancellable, Item, Error> Default for PublishSubject<'o, Cancellable, I
         Self {
             data: Rc::new(RefCell::new(Data {
                 cancellable: None,
-                observers: vec![],
+                emitters: vec![],
             })),
         }
     }
@@ -43,15 +43,15 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        &mut self.data.borrow_mut().observers.on_next(item);
+        &mut self.data.borrow_mut().emitters.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        &mut self.data.borrow_mut().observers.on_error(error);
+        &mut self.data.borrow_mut().emitters.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        &mut self.data.borrow_mut().observers.on_completed();
+        &mut self.data.borrow_mut().emitters.on_completed();
     }
 }
 
@@ -77,8 +77,8 @@ where
     {
         self.data
             .borrow_mut()
-            .observers
-            .push(Box::new(consumer::local::AutoOnSubscribe::new(observer)))
+            .emitters
+            .push(Box::new(emitter::local::FromObserver::new(observer)))
     }
 }
 

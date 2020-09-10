@@ -10,37 +10,54 @@ use std::sync::Arc;
 /// [`SharedObservable::Subscription`]: trait.SharedObservable.html#associatedtype.Subscription
 pub trait Cancellable {
     /// Cancels the observable the given suscription was provided by.
-    fn cancel(self);
+    fn cancel(&self);
+
+    /// Returns true, if the observable has been cancelled
+    fn is_cancelled(&self) -> bool;
 }
 
+#[derive(Clone)]
 pub struct LocalCancellable {
-    observed: Rc<RefCell<bool>>,
+    cancelled: Rc<RefCell<bool>>,
 }
 
-impl LocalCancellable {
-    pub fn new(observed: Rc<RefCell<bool>>) -> Self {
-        Self { observed }
+impl Default for LocalCancellable {
+    fn default() -> Self {
+        Self {
+            cancelled: Rc::new(RefCell::new(false)),
+        }
     }
 }
 
 impl Cancellable for LocalCancellable {
-    fn cancel(self) {
-        *self.observed.borrow_mut() = false;
+    fn cancel(&self) {
+        *self.cancelled.borrow_mut() = true;
+    }
+
+    fn is_cancelled(&self) -> bool {
+        *self.cancelled.borrow_mut()
     }
 }
 
+#[derive(Clone)]
 pub struct SharedCancellable {
-    observed: Arc<AtomicBool>,
+    cancelled: Arc<AtomicBool>,
 }
 
-impl SharedCancellable {
-    pub fn new(observed: Arc<AtomicBool>) -> Self {
-        Self { observed }
+impl Default for SharedCancellable {
+    fn default() -> Self {
+        Self {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        }
     }
 }
 
 impl Cancellable for SharedCancellable {
-    fn cancel(self) {
-        self.observed.store(false, Ordering::Release);
+    fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Release);
+    }
+
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Acquire)
     }
 }

@@ -1,31 +1,28 @@
 use crate::core;
-use std::cell::RefCell;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
-pub struct AutoOnSubscribe<Observer, Item, Error> {
+pub struct FromObserver<Observer, Item, Error> {
     observer: Observer,
-    observed: Rc<RefCell<bool>>,
+    cancellable: core::LocalCancellable,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<'o, Observer, Item, Error> AutoOnSubscribe<Observer, Item, Error>
+impl<'o, Observer, Item, Error> FromObserver<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
     pub fn new(mut observer: Observer) -> Self {
-        let observed = Rc::new(RefCell::new(true));
-        observer.on_subscribe(core::LocalCancellable::new(observed.clone()));
+        let cancellable = core::LocalCancellable::default();
+        observer.on_subscribe(cancellable.clone());
         Self {
             observer,
-            observed,
+            cancellable,
             phantom: PhantomData,
         }
     }
 }
 
-impl<'o, Observer, Item, Error> core::Consumer<Item, Error>
-    for AutoOnSubscribe<Observer, Item, Error>
+impl<'o, Observer, Item, Error> core::Emitter<Item, Error> for FromObserver<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
@@ -42,13 +39,14 @@ where
     }
 }
 
-impl<'o, Observer, Item, Error> core::CancellableConsumer<Item, Error>
-    for AutoOnSubscribe<Observer, Item, Error>
+impl<'o, Observer, Item, Error> core::CancellableEmitter<Item, Error>
+    for FromObserver<Observer, Item, Error>
 where
     Observer: core::Observer<core::LocalCancellable, Item, Error> + 'o,
 {
     fn is_cancelled(&self) -> bool {
-        !*self.observed.borrow()
+        use self::core::Cancellable;
+        self.cancellable.is_cancelled()
     }
 }
 

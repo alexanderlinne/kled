@@ -1,5 +1,5 @@
-use crate::consumer;
 use crate::core;
+use crate::emitter;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -24,7 +24,7 @@ impl<F, Item, Error> core::Observable for FnObservable<F, Item, Error> {
 
 impl<'o, F, Item, Error> core::LocalObservable<'o> for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::CancellableConsumer<Item, Error> + 'o>),
+    F: FnOnce(Box<dyn core::CancellableEmitter<Item, Error> + 'o>),
     Item: 'o,
     Error: 'o,
 {
@@ -34,14 +34,14 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
-        let observer = consumer::local::AutoOnSubscribe::new(observer);
+        let observer = emitter::local::FromObserver::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }
 
 impl<F, Item, Error> core::SharedObservable for FnObservable<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>),
+    F: FnOnce(Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>),
     Item: Send + 'static,
     Error: Send + 'static,
 {
@@ -51,7 +51,7 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
-        let observer = consumer::shared::AutoOnSubscribe::new(observer);
+        let observer = emitter::shared::FromObserver::new(observer);
         (self.subscriber_consumer)(Box::new(observer));
     }
 }

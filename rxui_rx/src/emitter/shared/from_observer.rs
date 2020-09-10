@@ -1,31 +1,29 @@
 use crate::core;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
-pub struct AutoOnSubscribe<Observer, Item, Error> {
+pub struct FromObserver<Observer, Item, Error> {
     observer: Observer,
-    observed: Arc<AtomicBool>,
+    cancellable: core::SharedCancellable,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<Observer, Item, Error> AutoOnSubscribe<Observer, Item, Error>
+impl<Observer, Item, Error> FromObserver<Observer, Item, Error>
 where
     Observer: core::Observer<core::SharedCancellable, Item, Error>,
 {
     pub fn new(mut observer: Observer) -> Self {
-        let observed = Arc::new(AtomicBool::new(true));
-        observer.on_subscribe(core::SharedCancellable::new(observed.clone()));
+        let cancellable = core::SharedCancellable::default();
+        observer.on_subscribe(cancellable.clone());
         Self {
             observer,
-            observed,
+            cancellable,
             phantom: PhantomData,
         }
     }
 }
 
-impl<ObserverType, Item, Error> core::Consumer<Item, Error>
-    for AutoOnSubscribe<ObserverType, Item, Error>
+impl<ObserverType, Item, Error> core::Emitter<Item, Error>
+    for FromObserver<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<core::SharedCancellable, Item, Error>,
 {
@@ -42,13 +40,14 @@ where
     }
 }
 
-impl<ObserverType, Item, Error> core::CancellableConsumer<Item, Error>
-    for AutoOnSubscribe<ObserverType, Item, Error>
+impl<ObserverType, Item, Error> core::CancellableEmitter<Item, Error>
+    for FromObserver<ObserverType, Item, Error>
 where
     ObserverType: core::Observer<core::SharedCancellable, Item, Error>,
 {
     fn is_cancelled(&self) -> bool {
-        !self.observed.load(Ordering::Acquire)
+        use self::core::Cancellable;
+        self.cancellable.is_cancelled()
     }
 }
 

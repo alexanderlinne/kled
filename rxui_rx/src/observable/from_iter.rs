@@ -1,6 +1,6 @@
-use crate::consumer;
 use crate::core;
-use crate::core::{CancellableConsumer, Consumer};
+use crate::core::{CancellableEmitter, Emitter};
+use crate::emitter;
 use crate::util;
 
 pub struct IntoIterObservable<IntoIter> {
@@ -34,7 +34,7 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
-        let mut observer = consumer::local::AutoOnSubscribe::new(observer);
+        let mut observer = emitter::local::FromObserver::new(observer);
         for v in self.iterable.into_iter() {
             if !observer.is_cancelled() {
                 observer.on_next(v);
@@ -58,7 +58,7 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
-        let mut observer = consumer::shared::AutoOnSubscribe::new(observer);
+        let mut observer = emitter::shared::FromObserver::new(observer);
         for v in self.iterable.into_iter() {
             if !observer.is_cancelled() {
                 observer.on_next(v);

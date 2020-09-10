@@ -1,12 +1,10 @@
 use crate::core;
 
-pub trait CancellableConsumer<Item, Error>: core::Consumer<Item, Error> {
+pub trait CancellableEmitter<Item, Error>: core::Emitter<Item, Error> {
     fn is_cancelled(&self) -> bool;
 }
 
-impl<'o, Item, Error> core::Consumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + 'o>
-{
+impl<'o, Item, Error> core::Emitter<Item, Error> for Box<dyn CancellableEmitter<Item, Error> + 'o> {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
     }
@@ -20,16 +18,16 @@ impl<'o, Item, Error> core::Consumer<Item, Error>
     }
 }
 
-impl<'o, Item, Error> CancellableConsumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + 'o>
+impl<'o, Item, Error> CancellableEmitter<Item, Error>
+    for Box<dyn CancellableEmitter<Item, Error> + 'o>
 {
     fn is_cancelled(&self) -> bool {
         (&**self).is_cancelled()
     }
 }
 
-impl<Item, Error> core::Consumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + Send + 'static>
+impl<Item, Error> core::Emitter<Item, Error>
+    for Box<dyn CancellableEmitter<Item, Error> + Send + 'static>
 {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
@@ -44,8 +42,8 @@ impl<Item, Error> core::Consumer<Item, Error>
     }
 }
 
-impl<Item, Error> CancellableConsumer<Item, Error>
-    for Box<dyn CancellableConsumer<Item, Error> + Send + 'static>
+impl<Item, Error> CancellableEmitter<Item, Error>
+    for Box<dyn CancellableEmitter<Item, Error> + Send + 'static>
 {
     fn is_cancelled(&self) -> bool {
         (&**self).is_cancelled()

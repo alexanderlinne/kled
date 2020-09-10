@@ -1,8 +1,8 @@
 use crate::core;
 use crate::util::distribute_value;
 
-impl<'o, Item, Error> core::Consumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
+impl<'o, Item, Error> core::Emitter<Item, Error>
+    for Vec<Box<dyn core::CancellableEmitter<Item, Error> + 'o>>
 where
     Item: Clone,
     Error: Clone,
@@ -20,8 +20,8 @@ where
     }
 }
 
-impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + 'o>>
+impl<'o, Item, Error> core::CancellableEmitter<Item, Error>
+    for Vec<Box<dyn core::CancellableEmitter<Item, Error> + 'o>>
 where
     Item: Clone,
     Error: Clone,
@@ -33,8 +33,8 @@ where
     }
 }
 
-impl<Item, Error> core::Consumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>
+impl<Item, Error> core::Emitter<Item, Error>
+    for Vec<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>
 where
     Item: Clone,
     Error: Clone,
@@ -52,8 +52,8 @@ where
     }
 }
 
-impl<'o, Item, Error> core::CancellableConsumer<Item, Error>
-    for Vec<Box<dyn core::CancellableConsumer<Item, Error> + Send + 'static>>
+impl<'o, Item, Error> core::CancellableEmitter<Item, Error>
+    for Vec<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>
 where
     Item: Clone,
     Error: Clone,

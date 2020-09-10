@@ -1,10 +1,10 @@
-pub trait Consumer<Item, Error> {
+pub trait Emitter<Item, Error> {
     fn on_next(&mut self, item: Item);
-    fn on_error(&mut self, errpr: Error);
+    fn on_error(&mut self, error: Error);
     fn on_completed(&mut self);
 }
 
-impl<'o, Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + 'o> {
+impl<'o, Item, Error> Emitter<Item, Error> for Box<dyn Emitter<Item, Error> + 'o> {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
     }
@@ -18,7 +18,7 @@ impl<'o, Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + 
     }
 }
 
-impl<Item, Error> Consumer<Item, Error> for Box<dyn Consumer<Item, Error> + Send + 'static> {
+impl<Item, Error> Emitter<Item, Error> for Box<dyn Emitter<Item, Error> + Send + 'static> {
     fn on_next(&mut self, item: Item) {
         (&mut **self).on_next(item)
     }
