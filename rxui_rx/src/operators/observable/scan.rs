@@ -1,14 +1,14 @@
 use crate::core;
 
-pub struct Scan<Observable, ItemOut, BinaryOp> {
+pub struct ObservableScan<Observable, ItemOut, BinaryOp> {
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,
 }
 
-impl<Observable, ItemOut, BinaryOp> Scan<Observable, ItemOut, BinaryOp> {
+impl<Observable, ItemOut, BinaryOp> ObservableScan<Observable, ItemOut, BinaryOp> {
     pub fn new(observable: Observable, initial_value: ItemOut, binary_op: BinaryOp) -> Self {
-        Self {
+        ObservableScan {
             observable,
             initial_value,
             binary_op,
@@ -17,7 +17,7 @@ impl<Observable, ItemOut, BinaryOp> Scan<Observable, ItemOut, BinaryOp> {
 }
 
 impl<'o, Observable, ItemOut, BinaryOp> core::LocalObservable<'o>
-    for Scan<Observable, ItemOut, BinaryOp>
+    for ObservableScan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::LocalObservable<'o>,
     ItemOut: Clone + 'o,
@@ -36,7 +36,8 @@ where
     }
 }
 
-impl<Observable, ItemOut, BinaryOp> core::SharedObservable for Scan<Observable, ItemOut, BinaryOp>
+impl<Observable, ItemOut, BinaryOp> core::SharedObservable
+    for ObservableScan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::SharedObservable,
     ItemOut: Clone + Send + 'static,
@@ -56,7 +57,8 @@ where
     }
 }
 
-impl<Observable, ItemOut, BinaryOp> core::Observable for Scan<Observable, ItemOut, BinaryOp>
+impl<Observable, ItemOut, BinaryOp> core::Observable
+    for ObservableScan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::Observable,
 {

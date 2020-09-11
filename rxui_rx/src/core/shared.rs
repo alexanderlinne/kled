@@ -14,12 +14,12 @@ impl<Observable> Shared<Observable> {
     pub fn observe_on<Scheduler>(
         self,
         scheduler: &Scheduler,
-    ) -> Shared<operators::ObserveOn<Observable, Scheduler::Worker>>
+    ) -> Shared<operators::ObservableObserveOn<Observable, Scheduler::Worker>>
     where
         Self: Sized,
         Scheduler: core::Scheduler,
     {
-        Shared::new(operators::ObserveOn::new(
+        Shared::new(operators::ObservableObserveOn::new(
             self.actual_observable,
             scheduler.create_worker(),
         ))
@@ -29,11 +29,11 @@ impl<Observable> Shared<Observable> {
         self,
         initial_value: ItemOut,
         binary_op: BinaryOp,
-    ) -> Shared<operators::Scan<Observable, ItemOut, BinaryOp>>
+    ) -> Shared<operators::ObservableScan<Observable, ItemOut, BinaryOp>>
     where
         Self: Sized,
     {
-        Shared::new(operators::Scan::new(
+        Shared::new(operators::ObservableScan::new(
             self.actual_observable,
             initial_value,
             binary_op,
@@ -43,12 +43,12 @@ impl<Observable> Shared<Observable> {
     pub fn subscribe_on<Scheduler>(
         self,
         scheduler: &Scheduler,
-    ) -> Shared<operators::SubscribeOn<Observable, Scheduler::Worker>>
+    ) -> Shared<operators::ObservableSubscribeOn<Observable, Scheduler::Worker>>
     where
         Self: Sized,
         Scheduler: core::Scheduler,
     {
-        Shared::new(operators::SubscribeOn::new(
+        Shared::new(operators::ObservableSubscribeOn::new(
             self.actual_observable,
             scheduler.create_worker(),
         ))

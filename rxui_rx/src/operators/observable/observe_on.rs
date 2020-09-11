@@ -4,21 +4,21 @@ use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-pub struct ObserveOn<Observable, Worker> {
+pub struct ObservableObserveOn<Observable, Worker> {
     observable: Observable,
     worker: Worker,
 }
 
-impl<Observable, Worker> ObserveOn<Observable, Worker>
+impl<Observable, Worker> ObservableObserveOn<Observable, Worker>
 where
     Worker: core::Worker + Send + 'static,
 {
     pub fn new(observable: Observable, worker: Worker) -> Self {
-        Self { observable, worker }
+        ObservableObserveOn { observable, worker }
     }
 }
 
-impl<Observable, Worker> core::SharedObservable for ObserveOn<Observable, Worker>
+impl<Observable, Worker> core::SharedObservable for ObservableObserveOn<Observable, Worker>
 where
     Observable: core::SharedObservable + 'static,
     <Observable as core::SharedObservable>::Cancellable: Send,
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<Observable, Worker> core::Observable for ObserveOn<Observable, Worker>
+impl<Observable, Worker> core::Observable for ObservableObserveOn<Observable, Worker>
 where
     Observable: core::Observable,
 {

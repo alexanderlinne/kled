@@ -1,20 +1,20 @@
 use crate::core;
 
-pub struct SubscribeOn<Observable, Worker> {
+pub struct ObservableSubscribeOn<Observable, Worker> {
     observable: Observable,
     worker: Worker,
 }
 
-impl<Observable, Worker> SubscribeOn<Observable, Worker>
+impl<Observable, Worker> ObservableSubscribeOn<Observable, Worker>
 where
     Worker: core::Worker + Send + 'static,
 {
     pub fn new(observable: Observable, worker: Worker) -> Self {
-        Self { observable, worker }
+        ObservableSubscribeOn { observable, worker }
     }
 }
 
-impl<Observable, Worker> core::SharedObservable for SubscribeOn<Observable, Worker>
+impl<Observable, Worker> core::SharedObservable for ObservableSubscribeOn<Observable, Worker>
 where
     Observable: core::SharedObservable + Send + 'static,
     Worker: core::Worker + Send + 'static,
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<Observable, Worker> core::Observable for SubscribeOn<Observable, Worker>
+impl<Observable, Worker> core::Observable for ObservableSubscribeOn<Observable, Worker>
 where
     Observable: core::Observable,
 {

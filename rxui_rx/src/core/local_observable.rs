@@ -12,10 +12,10 @@ pub trait LocalObservable<'o>: core::Observable {
         self,
         initial_value: ItemOut,
         binary_op: BinaryOp,
-    ) -> operators::Scan<Self, ItemOut, BinaryOp>
+    ) -> operators::ObservableScan<Self, ItemOut, BinaryOp>
     where
         Self: Sized,
     {
-        operators::Scan::new(self, initial_value, binary_op)
+        operators::ObservableScan::new(self, initial_value, binary_op)
     }
 }
