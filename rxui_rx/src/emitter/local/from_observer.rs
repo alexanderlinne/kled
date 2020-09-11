@@ -49,27 +49,3 @@ where
         self.cancellable.is_cancelled()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::observer;
-    use crate::prelude::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
-    #[test]
-    fn unsubscribe() {
-        let vec = vec![0, 1, 2, 3];
-        let sum = Rc::new(RefCell::new(0));
-        let sum_move = sum.clone();
-        vec.into_observable().subscribe(observer::from_fn(
-            |sub: LocalCancellable| {
-                sub.cancel();
-            },
-            move |v| *sum_move.borrow_mut() += v,
-            |_| {},
-            || {},
-        ));
-        assert_eq!(*sum.borrow(), 0);
-    }
-}

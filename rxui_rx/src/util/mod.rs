@@ -17,6 +17,3 @@ where
         }
     }
 }
-
-#[derive(Copy, Clone)]
-pub enum Infallible {}

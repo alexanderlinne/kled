@@ -21,9 +21,9 @@ where
 impl<Observable, Worker> core::SharedObservable for ObservableObserveOn<Observable, Worker>
 where
     Observable: core::SharedObservable + 'static,
-    <Observable as core::SharedObservable>::Cancellable: Send,
-    <Observable as core::Observable>::Item: Send,
-    <Observable as core::Observable>::Error: Send,
+    Observable::Cancellable: Send,
+    Observable::Item: Send,
+    Observable::Error: Send,
     Worker: core::Worker + Send + 'static,
 {
     type Cancellable = Observable::Cancellable;

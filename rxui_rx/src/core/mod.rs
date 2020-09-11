@@ -8,6 +8,8 @@ mod local_flow;
 mod local_observable;
 mod observable;
 mod observable_subscribe;
+mod observable_subscribe_all;
+mod observable_subscribe_next;
 mod observer;
 mod scheduler;
 mod shared;
@@ -16,6 +18,7 @@ mod shared_observable;
 mod subject;
 mod subscriber;
 mod subscription;
+mod util;
 
 pub use cancellable::*;
 pub use cancellable_emitter::*;
@@ -27,6 +30,8 @@ pub use local_flow::*;
 pub use local_observable::*;
 pub use observable::*;
 pub use observable_subscribe::*;
+pub use observable_subscribe_all::ObservableSubsribeAll;
+pub use observable_subscribe_next::ObservableSubsribeNext;
 pub use observer::*;
 pub use scheduler::*;
 pub use shared::*;
@@ -35,7 +40,4 @@ pub use shared_observable::*;
 pub use subject::*;
 pub use subscriber::*;
 pub use subscription::*;
-
-mod private {
-    pub trait Sealed {}
-}
+pub use util::{Inconstructible, Infallible};

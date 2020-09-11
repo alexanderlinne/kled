@@ -1,11 +1,8 @@
 use crate::core;
-use crate::core::private::Sealed;
 
-pub trait ObservableSubcribe<'o, Observer>: Sealed {
+pub trait ObservableSubcribe<'o, Observer>: core::util::Sealed {
     fn subscribe(self, _: Observer);
 }
-
-impl<'o, Observable> Sealed for Observable where Observable: core::LocalObservable<'o> + 'o {}
 
 impl<'o, Observer, Observable> ObservableSubcribe<'o, Observer> for Observable
 where
@@ -15,11 +12,6 @@ where
     fn subscribe(self, observer: Observer) {
         self.actual_subscribe(observer);
     }
-}
-
-impl<Observable> Sealed for core::Shared<Observable> where
-    Observable: core::SharedObservable + Send + 'static
-{
 }
 
 impl<'o, Observer, Observable> ObservableSubcribe<'o, Observer> for core::Shared<Observable>

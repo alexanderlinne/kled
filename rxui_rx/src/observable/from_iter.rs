@@ -1,7 +1,6 @@
 use crate::core;
 use crate::core::{CancellableEmitter, Emitter};
 use crate::emitter;
-use crate::util;
 
 pub struct IntoIterObservable<IntoIter> {
     iterable: IntoIter,
@@ -21,7 +20,7 @@ where
     IntoIter: IntoIterator,
 {
     type Item = IntoIter::Item;
-    type Error = util::Infallible;
+    type Error = core::Infallible;
 }
 
 impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>
@@ -85,7 +84,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::observer;
     use crate::prelude::*;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -96,9 +94,7 @@ mod test {
         let sum = Rc::new(RefCell::new(0));
         let sum_move = sum.clone();
         vec.into_observable()
-            .subscribe(observer::from_next_fn(move |v| {
-                (*sum_move.borrow_mut()) += v
-            }));
+            .subscribe_next(move |v| (*sum_move.borrow_mut()) += v);
         assert_eq!(*sum.borrow(), 6);
     }
 }
