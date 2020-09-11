@@ -3,26 +3,26 @@ use crate::emitter;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
-pub struct FnObservable<F, Item, Error> {
-    subscriber_consumer: F,
+pub struct ObservableCreate<F, Item, Error> {
+    emitter_consumer: F,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<F, Item, Error> FnObservable<F, Item, Error> {
-    fn new(subscriber_consumer: F) -> Self {
-        Self {
-            subscriber_consumer,
+impl<F, Item, Error> ObservableCreate<F, Item, Error> {
+    pub fn new(emitter_consumer: F) -> Self {
+        ObservableCreate {
+            emitter_consumer,
             phantom: PhantomData,
         }
     }
 }
 
-impl<F, Item, Error> core::Observable for FnObservable<F, Item, Error> {
+impl<F, Item, Error> core::Observable for ObservableCreate<F, Item, Error> {
     type Item = Item;
     type Error = Error;
 }
 
-impl<'o, F, Item, Error> core::LocalObservable<'o> for FnObservable<F, Item, Error>
+impl<'o, F, Item, Error> core::LocalObservable<'o> for ObservableCreate<F, Item, Error>
 where
     F: FnOnce(Box<dyn core::CancellableEmitter<Item, Error> + 'o>),
     Item: 'o,
@@ -34,14 +34,14 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
-        let observer = emitter::local::FromObserver::new(observer);
-        (self.subscriber_consumer)(Box::new(observer));
+        let emitter = emitter::local::FromObserver::new(observer);
+        (self.emitter_consumer)(Box::new(emitter));
     }
 }
 
-impl<F, Item, Error> core::SharedObservable for FnObservable<F, Item, Error>
+impl<F, Item, Error> core::SharedObservable for ObservableCreate<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>),
+    F: FnOnce(Box<dyn core::CancellableEmitter<Item, Error> + Send>),
     Item: Send + 'static,
     Error: Send + 'static,
 {
@@ -51,11 +51,29 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
-        let observer = emitter::shared::FromObserver::new(observer);
-        (self.subscriber_consumer)(Box::new(observer));
+        let emitter = emitter::shared::FromObserver::new(observer);
+        (self.emitter_consumer)(Box::new(emitter));
     }
 }
 
-pub fn create<F, Item, Error>(observer_consumer: F) -> FnObservable<F, Item, Error> {
-    FnObservable::new(observer_consumer)
+pub fn create<F, Item, Error>(observer_consumer: F) -> ObservableCreate<F, Item, Error> {
+    ObservableCreate::new(observer_consumer)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+    use crate::util::shared::*;
+
+    #[test]
+    fn create() {
+        let test_observer = TestObserver::default();
+        observable::create(|mut emitter: Box<dyn CancellableEmitter<i32, ()>>| {
+            emitter.on_next(0);
+            emitter.on_completed();
+        })
+        .subscribe(test_observer.clone());
+        assert_eq!(test_observer.status(), ObserverStatus::Completed);
+        assert_eq!(test_observer.items(), vec![0]);
+    }
 }
