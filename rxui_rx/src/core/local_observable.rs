@@ -15,6 +15,8 @@ pub trait LocalObservable<'o>: core::Observable {
     ) -> operators::ObservableScan<Self, ItemOut, BinaryOp>
     where
         Self: Sized,
+        ItemOut: Clone,
+        BinaryOp: FnMut(ItemOut, Self::Item) -> ItemOut,
     {
         operators::ObservableScan::new(self, initial_value, binary_op)
     }

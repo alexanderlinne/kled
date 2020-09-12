@@ -32,6 +32,9 @@ impl<Observable> Shared<Observable> {
     ) -> Shared<operators::ObservableScan<Observable, ItemOut, BinaryOp>>
     where
         Self: Sized,
+        Observable: core::Observable,
+        ItemOut: Clone,
+        BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut,
     {
         Shared::new(operators::ObservableScan::new(
             self.actual_observable,

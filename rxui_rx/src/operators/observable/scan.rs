@@ -1,19 +1,16 @@
 use crate::core;
 
-pub struct ObservableScan<Observable, ItemOut, BinaryOp> {
+#[derive(new, reactive_operator)]
+pub struct ObservableScan<Observable, ItemOut, BinaryOp>
+where
+    Observable: core::Observable,
+    ItemOut: Clone,
+    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut,
+{
+    #[upstream(downstream = "ScanObserver", item = "ItemOut")]
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,
-}
-
-impl<Observable, ItemOut, BinaryOp> ObservableScan<Observable, ItemOut, BinaryOp> {
-    pub fn new(observable: Observable, initial_value: ItemOut, binary_op: BinaryOp) -> Self {
-        ObservableScan {
-            observable,
-            initial_value,
-            binary_op,
-        }
-    }
 }
 
 impl<'o, Observable, ItemOut, BinaryOp> core::LocalObservable<'o>
@@ -24,15 +21,16 @@ where
     BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + 'o,
 {
     type Cancellable = Observable::Cancellable;
+
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
-        self.observable.actual_subscribe(ScanObserver {
+        self.observable.actual_subscribe(ScanObserver::new(
             observer,
-            previous_value: self.initial_value,
-            binary_op: self.binary_op,
-        });
+            self.initial_value,
+            self.binary_op,
+        ));
     }
 }
 
@@ -49,40 +47,32 @@ where
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
-        self.observable.actual_subscribe(ScanObserver {
+        self.observable.actual_subscribe(ScanObserver::new(
             observer,
-            previous_value: self.initial_value,
-            binary_op: self.binary_op,
-        });
+            self.initial_value,
+            self.binary_op,
+        ));
     }
 }
 
-impl<Observable, ItemOut, BinaryOp> core::Observable
-    for ObservableScan<Observable, ItemOut, BinaryOp>
-where
-    Observable: core::Observable,
-{
-    type Item = ItemOut;
-    type Error = Observable::Error;
-}
-
+#[derive(new)]
 struct ScanObserver<Observer, ItemOut, BinaryOp> {
     observer: Observer,
     previous_value: ItemOut,
     binary_op: BinaryOp,
 }
 
-impl<Cancellable, Item, Observer, ItemOut, Error, BinaryOp> core::Observer<Cancellable, Item, Error>
-    for ScanObserver<Observer, ItemOut, BinaryOp>
+impl<Cancellable, ItemIn, Observer, ItemOut, Error, BinaryOp>
+    core::Observer<Cancellable, ItemIn, Error> for ScanObserver<Observer, ItemOut, BinaryOp>
 where
     Observer: core::Observer<Cancellable, ItemOut, Error>,
-    BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
+    BinaryOp: FnMut(ItemOut, ItemIn) -> ItemOut,
     ItemOut: Clone,
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
         self.observer.on_subscribe(cancellable);
     }
-    fn on_next(&mut self, item: Item) {
+    fn on_next(&mut self, item: ItemIn) {
         self.previous_value = (self.binary_op)(self.previous_value.clone(), item);
         self.observer.on_next(self.previous_value.clone());
     }

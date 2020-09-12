@@ -1,5 +1,9 @@
 #![deny(intra_doc_link_resolution_failure)]
 
+#[macro_use]
+extern crate derive_new;
+#[macro_use]
+extern crate rxui_rx_derive;
 extern crate threadpool;
 
 pub mod core;

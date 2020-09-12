@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "rxui_rx",
+    "rxui_rx_derive",
     "rxui_signals",
 ]

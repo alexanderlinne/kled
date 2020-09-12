@@ -1,7 +1,9 @@
+use crate::core;
+
 pub trait Subscriber<Subscription, Item, Error> {
     fn on_subscribe(&mut self, subscription: Subscription);
     fn on_next(&mut self, item: Item);
-    fn on_error(&mut self, errpr: Error);
+    fn on_error(&mut self, error: core::FlowError<Error>);
     fn on_completed(&mut self);
 }
 
@@ -16,7 +18,7 @@ impl<'o, Subscription, Item, Error> Subscriber<Subscription, Item, Error>
         (&mut **self).on_next(item)
     }
 
-    fn on_error(&mut self, error: Error) {
+    fn on_error(&mut self, error: core::FlowError<Error>) {
         (&mut **self).on_error(error)
     }
 
@@ -36,7 +38,7 @@ impl<Subscription, Item, Error> Subscriber<Subscription, Item, Error>
         (&mut **self).on_next(item)
     }
 
-    fn on_error(&mut self, error: Error) {
+    fn on_error(&mut self, error: core::FlowError<Error>) {
         (&mut **self).on_error(error)
     }
 
