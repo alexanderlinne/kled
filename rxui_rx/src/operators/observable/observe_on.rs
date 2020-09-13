@@ -4,61 +4,18 @@ use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-pub struct ObservableObserveOn<Observable, Worker> {
-    observable: Observable,
-    worker: Worker,
-}
-
-impl<Observable, Worker> ObservableObserveOn<Observable, Worker>
+#[derive(new, reactive_observable)]
+pub struct ObservableObserveOn<Observable, Worker>
 where
-    Worker: core::Worker + Send + 'static,
-{
-    pub fn new(observable: Observable, worker: Worker) -> Self {
-        ObservableObserveOn { observable, worker }
-    }
-}
-
-impl<Observable, Worker> core::SharedObservable for ObservableObserveOn<Observable, Worker>
-where
-    Observable: core::SharedObservable + 'static,
+    Observable: core::SharedObservable,
     Observable::Cancellable: Send,
     Observable::Item: Send,
     Observable::Error: Send,
     Worker: core::Worker + Send + 'static,
 {
-    type Cancellable = Observable::Cancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
-    where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
-    {
-        let (sender, receiver) = mpsc::channel();
-        self.observable.actual_subscribe(ObserveOnObserver {
-            task: Arc::new(ObserveOnTaskWrapper {
-                inner: UnsafeCell::new(ObserveOnTask {
-                    receiver,
-                    data: Mutex::new(Data {
-                        pending_count: 0,
-                        done: false,
-                        error: None,
-                    }),
-                    observer,
-                    phantom: PhantomData,
-                }),
-            }),
-            sender,
-            worker: self.worker.clone(),
-            phantom: PhantomData,
-        });
-    }
-}
-
-impl<Observable, Worker> core::Observable for ObservableObserveOn<Observable, Worker>
-where
-    Observable: core::Observable,
-{
-    type Item = Observable::Item;
-    type Error = Observable::Error;
+    #[upstream(downstream = "ObserveOnObserver")]
+    observable: Observable,
+    worker: Worker,
 }
 
 struct ObserveOnObserver<Observer, Worker, Cancellable, Item, Error> {
@@ -77,6 +34,27 @@ where
     Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
     Worker: core::Worker + Send + 'static,
 {
+    fn new(observer: Observer, worker: Worker) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        ObserveOnObserver {
+            task: Arc::new(ObserveOnTaskWrapper {
+                inner: UnsafeCell::new(ObserveOnTask {
+                    receiver,
+                    data: Mutex::new(Data {
+                        pending_count: 0,
+                        done: false,
+                        error: None,
+                    }),
+                    observer,
+                    phantom: PhantomData,
+                }),
+            }),
+            sender,
+            worker: worker.clone(),
+            phantom: PhantomData,
+        }
+    }
+
     fn schedule<F>(&mut self, f: F)
     where
         F: FnOnce(&mut Data<Error>),

@@ -17,6 +17,10 @@ impl<Observable> Shared<Observable> {
     ) -> Shared<operators::ObservableObserveOn<Observable, Scheduler::Worker>>
     where
         Self: Sized,
+        Observable: core::SharedObservable,
+        Observable::Cancellable: Send,
+        Observable::Item: Send,
+        Observable::Error: Send,
         Scheduler: core::Scheduler,
     {
         Shared::new(operators::ObservableObserveOn::new(

@@ -27,7 +27,10 @@ pub trait Observable {
         scheduler: &Scheduler,
     ) -> core::Shared<operators::ObservableObserveOn<Self, Scheduler::Worker>>
     where
-        Self: Sized,
+        Self: core::SharedObservable + Sized,
+        Self::Cancellable: Send,
+        Self::Item: Send,
+        Self::Error: Send,
         Scheduler: core::Scheduler,
     {
         core::Shared::new(operators::ObservableObserveOn::new(

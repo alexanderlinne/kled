@@ -1,17 +1,12 @@
 use crate::core;
 
-pub struct ObservableSubscribeOn<Observable, Worker> {
-    observable: Observable,
-    worker: Worker,
-}
-
-impl<Observable, Worker> ObservableSubscribeOn<Observable, Worker>
+#[derive(new)]
+pub struct ObservableSubscribeOn<Observable, Worker>
 where
     Worker: core::Worker + Send + 'static,
 {
-    pub fn new(observable: Observable, worker: Worker) -> Self {
-        ObservableSubscribeOn { observable, worker }
-    }
+    observable: Observable,
+    worker: Worker,
 }
 
 impl<Observable, Worker> core::SharedObservable for ObservableSubscribeOn<Observable, Worker>
@@ -35,6 +30,7 @@ where
 impl<Observable, Worker> core::Observable for ObservableSubscribeOn<Observable, Worker>
 where
     Observable: core::Observable,
+    Worker: core::Worker + Send + 'static,
 {
     type Item = Observable::Item;
     type Error = Observable::Error;
