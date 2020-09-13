@@ -4,18 +4,22 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
 use syn::{parse_macro_input, DeriveInput, Token};
 
 macro_rules! quote_and_parse {
     ($($t:tt)*) => (syn::parse(quote!{$($t)*}.into()).unwrap())
 }
 
-#[proc_macro_derive(reactive_operator, attributes(upstream))]
-pub fn derive_rx_operator(item: TokenStream) -> TokenStream {
+#[proc_macro_derive(reactive_observable, attributes(upstream))]
+pub fn derive_reactive_observable(item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
     match ast.data {
         syn::Data::Struct(ref s) => match s.fields {
-            syn::Fields::Named(ref fields) => derive_rx_operator_struct(&ast, &fields.named),
+            syn::Fields::Named(ref fields) => {
+                derive_reactive_observable_struct(&ast, &fields.named)
+            }
             _ => panic! {"Expected named fields"},
         },
         _ => panic! {"Expected a struct"},
@@ -23,7 +27,7 @@ pub fn derive_rx_operator(item: TokenStream) -> TokenStream {
     .into()
 }
 
-fn derive_rx_operator_struct(
+fn derive_reactive_observable_struct(
     ast: &syn::DeriveInput,
     fields: &syn::punctuated::Punctuated<syn::Field, Token![,]>,
 ) -> proc_macro2::TokenStream {
@@ -42,13 +46,7 @@ fn derive_rx_operator_struct(
     }
     let source = &sources[0];
     if source.kind.is_observable() {
-        if source.kind.supports_local() {
-            generate_local_observable_impl(&ast, &source);
-        }
-        if source.kind.supports_shared() {
-            generate_shared_observable_impl(&ast, &source);
-        }
-        generate_observable_impl(&ast, &source)
+        derive_observable(&ast, &source, &data_fields)
     } else {
         unimplemented! {}
     }
@@ -94,6 +92,25 @@ fn name_of_attr(attr: &syn::Attribute) -> &syn::Ident {
     &(*attr_name).ident
 }
 
+fn derive_observable(
+    ast: &syn::DeriveInput,
+    source: &UpstreamField,
+    data_fields: &Vec<Field>,
+) -> proc_macro2::TokenStream {
+    let observable = generate_observable_impl(&ast, &source);
+    let local = if source.kind.supports_local() {
+        generate_local_observable_impl(&ast, &source, &data_fields)
+    } else {
+        TokenStream::default().into()
+    };
+    let shared = if source.kind.supports_shared() {
+        generate_shared_observable_impl(&ast, &source, &data_fields)
+    } else {
+        TokenStream::default().into()
+    };
+    quote! {#observable #local #shared}
+}
+
 fn generate_observable_impl(
     ast: &syn::DeriveInput,
     source: &UpstreamField,
@@ -109,29 +126,102 @@ fn generate_observable_impl(
         Some(ty) => ty.clone(),
         None => quote_and_parse! { #source_type::Error },
     };
-    let result = quote! {
+    quote! {
         impl #impl_generics core::Observable
-            for #name #ty_generics #where_clause
+            for #name #ty_generics
+        #where_clause
         {
             type Item = #item_ty;
             type Error = #error_ty;
         }
-    };
-    result
+    }
 }
 
 fn generate_local_observable_impl(
     ast: &syn::DeriveInput,
     source: &UpstreamField,
+    data_fields: &Vec<Field>,
 ) -> proc_macro2::TokenStream {
-    TokenStream::default().into()
+    generate_actual_subscribe_impl(
+        ast,
+        source,
+        data_fields,
+        quote! {core::LocalObservable},
+        Some(quote! {'o}),
+        None,
+    )
 }
 
 fn generate_shared_observable_impl(
     ast: &syn::DeriveInput,
     source: &UpstreamField,
+    data_fields: &Vec<Field>,
 ) -> proc_macro2::TokenStream {
-    TokenStream::default().into()
+    generate_actual_subscribe_impl(
+        ast,
+        source,
+        data_fields,
+        quote! {core::SharedObservable},
+        None,
+        Some(quote! {+ Send + 'static}),
+    )
+}
+
+fn generate_actual_subscribe_impl(
+    ast: &syn::DeriveInput,
+    source: &UpstreamField,
+    data_fields: &Vec<Field>,
+    impl_type: proc_macro2::TokenStream,
+    lifetime_impl_params: Option<proc_macro2::TokenStream>,
+    additional_bounds: Option<proc_macro2::TokenStream>,
+) -> proc_macro2::TokenStream {
+    let name = &ast.ident;
+    let source_type = source.field.ty;
+    let generic_params = &ast.generics.params;
+    let (_, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let where_preds = remove_predicates_for_type(
+        &source.field.ty,
+        &where_clause.as_ref().expect("").predicates,
+    );
+    let upstream_name = &source.field.ident;
+    let downstream_ty = &source.settings.downstream_ty;
+    let field_idents = data_fields.iter().map(|f| &f.ident);
+    let lifetime_impl_params_with_comma = lifetime_impl_params.as_ref().map(|t| quote! {#t,});
+    let lifetime_impl_params_with_plus = lifetime_impl_params.as_ref().map(|t| quote! {+ #t});
+    let lifetime_impl_params_with_lg = lifetime_impl_params.as_ref().map(|t| quote! {< #t >});
+    quote! {
+        impl<#lifetime_impl_params_with_comma #generic_params> #impl_type #lifetime_impl_params_with_lg
+            for #name #ty_generics
+        where
+            #source_type: #impl_type #lifetime_impl_params_with_lg,
+            #(#where_preds #lifetime_impl_params_with_plus #additional_bounds),*
+        {
+            type Cancellable = Observable::Cancellable;
+
+            fn actual_subscribe<Observer>(self, observer: Observer)
+            where
+                Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> #lifetime_impl_params_with_plus #additional_bounds,
+            {
+                self. #upstream_name .actual_subscribe( #downstream_ty ::new(
+                    observer,
+                    #( self. #field_idents),*
+                ));
+            }
+        }
+    }
+}
+
+fn remove_predicates_for_type<'a>(
+    ty: &syn::Type,
+    preds: &'a Punctuated<syn::WherePredicate, Comma>,
+) -> Vec<&'a syn::WherePredicate> {
+    let mut result = Vec::new();
+    for pred in preds.iter() {
+        if !is_predicate_for_type(ty, pred) {
+            result.push(pred);
+        }
+    }
+    result
 }
 
 struct Field<'a> {
@@ -177,7 +267,7 @@ impl<'a> UpstreamField<'a> {
 }
 
 struct Settings {
-    downstream_ty: Option<String>,
+    downstream_ty: Option<syn::Type>,
     item_ty: Option<syn::Type>,
     error_ty: Option<syn::Type>,
 }
@@ -194,7 +284,8 @@ impl Settings {
                 syn::NestedMeta::Meta(syn::Meta::NameValue(ref kv)) => {
                     if let syn::Lit::Str(ref s) = kv.lit {
                         if kv.path.is_ident("downstream") {
-                            result.downstream_ty = Some(s.value());
+                            result.downstream_ty =
+                                Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else if kv.path.is_ident("item") {
                             result.item_ty = Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else if kv.path.is_ident("error") {
@@ -226,7 +317,7 @@ enum UpstreamKind {
 impl UpstreamKind {
     fn from(source_ty: &syn::Type, where_clause: &syn::WhereClause) -> Self {
         for pred in where_clause.predicates.iter() {
-            if let Some(pred) = Self::try_get_predicate_type(source_ty, pred) {
+            if let Some(pred) = try_get_predicate_type(source_ty, pred) {
                 if Self::contains_bound(quote_and_parse! { core::Observable }, pred) {
                     return Self::Observable;
                 }
@@ -239,25 +330,6 @@ impl UpstreamKind {
             }
         }
         panic! {"Couldn't identify source type"};
-    }
-
-    fn try_get_predicate_type<'a>(
-        ty: &syn::Type,
-        pred: &'a syn::WherePredicate,
-    ) -> Option<&'a syn::PredicateType> {
-        match pred {
-            syn::WherePredicate::Type(pred) => {
-                let bounded_ty = &pred.bounded_ty;
-                let ty = quote! { #ty };
-                let bounded_ty = quote! { #bounded_ty };
-                if ty.to_string() == bounded_ty.to_string() {
-                    Some(pred)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
     }
 
     fn contains_bound(path: syn::Path, pred: &syn::PredicateType) -> bool {
@@ -281,15 +353,40 @@ impl UpstreamKind {
             || *self == Self::SharedObservable
     }
 
-    fn is_flow(&self) -> bool {
-        *self == Self::Flow || *self == Self::LocalFlow || *self == Self::SharedFlow
-    }
-
     fn supports_local(&self) -> bool {
-        *self == Self::LocalObservable || *self == Self::LocalFlow
+        *self == Self::Observable
+            || *self == Self::Flow
+            || *self == Self::LocalObservable
+            || *self == Self::LocalFlow
     }
 
     fn supports_shared(&self) -> bool {
-        *self == Self::SharedObservable || *self == Self::SharedFlow
+        *self == Self::Observable
+            || *self == Self::Flow
+            || *self == Self::SharedObservable
+            || *self == Self::SharedFlow
+    }
+}
+
+fn is_predicate_for_type(ty: &syn::Type, pred: &syn::WherePredicate) -> bool {
+    try_get_predicate_type(ty, pred).is_some()
+}
+
+fn try_get_predicate_type<'a>(
+    ty: &syn::Type,
+    pred: &'a syn::WherePredicate,
+) -> Option<&'a syn::PredicateType> {
+    match pred {
+        syn::WherePredicate::Type(pred) => {
+            let bounded_ty = &pred.bounded_ty;
+            let ty = quote! { #ty };
+            let bounded_ty = quote! { #bounded_ty };
+            if ty.to_string() == bounded_ty.to_string() {
+                Some(pred)
+            } else {
+                None
+            }
+        }
+        _ => None,
     }
 }

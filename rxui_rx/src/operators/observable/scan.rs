@@ -1,6 +1,6 @@
 use crate::core;
 
-#[derive(new, reactive_operator)]
+#[derive(new, reactive_observable)]
 pub struct ObservableScan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::Observable,
@@ -11,48 +11,6 @@ where
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,
-}
-
-impl<'o, Observable, ItemOut, BinaryOp> core::LocalObservable<'o>
-    for ObservableScan<Observable, ItemOut, BinaryOp>
-where
-    Observable: core::LocalObservable<'o>,
-    ItemOut: Clone + 'o,
-    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + 'o,
-{
-    type Cancellable = Observable::Cancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
-    where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
-    {
-        self.observable.actual_subscribe(ScanObserver::new(
-            observer,
-            self.initial_value,
-            self.binary_op,
-        ));
-    }
-}
-
-impl<Observable, ItemOut, BinaryOp> core::SharedObservable
-    for ObservableScan<Observable, ItemOut, BinaryOp>
-where
-    Observable: core::SharedObservable,
-    ItemOut: Clone + Send + 'static,
-    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut + Send + 'static,
-{
-    type Cancellable = Observable::Cancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
-    where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
-    {
-        self.observable.actual_subscribe(ScanObserver::new(
-            observer,
-            self.initial_value,
-            self.binary_op,
-        ));
-    }
 }
 
 #[derive(new)]
