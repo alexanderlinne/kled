@@ -199,4 +199,19 @@ mod tests {
         assert_eq!(test_observer.status(), ObserverStatus::Completed);
         assert_eq!(test_observer.items(), vec![0, 1, 2, 3]);
     }
+
+    #[test]
+    fn observe_on_error() {
+        let scheduler = scheduler::ThreadPoolScheduler::default();
+        let test_observer = TestObserver::default();
+        let test_observable = TestObservable::default().annotate_item_type(());
+        test_observable
+            .clone()
+            .observe_on(&scheduler)
+            .subscribe(test_observer.clone());
+        test_observable.emit_error(());
+        scheduler.join();
+        assert_eq!(test_observer.status(), ObserverStatus::Error);
+        assert_eq!(test_observer.error(), Some(()));
+    }
 }
