@@ -1,7 +1,7 @@
-# rxui
+# rxui: Rust-native desktop GUI framework
 
-[![Build Status](https://travis-ci.org/alexanderlinne/rxui.svg?branch=master)](https://travis-ci.org/alexanderlinne/rxui)
-[![Coverage Status](https://coveralls.io/repos/github/alexanderlinne/rxui/badge.svg?branch=master)](https://coveralls.io/github/alexanderlinne/rxui?branch=master)
+[![Build Status](https://img.shields.io/travis/alexanderlinne/rxui/master?style=flat-square&logo=appveyor)](https://travis-ci.org/alexanderlinne/rxui)
+[![Coverage Status](https://img.shields.io/coveralls/github/alexanderlinne/rxui/master?style=flat-square&logo=appveyor)](https://coveralls.io/github/alexanderlinne/rxui?branch=master)
 
 ## Warning: WIP
 
