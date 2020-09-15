@@ -2,6 +2,7 @@ use crate::core;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct TestObserver<Cancellable, Item, Error> {
     data: Rc<RefCell<Data<Cancellable, Item, Error>>>,
 }
@@ -28,22 +29,7 @@ impl<Cancellable, Item, Error> Default for TestObserver<Cancellable, Item, Error
     }
 }
 
-impl<Cancellable, Item, Error> Clone for TestObserver<Cancellable, Item, Error> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),
-        }
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum ObserverStatus {
-    Unsubscribed,
-    Subscribed,
-    Error,
-    Completed,
-    Cancelled,
-}
+pub type ObserverStatus = crate::util::DownstreamStatus;
 
 impl<Cancellable, Item, Error> TestObserver<Cancellable, Item, Error>
 where
@@ -73,7 +59,7 @@ where
         self.data.borrow().cancellable.is_some()
     }
 
-    pub fn cancel_cancellable(&mut self) {
+    pub fn cancel(&mut self) {
         assert!(self.is_subscribed());
         let mut data = self.data.borrow_mut();
         data.cancellable.take().unwrap().cancel();

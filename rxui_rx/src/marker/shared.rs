@@ -2,31 +2,33 @@ use crate::core;
 use crate::operators;
 
 #[derive(Clone)]
-pub struct Shared<Observable> {
-    pub(crate) actual_observable: Observable,
+pub struct Shared<Actual> {
+    pub(crate) actual: Actual,
 }
 
-impl<Observable> Shared<Observable> {
-    pub fn new(actual_observable: Observable) -> Self {
-        Self { actual_observable }
+impl<Actual> Shared<Actual> {
+    pub fn new(actual: Actual) -> Self {
+        Self { actual }
     }
+}
 
+impl<Observable> Shared<Observable>
+where
+    Observable: core::Observable,
+{
     pub fn observe_on<Scheduler>(
         self,
-        scheduler: &Scheduler,
-    ) -> Shared<operators::ObservableObserveOn<Observable, Scheduler::Worker>>
+        scheduler: Scheduler,
+    ) -> Shared<operators::ObservableObserveOn<Observable, Scheduler>>
     where
         Self: Sized,
         Observable: core::SharedObservable,
         Observable::Cancellable: Send,
         Observable::Item: Send,
         Observable::Error: Send,
-        Scheduler: core::Scheduler,
+        Scheduler: core::Scheduler + Send,
     {
-        Shared::new(operators::ObservableObserveOn::new(
-            self.actual_observable,
-            scheduler.create_worker(),
-        ))
+        Shared::new(operators::ObservableObserveOn::new(self.actual, scheduler))
     }
 
     pub fn scan<ItemOut, BinaryOp>(
@@ -36,12 +38,11 @@ impl<Observable> Shared<Observable> {
     ) -> Shared<operators::ObservableScan<Observable, ItemOut, BinaryOp>>
     where
         Self: Sized,
-        Observable: core::Observable,
         ItemOut: Clone,
         BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut,
     {
         Shared::new(operators::ObservableScan::new(
-            self.actual_observable,
+            self.actual,
             initial_value,
             binary_op,
         ))
@@ -49,15 +50,15 @@ impl<Observable> Shared<Observable> {
 
     pub fn subscribe_on<Scheduler>(
         self,
-        scheduler: &Scheduler,
-    ) -> Shared<operators::ObservableSubscribeOn<Observable, Scheduler::Worker>>
+        scheduler: Scheduler,
+    ) -> Shared<operators::ObservableSubscribeOn<Observable, Scheduler>>
     where
         Self: Sized,
-        Scheduler: core::Scheduler,
+        Scheduler: core::Scheduler + Send,
     {
         Shared::new(operators::ObservableSubscribeOn::new(
-            self.actual_observable,
-            scheduler.create_worker(),
+            self.actual,
+            scheduler,
         ))
     }
 }
@@ -67,18 +68,18 @@ where
     T: core::Observer<Cancellable, Item, Error>,
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
-        self.actual_observable.on_subscribe(cancellable);
+        self.actual.on_subscribe(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
-        self.actual_observable.on_next(item);
+        self.actual.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        self.actual_observable.on_error(error);
+        self.actual.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        self.actual_observable.on_completed();
+        self.actual.on_completed();
     }
 }

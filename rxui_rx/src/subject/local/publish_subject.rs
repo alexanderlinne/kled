@@ -1,6 +1,6 @@
+use crate::cancellable::local::*;
 use crate::core;
-use crate::core::Emitter;
-use crate::emitter;
+use crate::core::{IntoObservableEmitter, ObservableEmitter};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -10,7 +10,7 @@ pub struct PublishSubject<'o, Cancellable, Item, Error> {
 
 struct Data<'o, Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    emitters: Vec<Box<dyn core::CancellableEmitter<Item, Error> + 'o>>,
+    emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + 'o>>,
 }
 
 impl<'o, Cancellable, Item, Error> Default for PublishSubject<'o, Cancellable, Item, Error> {
@@ -69,7 +69,7 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Cancellable = core::LocalCancellable;
+    type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
@@ -78,7 +78,7 @@ where
         self.data
             .borrow_mut()
             .emitters
-            .push(Box::new(emitter::local::FromObserver::new(observer)))
+            .push(Box::new(observer.into_emitter()))
     }
 }
 

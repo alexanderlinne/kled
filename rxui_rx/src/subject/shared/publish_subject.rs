@@ -1,6 +1,6 @@
+use crate::cancellable::shared::*;
 use crate::core;
-use crate::core::Emitter;
-use crate::emitter;
+use crate::core::{IntoSharedObservableEmitter, ObservableEmitter};
 use std::sync::{Arc, Mutex};
 
 pub struct PublishSubject<Cancellable, Item, Error> {
@@ -9,7 +9,7 @@ pub struct PublishSubject<Cancellable, Item, Error> {
 
 struct Data<Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    emitters: Vec<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>,
+    emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
 impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
@@ -67,7 +67,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Cancellable = core::SharedCancellable;
+    type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
@@ -77,7 +77,7 @@ where
             .lock()
             .unwrap()
             .emitters
-            .push(Box::new(emitter::shared::FromObserver::new(observer)))
+            .push(Box::new(observer.into_shared_emitter()))
     }
 }
 

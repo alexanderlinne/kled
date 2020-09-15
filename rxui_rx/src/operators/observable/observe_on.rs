@@ -4,37 +4,37 @@ use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-#[derive(new, reactive_observable)]
-pub struct ObservableObserveOn<Observable, Worker>
+#[derive(new, reactive_operator)]
+pub struct ObservableObserveOn<Observable, Scheduler>
 where
     Observable: core::SharedObservable,
     Observable::Cancellable: Send,
     Observable::Item: Send,
     Observable::Error: Send,
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
     #[upstream(downstream = "ObserveOnObserver")]
     observable: Observable,
-    worker: Worker,
+    scheduler: Scheduler,
 }
 
-struct ObserveOnObserver<Observer, Worker, Cancellable, Item, Error> {
+struct ObserveOnObserver<Observer, Scheduler, Cancellable, Item, Error> {
     task: Arc<ObserveOnTaskWrapper<Observer, Cancellable, Item, Error>>,
     sender: mpsc::Sender<Item>,
-    worker: Worker,
+    scheduler: Scheduler,
     phantom: PhantomData<Cancellable>,
 }
 
-impl<Observer, Worker, Cancellable, Item, Error>
-    ObserveOnObserver<Observer, Worker, Cancellable, Item, Error>
+impl<Observer, Scheduler, Cancellable, Item, Error>
+    ObserveOnObserver<Observer, Scheduler, Cancellable, Item, Error>
 where
     Cancellable: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
     Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
-    fn new(observer: Observer, worker: Worker) -> Self {
+    fn new(observer: Observer, scheduler: Scheduler) -> Self {
         let (sender, receiver) = mpsc::channel();
         ObserveOnObserver {
             task: Arc::new(ObserveOnTaskWrapper {
@@ -50,7 +50,7 @@ where
                 }),
             }),
             sender,
-            worker: worker.clone(),
+            scheduler: scheduler.clone(),
             phantom: PhantomData,
         }
     }
@@ -67,21 +67,21 @@ where
         };
         if last_pending_count == 0 {
             let task = self.task.clone();
-            self.worker.schedule(move || unsafe {
+            self.scheduler.schedule(move || unsafe {
                 (*task.inner.get()).drain();
             });
         }
     }
 }
 
-impl<Cancellable, Item, Error, Observer, Worker> core::Observer<Cancellable, Item, Error>
-    for ObserveOnObserver<Observer, Worker, Cancellable, Item, Error>
+impl<Cancellable, Item, Error, Observer, Scheduler> core::Observer<Cancellable, Item, Error>
+    for ObserveOnObserver<Observer, Scheduler, Cancellable, Item, Error>
 where
     Cancellable: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
     Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
         unsafe {
@@ -180,7 +180,7 @@ mod tests {
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
-            .observe_on(&scheduler)
+            .observe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
         assert_eq!(test_observer.status(), ObserverStatus::Completed);
@@ -193,7 +193,7 @@ mod tests {
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_shared_observable()
-            .observe_on(&scheduler)
+            .observe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
         assert_eq!(test_observer.status(), ObserverStatus::Completed);
@@ -207,7 +207,7 @@ mod tests {
         let test_observable = TestObservable::default().annotate_item_type(());
         test_observable
             .clone()
-            .observe_on(&scheduler)
+            .observe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         test_observable.emit_error(());
         scheduler.join();

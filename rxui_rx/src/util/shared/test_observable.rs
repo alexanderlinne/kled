@@ -1,27 +1,21 @@
+use crate::cancellable::shared::*;
 use crate::core;
-use crate::emitter;
+use crate::core::IntoSharedObservableEmitter;
 use std::sync::{Arc, Mutex};
 
+#[derive(Clone)]
 pub struct TestObservable<Item, Error> {
     data: Arc<Mutex<Data<Item, Error>>>,
 }
 
 struct Data<Item, Error> {
-    emitter: Option<Box<dyn core::CancellableEmitter<Item, Error> + Send + 'static>>,
+    emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
 impl<'o, Item, Error> Default for TestObservable<Item, Error> {
     fn default() -> Self {
         Self {
             data: Arc::new(Mutex::new(Data { emitter: None })),
-        }
-    }
-}
-
-impl<'o, Item, Error> Clone for TestObservable<Item, Error> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),
         }
     }
 }
@@ -86,15 +80,14 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Cancellable = core::SharedCancellable;
+    type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        self.data.lock().unwrap().emitter =
-            Some(Box::new(emitter::shared::FromObserver::new(observer)));
+        self.data.lock().unwrap().emitter = Some(Box::new(observer.into_shared_emitter()));
     }
 }
 

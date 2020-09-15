@@ -1,6 +1,6 @@
 use crate::core;
 
-#[derive(new, reactive_observable)]
+#[derive(new, reactive_operator)]
 pub struct ObservableScan<Observable, ItemOut, BinaryOp>
 where
     Observable: core::Observable,
@@ -45,11 +45,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::util;
+    use crate::util::local::*;
 
     #[test]
     fn local_scan() {
-        use util::local::*;
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()

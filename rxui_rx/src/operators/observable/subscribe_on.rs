@@ -1,18 +1,18 @@
 use crate::core;
 
 #[derive(new)]
-pub struct ObservableSubscribeOn<Observable, Worker>
+pub struct ObservableSubscribeOn<Observable, Scheduler>
 where
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
     observable: Observable,
-    worker: Worker,
+    scheduler: Scheduler,
 }
 
-impl<Observable, Worker> core::SharedObservable for ObservableSubscribeOn<Observable, Worker>
+impl<Observable, Scheduler> core::SharedObservable for ObservableSubscribeOn<Observable, Scheduler>
 where
     Observable: core::SharedObservable + Send + 'static,
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
     type Cancellable = Observable::Cancellable;
 
@@ -21,16 +21,16 @@ where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         let observable = self.observable;
-        self.worker.schedule(move || {
+        self.scheduler.schedule(move || {
             observable.actual_subscribe(observer);
         });
     }
 }
 
-impl<Observable, Worker> core::Observable for ObservableSubscribeOn<Observable, Worker>
+impl<Observable, Scheduler> core::Observable for ObservableSubscribeOn<Observable, Scheduler>
 where
     Observable: core::Observable,
-    Worker: core::Worker + Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
 {
     type Item = Observable::Item;
     type Error = Observable::Error;
@@ -48,7 +48,7 @@ mod tests {
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
-            .subscribe_on(&scheduler)
+            .subscribe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
         assert_eq!(test_observer.status(), ObserverStatus::Completed);
@@ -61,7 +61,7 @@ mod tests {
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_shared_observable()
-            .subscribe_on(&scheduler)
+            .subscribe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
         assert_eq!(test_observer.status(), ObserverStatus::Completed);

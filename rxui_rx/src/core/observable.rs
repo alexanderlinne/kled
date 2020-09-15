@@ -1,5 +1,42 @@
 use crate::core;
+use crate::marker;
 use crate::operators;
+
+pub trait LocalObservable<'o>: Observable {
+    type Cancellable: core::Cancellable;
+
+    fn actual_subscribe<Observer>(self, observer: Observer)
+    where
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o;
+
+    fn scan<ItemOut, BinaryOp>(
+        self,
+        initial_value: ItemOut,
+        binary_op: BinaryOp,
+    ) -> operators::ObservableScan<Self, ItemOut, BinaryOp>
+    where
+        Self: Sized,
+        ItemOut: Clone,
+        BinaryOp: FnMut(ItemOut, Self::Item) -> ItemOut,
+    {
+        operators::ObservableScan::new(self, initial_value, binary_op)
+    }
+}
+
+pub trait SharedObservable: Observable {
+    type Cancellable: core::Cancellable;
+
+    fn actual_subscribe<Observer>(self, observer: Observer)
+    where
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static;
+
+    fn into_shared(self) -> marker::Shared<Self>
+    where
+        Self: Sized,
+    {
+        marker::Shared::new(self)
+    }
+}
 
 /// A non-backpressured source of [`Item`]s to which an [`Observer`] may subscribe.
 ///
@@ -16,40 +53,34 @@ use crate::operators;
 /// [`LocalObservable`]: trait.LocalObservable.html
 /// [`SharedObservable`]: trait.SharedObservable.html
 pub trait Observable {
-    /// The type of items emitted by this observable.
+    /// The type of items emitted by this observable
     type Item;
 
-    /// The type of error which may be emitted by this observable.
+    /// The type of error which may be emitted by this observable
     type Error;
 
     fn observe_on<Scheduler>(
         self,
-        scheduler: &Scheduler,
-    ) -> core::Shared<operators::ObservableObserveOn<Self, Scheduler::Worker>>
+        scheduler: Scheduler,
+    ) -> marker::Shared<operators::ObservableObserveOn<Self, Scheduler>>
     where
-        Self: core::SharedObservable + Sized,
+        Self: SharedObservable + Sized,
         Self::Cancellable: Send,
         Self::Item: Send,
         Self::Error: Send,
-        Scheduler: core::Scheduler,
+        Scheduler: core::Scheduler + Send,
     {
-        core::Shared::new(operators::ObservableObserveOn::new(
-            self,
-            scheduler.create_worker(),
-        ))
+        marker::Shared::new(operators::ObservableObserveOn::new(self, scheduler))
     }
 
     fn subscribe_on<Scheduler>(
         self,
-        scheduler: &Scheduler,
-    ) -> core::Shared<operators::ObservableSubscribeOn<Self, Scheduler::Worker>>
+        scheduler: Scheduler,
+    ) -> marker::Shared<operators::ObservableSubscribeOn<Self, Scheduler>>
     where
         Self: Sized,
-        Scheduler: core::Scheduler,
+        Scheduler: core::Scheduler + Send,
     {
-        core::Shared::new(operators::ObservableSubscribeOn::new(
-            self,
-            scheduler.create_worker(),
-        ))
+        marker::Shared::new(operators::ObservableSubscribeOn::new(self, scheduler))
     }
 }

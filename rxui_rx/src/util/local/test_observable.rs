@@ -1,29 +1,22 @@
+use crate::cancellable::local::*;
 use crate::core;
-use crate::core::{CancellableEmitter, Emitter};
-use crate::emitter;
+use crate::core::IntoObservableEmitter;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct TestObservable<'o, Item, Error> {
     data: Rc<RefCell<Data<'o, Item, Error>>>,
 }
 
 struct Data<'o, Item, Error> {
-    emitter: Option<Box<dyn core::CancellableEmitter<Item, Error> + 'o>>,
+    emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + 'o>>,
 }
 
 impl<'o, Item, Error> Default for TestObservable<'o, Item, Error> {
     fn default() -> Self {
         Self {
             data: Rc::new(RefCell::new(Data { emitter: None })),
-        }
-    }
-}
-
-impl<'o, Item, Error> Clone for TestObservable<'o, Item, Error> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),
         }
     }
 }
@@ -88,15 +81,14 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Cancellable = core::LocalCancellable;
+    type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
     {
         assert!(!self.has_observer());
-        self.data.borrow_mut().emitter =
-            Some(Box::new(emitter::local::FromObserver::new(observer)));
+        self.data.borrow_mut().emitter = Some(Box::new(observer.into_emitter()));
     }
 }
 
