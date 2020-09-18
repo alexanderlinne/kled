@@ -25,7 +25,7 @@ impl BoolSubscriptionStub {
         }
     }
 
-    pub fn requested(&self) -> usize {
+    pub fn get_and_reset_requested(&self) -> usize {
         self.data.requested.swap(0, Ordering::SeqCst)
     }
 

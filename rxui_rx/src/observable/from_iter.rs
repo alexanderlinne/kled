@@ -83,20 +83,3 @@ where
         IntoIterObservable::new(self)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use crate::prelude::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
-    #[test]
-    fn iterable_into_observable() {
-        let vec = vec![0, 1, 2, 3];
-        let sum = Rc::new(RefCell::new(0));
-        let sum_move = sum.clone();
-        vec.into_observable()
-            .subscribe_next(move |v| (*sum_move.borrow_mut()) += v);
-        assert_eq!(*sum.borrow(), 6);
-    }
-}

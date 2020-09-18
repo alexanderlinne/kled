@@ -37,18 +37,7 @@ where
     fn new(observer: Observer, scheduler: Scheduler) -> Self {
         let (sender, receiver) = mpsc::channel();
         ObserveOnObserver {
-            task: Arc::new(ObserveOnTaskWrapper {
-                inner: UnsafeCell::new(ObserveOnTask {
-                    receiver,
-                    data: Mutex::new(Data {
-                        pending_count: 0,
-                        done: false,
-                        error: None,
-                    }),
-                    observer,
-                    phantom: PhantomData,
-                }),
-            }),
+            task: Arc::new(ObserveOnTaskWrapper::new(receiver, observer)),
             sender,
             scheduler: scheduler.clone(),
             phantom: PhantomData,
@@ -110,6 +99,14 @@ struct ObserveOnTaskWrapper<Observer, Cancellable, Item, Error> {
     inner: UnsafeCell<ObserveOnTask<Observer, Cancellable, Item, Error>>,
 }
 
+impl<Observer, Cancellable, Item, Error> ObserveOnTaskWrapper<Observer, Cancellable, Item, Error> {
+    pub fn new(receiver: mpsc::Receiver<Item>, observer: Observer) -> Self {
+        Self {
+            inner: UnsafeCell::new(ObserveOnTask::new(receiver, observer)),
+        }
+    }
+}
+
 unsafe impl<Observer, Cancellable, Item, Error> Send
     for ObserveOnTaskWrapper<Observer, Cancellable, Item, Error>
 {
@@ -126,10 +123,31 @@ struct ObserveOnTask<Observer, Cancellable, Item, Error> {
     phantom: PhantomData<Cancellable>,
 }
 
+impl<Observer, Cancellable, Item, Error> ObserveOnTask<Observer, Cancellable, Item, Error> {
+    pub fn new(receiver: mpsc::Receiver<Item>, observer: Observer) -> Self {
+        Self {
+            receiver,
+            data: Mutex::new(Data::default()),
+            observer,
+            phantom: PhantomData,
+        }
+    }
+}
+
 struct Data<Error> {
     pending_count: usize,
     done: bool,
     error: Option<Error>,
+}
+
+impl<Error> Default for Data<Error> {
+    fn default() -> Self {
+        Self {
+            pending_count: 0,
+            done: false,
+            error: None,
+        }
+    }
 }
 
 impl<Observer, Cancellable, Item, Error> ObserveOnTask<Observer, Cancellable, Item, Error>

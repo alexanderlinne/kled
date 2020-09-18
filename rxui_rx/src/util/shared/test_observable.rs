@@ -12,7 +12,7 @@ struct Data<Item, Error> {
     emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
-impl<'o, Item, Error> Default for TestObservable<Item, Error> {
+impl<Item, Error> Default for TestObservable<Item, Error> {
     fn default() -> Self {
         Self {
             data: Arc::new(Mutex::new(Data { emitter: None })),

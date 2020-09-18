@@ -1,6 +1,5 @@
 use crate::flow;
 use crate::util::distribute_value;
-use std::cmp::min;
 
 pub trait FlowEmitter<Item, Error> {
     fn on_next(&mut self, item: Item);
@@ -10,8 +9,6 @@ pub trait FlowEmitter<Item, Error> {
     fn is_cancelled(&self) -> bool {
         false
     }
-
-    fn requested(&self) -> usize;
 }
 
 impl<'o, Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Error> + 'o> {
@@ -30,10 +27,6 @@ impl<'o, Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Err
     fn is_cancelled(&self) -> bool {
         (&**self).is_cancelled()
     }
-
-    fn requested(&self) -> usize {
-        (&**self).requested()
-    }
 }
 
 impl<Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Error> + Send + 'static> {
@@ -51,10 +44,6 @@ impl<Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Error> 
 
     fn is_cancelled(&self) -> bool {
         (&**self).is_cancelled()
-    }
-
-    fn requested(&self) -> usize {
-        (&**self).requested()
     }
 }
 
@@ -80,12 +69,6 @@ where
             is_cancelled && item.is_cancelled()
         })
     }
-
-    fn requested(&self) -> usize {
-        self.iter().fold(usize::MAX, |min_requested, item| {
-            min(min_requested, item.requested())
-        })
-    }
 }
 
 impl<Item, Error> FlowEmitter<Item, Error>
@@ -109,12 +92,6 @@ where
     fn is_cancelled(&self) -> bool {
         self.iter().fold(true, |is_cancelled, item| {
             is_cancelled && item.is_cancelled()
-        })
-    }
-
-    fn requested(&self) -> usize {
-        self.iter().fold(usize::MAX, |min_requested, item| {
-            min(min_requested, item.requested())
         })
     }
 }

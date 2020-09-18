@@ -25,7 +25,7 @@ impl BoolSubscriptionStub {
         }
     }
 
-    pub fn requested(&self) -> usize {
+    pub fn get_and_reset_requested(&self) -> usize {
         let mut data = self.data.borrow_mut();
         let result = data.requested;
         data.requested = 0;

@@ -1,6 +1,7 @@
 use crate::core;
 use crate::flow;
 use crate::marker;
+use crate::operators;
 
 #[derive(Clone)]
 pub struct Flow<Actual> {
@@ -17,6 +18,23 @@ impl<Actual> Flow<Actual> {
         Self: Sized,
     {
         marker::Shared::new(self)
+    }
+
+    pub fn observe_on<Scheduler>(
+        self,
+        scheduler: Scheduler,
+    ) -> marker::Shared<marker::Flow<operators::FlowObserveOn<Actual, Scheduler>>>
+    where
+        Actual: core::SharedFlow + Sized,
+        Actual::Subscription: Send,
+        Actual::Item: Send,
+        Actual::Error: Send,
+        Scheduler: core::Scheduler + Send,
+    {
+        marker::Shared::new(marker::Flow::new(operators::FlowObserveOn::new(
+            self.actual,
+            scheduler,
+        )))
     }
 }
 

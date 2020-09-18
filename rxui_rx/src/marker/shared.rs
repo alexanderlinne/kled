@@ -1,4 +1,5 @@
 use crate::core;
+use crate::marker;
 use crate::operators;
 
 #[derive(Clone)]
@@ -60,6 +61,29 @@ where
             self.actual,
             scheduler,
         ))
+    }
+}
+
+impl<Flow> Shared<marker::Flow<Flow>>
+where
+    Flow: core::Flow,
+{
+    pub fn observe_on<Scheduler>(
+        self,
+        scheduler: Scheduler,
+    ) -> Shared<marker::Flow<operators::FlowObserveOn<Flow, Scheduler>>>
+    where
+        Self: Sized,
+        Flow: core::SharedFlow,
+        Flow::Subscription: Send,
+        Flow::Item: Send,
+        Flow::Error: Send,
+        Scheduler: core::Scheduler + Send,
+    {
+        Shared::new(marker::Flow::new(operators::FlowObserveOn::new(
+            self.actual.actual,
+            scheduler,
+        )))
     }
 }
 
