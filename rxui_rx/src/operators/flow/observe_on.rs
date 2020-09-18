@@ -232,7 +232,7 @@ mod tests {
             .clone()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
-        test_flow.emit_error(flow::Error::Upstream(()));
+        test_flow.emit_error(());
         scheduler.join();
         assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
         assert_eq!(test_subscriber.error(), Some(flow::Error::Upstream(())));

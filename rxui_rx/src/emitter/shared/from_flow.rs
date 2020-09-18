@@ -25,7 +25,7 @@ mod tests {
     use crate::util::shared::*;
 
     #[test]
-    fn create_missing() {
+    fn missing() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]
@@ -38,7 +38,7 @@ mod tests {
     }
 
     #[test]
-    fn create_drop() {
+    fn drop() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]
@@ -48,5 +48,21 @@ mod tests {
         scheduler.join();
         assert_eq!(test_subscriber.status(), ObserverStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![0]);
+    }
+
+    #[test]
+    fn drop_error() {
+        let scheduler = scheduler::ThreadPoolScheduler::default();
+        let test_subscriber = TestSubscriber::default();
+        let test_flow = TestFlow::new(flow::BackpressureStrategy::Drop);
+        test_flow
+            .clone()
+            .observe_on(scheduler.clone())
+            .subscribe(test_subscriber.clone());
+        test_flow.emit(0);
+        test_flow.emit_error(());
+        scheduler.join();
+        assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
+        assert_eq!(test_subscriber.error(), Some(flow::Error::Upstream(())));
     }
 }

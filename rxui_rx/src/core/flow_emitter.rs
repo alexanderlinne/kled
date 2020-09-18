@@ -1,9 +1,8 @@
-use crate::flow;
 use crate::util::distribute_value;
 
 pub trait FlowEmitter<Item, Error> {
     fn on_next(&mut self, item: Item);
-    fn on_error(&mut self, error: flow::Error<Error>);
+    fn on_error(&mut self, error: Error);
     fn on_completed(&mut self);
 
     fn is_cancelled(&self) -> bool {
@@ -16,7 +15,7 @@ impl<'o, Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Err
         (&mut **self).on_next(item)
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    fn on_error(&mut self, error: Error) {
         (&mut **self).on_error(error)
     }
 
@@ -34,7 +33,7 @@ impl<Item, Error> FlowEmitter<Item, Error> for Box<dyn FlowEmitter<Item, Error> 
         (&mut **self).on_next(item)
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    fn on_error(&mut self, error: Error) {
         (&mut **self).on_error(error)
     }
 
@@ -56,7 +55,7 @@ where
         distribute_value(self, |o, i| o.on_next(i), item);
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    fn on_error(&mut self, error: Error) {
         distribute_value(self, |o, e| o.on_error(e), error);
     }
 
@@ -81,7 +80,7 @@ where
         distribute_value(self, |o, i| o.on_next(i), item);
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    fn on_error(&mut self, error: Error) {
         distribute_value(self, |o, e| o.on_error(e), error);
     }
 

@@ -46,8 +46,8 @@ where
         }
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
-        self.subscriber.on_error(error);
+    fn on_error(&mut self, error: Error) {
+        self.subscriber.on_error(flow::Error::Upstream(error));
     }
 
     fn on_completed(&mut self) {

@@ -1,24 +1,25 @@
 use crate::core;
-use crate::core::IntoSharedFlowEmitter;
+use crate::core::IntoFlowEmitter;
 use crate::flow;
 use crate::marker;
-use crate::subscription::shared::*;
-use std::sync::{Arc, Mutex};
+use crate::subscription::local::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct TestFlow<Item, Error> {
-    data: Arc<Mutex<Data<Item, Error>>>,
+pub struct TestFlow<'o, Item, Error> {
+    data: Rc<RefCell<Data<'o, Item, Error>>>,
 }
 
-struct Data<Item, Error> {
+struct Data<'o, Item, Error> {
     strategy: flow::BackpressureStrategy,
-    emitter: Option<Box<dyn core::FlowEmitter<Item, Error> + Send + 'static>>,
+    emitter: Option<Box<dyn core::FlowEmitter<Item, Error> + 'o>>,
 }
 
-impl<Item, Error> TestFlow<Item, Error> {
+impl<'o, Item, Error> TestFlow<'o, Item, Error> {
     pub fn default() -> marker::Flow<Self> {
         marker::Flow::new(Self {
-            data: Arc::new(Mutex::new(Data {
+            data: Rc::new(RefCell::new(Data {
                 strategy: flow::BackpressureStrategy::Missing,
                 emitter: None,
             })),
@@ -27,7 +28,7 @@ impl<Item, Error> TestFlow<Item, Error> {
 
     pub fn new(strategy: flow::BackpressureStrategy) -> marker::Flow<Self> {
         marker::Flow::new(Self {
-            data: Arc::new(Mutex::new(Data {
+            data: Rc::new(RefCell::new(Data {
                 strategy,
                 emitter: None,
             })),
@@ -35,13 +36,13 @@ impl<Item, Error> TestFlow<Item, Error> {
     }
 }
 
-impl<Item, Error> TestFlow<Item, Error> {
+impl<'o, Item, Error> TestFlow<'o, Item, Error> {
     pub fn has_observer(&self) -> bool {
-        self.data.lock().unwrap().emitter.is_some()
+        self.data.borrow().emitter.is_some()
     }
 }
 
-impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
+impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
     pub fn annotate_item_type(self, _: Item) -> Self {
         self
     }
@@ -56,7 +57,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.data.borrow().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -64,7 +65,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -81,7 +82,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -89,31 +90,31 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
     }
 }
 
-impl<Item, Error> core::SharedFlow for TestFlow<Item, Error>
+impl<'o, Item, Error> core::LocalFlow<'o> for TestFlow<'o, Item, Error>
 where
-    Item: Send + 'static,
-    Error: Send + 'static,
+    Item: 'o,
+    Error: 'o,
 {
     type Subscription = BoolSubscription;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + 'o,
     {
         assert!(!self.has_observer());
-        let mut data = self.data.lock().unwrap();
-        data.emitter = Some(Box::new(subscriber.into_shared_emitter(data.strategy)));
+        let mut data = self.data.borrow_mut();
+        data.emitter = Some(Box::new(subscriber.into_emitter(data.strategy)));
     }
 }
 
-impl<Item, Error> core::Flow for TestFlow<Item, Error> {
+impl<'o, Item, Error> core::Flow for TestFlow<'o, Item, Error> {
     type Item = Item;
     type Error = Error;
 }
