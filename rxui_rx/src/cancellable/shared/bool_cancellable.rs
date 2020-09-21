@@ -17,10 +17,10 @@ impl Default for BoolCancellable {
 
 impl core::Cancellable for BoolCancellable {
     fn cancel(&self) {
-        self.cancelled.store(true, Ordering::Release);
+        self.cancelled.store(true, Ordering::Relaxed);
     }
 
     fn is_cancelled(&self) -> bool {
-        self.cancelled.load(Ordering::Acquire)
+        self.cancelled.load(Ordering::Relaxed)
     }
 }

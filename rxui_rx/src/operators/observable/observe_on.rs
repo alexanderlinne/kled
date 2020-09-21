@@ -155,7 +155,7 @@ where
     Observer: core::Observer<Cancellable, Item, Error>,
 {
     pub fn drain(&mut self) {
-        let mut expected_count: usize = 1;
+        let mut expected_count: usize = 0;
         loop {
             for _ in 0..expected_count {
                 let mut data = self.data.lock().unwrap();

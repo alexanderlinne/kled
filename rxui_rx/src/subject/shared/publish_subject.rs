@@ -99,7 +99,7 @@ mod tests {
         let subject = PublishSubject::default().into_shared();
 
         let subject2 = subject.clone();
-        let barrier = Arc::new(Barrier::new(1));
+        let barrier = Arc::new(Barrier::new(2));
         let barrier2 = barrier.clone();
         let handle = thread::spawn(move || {
             barrier2.wait();

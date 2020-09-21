@@ -26,11 +26,11 @@ impl BoolSubscriptionStub {
     }
 
     pub fn get_and_reset_requested(&self) -> usize {
-        self.data.requested.swap(0, Ordering::SeqCst)
+        self.data.requested.swap(0, Ordering::Relaxed)
     }
 
     pub fn is_cancelled(&self) -> bool {
-        self.data.cancelled.load(Ordering::Acquire)
+        self.data.cancelled.load(Ordering::Relaxed)
     }
 }
 
@@ -41,15 +41,15 @@ pub struct BoolSubscription {
 
 impl core::Subscription for BoolSubscription {
     fn cancel(&self) {
-        self.data.cancelled.store(true, Ordering::Release);
+        self.data.cancelled.store(true, Ordering::Relaxed);
     }
 
     fn is_cancelled(&self) -> bool {
-        self.data.cancelled.load(Ordering::Acquire)
+        self.data.cancelled.load(Ordering::Relaxed)
     }
 
     fn request(&self, count: usize) {
-        self.data.requested.fetch_add(count, Ordering::SeqCst);
+        self.data.requested.fetch_add(count, Ordering::Relaxed);
     }
 }
 
