@@ -2,7 +2,6 @@ use crate::core;
 use crate::core::IntoFlowEmitter;
 use crate::flow;
 use crate::marker;
-use crate::subscription::local::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -88,7 +87,7 @@ impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
         }
     }
 
-    pub fn emit_on_completed(&self) {
+    pub fn emit_completed(&self) {
         assert!(self.has_observer());
         match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
@@ -102,7 +101,7 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + 'o>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

@@ -3,11 +3,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct BoolSubscriptionStub {
+pub struct AccumulateSubscriptionStub {
     data: Rc<RefCell<Data>>,
 }
 
-impl Default for BoolSubscriptionStub {
+impl Default for AccumulateSubscriptionStub {
     fn default() -> Self {
         Self {
             data: Rc::new(RefCell::new(Data {
@@ -18,9 +18,9 @@ impl Default for BoolSubscriptionStub {
     }
 }
 
-impl BoolSubscriptionStub {
-    pub fn subscription(&self) -> BoolSubscription {
-        BoolSubscription {
+impl AccumulateSubscriptionStub {
+    pub fn subscription(&self) -> AccumulateSubscription {
+        AccumulateSubscription {
             data: self.data.clone(),
         }
     }
@@ -38,11 +38,11 @@ impl BoolSubscriptionStub {
 }
 
 #[derive(Clone)]
-pub struct BoolSubscription {
+pub struct AccumulateSubscription {
     data: Rc<RefCell<Data>>,
 }
 
-impl core::Subscription for BoolSubscription {
+impl core::Subscription for AccumulateSubscription {
     fn cancel(&self) {
         (*self.data.borrow_mut()).cancelled = true;
     }

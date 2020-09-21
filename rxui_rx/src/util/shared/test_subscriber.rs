@@ -2,7 +2,6 @@ use crate::core;
 use crate::flow;
 use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
 pub struct TestSubscriber<Subscription, Item, Error> {
     data: Arc<Mutex<Data<Subscription, Item, Error>>>,
 }
@@ -35,6 +34,14 @@ impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
                 request_on_subscribe,
                 request_on_next: 0,
             })),
+        }
+    }
+}
+
+impl<Subscription, Item, Error> Clone for TestSubscriber<Subscription, Item, Error> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
         }
     }
 }
@@ -74,6 +81,17 @@ where
         let mut data = self.data.lock().unwrap();
         data.subscription.take().unwrap().cancel();
         data.is_cancelled = true;
+    }
+
+    pub fn request_direct(&self, count: usize) {
+        assert_eq!(self.status(), SubscriberStatus::Subscribed);
+        self.data
+            .lock()
+            .unwrap()
+            .subscription
+            .as_ref()
+            .expect("")
+            .request(count)
     }
 
     pub fn request_on_next(&mut self, count: usize) {

@@ -3,13 +3,12 @@ use crate::flow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Clone)]
 pub struct TestSubscriber<Subscription, Item, Error> {
-    data: Rc<RefCell<Data<Subscription, Item, Error>>>,
+    subscription: Rc<RefCell<Option<Subscription>>>,
+    data: Rc<RefCell<Data<Item, Error>>>,
 }
 
-struct Data<Subscription, Item, Error> {
-    subscription: Option<Subscription>,
+struct Data<Item, Error> {
     items: Vec<Item>,
     error: Option<flow::Error<Error>>,
     is_completed: bool,
@@ -27,8 +26,8 @@ impl<Subscription, Item, Error> Default for TestSubscriber<Subscription, Item, E
 impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
     pub fn new(request_on_subscribe: usize) -> Self {
         Self {
+            subscription: Rc::new(RefCell::new(None)),
             data: Rc::new(RefCell::new(Data {
-                subscription: None,
                 items: vec![],
                 error: None,
                 is_completed: false,
@@ -36,6 +35,15 @@ impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
                 request_on_subscribe,
                 request_on_next: 0,
             })),
+        }
+    }
+}
+
+impl<Subscription, Item, Error> Clone for TestSubscriber<Subscription, Item, Error> {
+    fn clone(&self) -> Self {
+        Self {
+            subscription: self.subscription.clone(),
+            data: self.data.clone(),
         }
     }
 }
@@ -67,14 +75,19 @@ where
     }
 
     pub fn is_subscribed(&self) -> bool {
-        self.data.borrow().subscription.is_some()
+        self.subscription.borrow().is_some()
     }
 
     pub fn cancel(&mut self) {
         assert!(self.is_subscribed());
         let mut data = self.data.borrow_mut();
-        data.subscription.take().unwrap().cancel();
+        self.subscription.borrow().as_ref().unwrap().cancel();
         data.is_cancelled = true;
+    }
+
+    pub fn request_direct(&self, count: usize) {
+        assert_eq!(self.status(), SubscriberStatus::Subscribed);
+        self.subscription.borrow().as_ref().unwrap().request(count)
     }
 
     pub fn request_on_next(&mut self, count: usize) {
@@ -111,15 +124,15 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         assert_eq!(self.status(), SubscriberStatus::Unsubscribed);
-        let mut data = self.data.borrow_mut();
-        subscription.request(data.request_on_subscribe);
-        data.subscription = Some(subscription);
+        subscription.request(self.data.borrow().request_on_subscribe);
+        *self.subscription.borrow_mut() = Some(subscription);
     }
     fn on_next(&mut self, item: Item) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
         let mut data = self.data.borrow_mut();
         data.items.push(item);
-        data.subscription
+        self.subscription
+            .borrow()
             .as_ref()
             .expect("")
             .request(data.request_on_next);

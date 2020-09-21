@@ -5,3 +5,31 @@ pub trait Subscription {
 
     fn request(&self, count: usize);
 }
+
+impl<'o> Subscription for Box<dyn Subscription + 'o> {
+    fn cancel(&self) {
+        (&**self).cancel()
+    }
+
+    fn is_cancelled(&self) -> bool {
+        (&**self).is_cancelled()
+    }
+
+    fn request(&self, count: usize) {
+        (&**self).request(count)
+    }
+}
+
+impl Subscription for Box<dyn Subscription + Send + 'static> {
+    fn cancel(&self) {
+        (&**self).cancel()
+    }
+
+    fn is_cancelled(&self) -> bool {
+        (&**self).is_cancelled()
+    }
+
+    fn request(&self, count: usize) {
+        (&**self).request(count)
+    }
+}

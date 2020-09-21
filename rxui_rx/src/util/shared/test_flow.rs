@@ -2,7 +2,6 @@ use crate::core;
 use crate::core::IntoSharedFlowEmitter;
 use crate::flow;
 use crate::marker;
-use crate::subscription::shared::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -87,7 +86,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
         }
     }
 
-    pub fn emit_on_completed(&self) {
+    pub fn emit_completed(&self) {
         assert!(self.has_observer());
         match self.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
@@ -101,7 +100,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + Send + 'static>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

@@ -2,7 +2,6 @@ use crate::core;
 use crate::core::{IntoFlowEmitter, IntoSharedFlowEmitter};
 use crate::flow;
 use crate::marker;
-use crate::subscription;
 use std::marker::PhantomData;
 
 #[derive(new, Clone)]
@@ -19,7 +18,7 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = subscription::local::BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + 'o>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
@@ -36,7 +35,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = subscription::shared::BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + Send + 'static>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

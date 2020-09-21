@@ -1,10 +1,11 @@
 use crate::core;
 use crate::flow;
-use crate::subscription::shared::*;
 
 impl<Subscriber, Item, Error> core::IntoSharedFlowEmitter<Item, Error> for Subscriber
 where
-    Subscriber: core::Subscriber<BoolSubscription, Item, Error> + Send + 'static,
+    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
+        + Send
+        + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {

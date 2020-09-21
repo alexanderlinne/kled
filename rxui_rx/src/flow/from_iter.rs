@@ -2,7 +2,6 @@ use crate::core;
 use crate::core::{FlowEmitter, IntoFlowEmitter, IntoSharedFlowEmitter};
 use crate::flow;
 use crate::marker;
-use crate::subscription::{local, shared};
 use crate::util;
 
 #[doc(hidden)]
@@ -31,8 +30,9 @@ where
 impl<'o, IntoIter> core::LocalFlow<'o> for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator,
+    IntoIter::Item: 'o,
 {
-    type Subscription = local::BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + 'o>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
@@ -57,7 +57,7 @@ where
     IntoIter: IntoIterator,
     IntoIter::Item: Send + 'static,
 {
-    type Subscription = shared::BoolSubscription;
+    type Subscription = Box<dyn core::Subscription + Send + 'static>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

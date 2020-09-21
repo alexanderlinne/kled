@@ -5,17 +5,19 @@ use std::marker::PhantomData;
 
 pub struct MissingEmitter<Subscriber, Item, Error> {
     subscriber: Subscriber,
-    stub: BoolSubscriptionStub,
+    stub: IgnoreSubscriptionStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Subscriber, Item, Error> MissingEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<BoolSubscription, Item, Error> + Send + 'static,
+    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
+        + Send
+        + 'static,
 {
     pub fn new(mut subscriber: Subscriber) -> Self {
-        let stub = BoolSubscriptionStub::default();
-        subscriber.on_subscribe(stub.subscription());
+        let stub = IgnoreSubscriptionStub::default();
+        subscriber.on_subscribe(Box::new(stub.subscription()));
         Self {
             subscriber,
             stub,
@@ -27,7 +29,9 @@ where
 impl<Subscriber, Item, Error> core::FlowEmitter<Item, Error>
     for MissingEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<BoolSubscription, Item, Error> + Send + 'static,
+    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
+        + Send
+        + 'static,
 {
     fn on_next(&mut self, item: Item) {
         self.subscriber.on_next(item);
