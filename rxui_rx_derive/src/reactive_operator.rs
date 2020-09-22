@@ -48,6 +48,13 @@ fn derive_struct(
 fn try_parse_field<'a>(field: &'a syn::Field) -> Option<Field<'a>> {
     match get_attr_by_name(&field.attrs, "upstream") {
         Some(_) => None,
+        None => parse_field(field),
+    }
+}
+
+fn parse_field<'a>(field: &'a syn::Field) -> Option<Field<'a>> {
+    match get_attr_by_name(&field.attrs, "reactive_operator") {
+        Some(_) => None,
         None => Some(Field::new(field)),
     }
 }
@@ -249,10 +256,19 @@ fn generate_actual_subscribe_impl(
     );
     let upstream_name = &source.field.ident;
     let downstream_ty = &source.settings.downstream_ty;
+    let subscription_ty = match &source.settings.subscription_ty {
+        Some(subscription_ty) => quote! { #subscription_ty },
+        None => quote! {#source_type :: #type_param_ident},
+    };
     let field_idents = data_fields.iter().map(|f| &f.ident);
-    let lifetime_impl_params_with_comma = lifetime_impl_params.as_ref().map(|t| quote! {#t,});
-    let lifetime_impl_params_with_plus = lifetime_impl_params.as_ref().map(|t| quote! {+ #t});
     let lifetime_impl_params_with_lg = lifetime_impl_params.as_ref().map(|t| quote! {< #t >});
+    let lifetime_impl_params_with_plus = lifetime_impl_params.as_ref().map(|t| quote! {+ #t});
+    let lifetime_impl_params = if contains_o_lifetime(&ast.generics) {
+        None
+    } else {
+        lifetime_impl_params
+    };
+    let lifetime_impl_params_with_comma = lifetime_impl_params.as_ref().map(|t| quote! {#t,});
     quote! {
         impl<#lifetime_impl_params_with_comma #generic_params> #impl_type #lifetime_impl_params_with_lg
             for #name #ty_generics
@@ -260,7 +276,7 @@ fn generate_actual_subscribe_impl(
             #source_type: #impl_type #lifetime_impl_params_with_lg,
             #(#where_preds #lifetime_impl_params_with_plus #additional_bounds),*
         {
-            type #type_param_ident = #source_type :: #type_param_ident;
+            type #type_param_ident = #subscription_ty;
 
             fn actual_subscribe<Downstream>(self, downstream: Downstream)
             where
@@ -286,6 +302,15 @@ fn remove_predicates_for_type<'a>(
         }
     }
     result
+}
+
+fn contains_o_lifetime(generics: &syn::Generics) -> bool {
+    for lifetime in generics.lifetimes() {
+        if lifetime.lifetime.ident.to_string() == "o" {
+            return true;
+        }
+    }
+    false
 }
 
 struct Field<'a> {
@@ -332,6 +357,7 @@ impl<'a> UpstreamField<'a> {
 
 struct Settings {
     downstream_ty: Option<syn::Type>,
+    subscription_ty: Option<syn::Type>,
     item_ty: Option<syn::Type>,
     error_ty: Option<syn::Type>,
 }
@@ -340,6 +366,7 @@ impl Settings {
     pub fn from(list: syn::MetaList) -> Settings {
         let mut result = Settings {
             downstream_ty: None,
+            subscription_ty: None,
             item_ty: None,
             error_ty: None,
         };
@@ -349,6 +376,9 @@ impl Settings {
                     if let syn::Lit::Str(ref s) = kv.lit {
                         if kv.path.is_ident("downstream") {
                             result.downstream_ty =
+                                Some(syn::parse_str(s.value().as_str()).unwrap());
+                        } else if kv.path.is_ident("subscription") {
+                            result.subscription_ty =
                                 Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else if kv.path.is_ident("item") {
                             result.item_ty = Some(syn::parse_str(s.value().as_str()).unwrap());

@@ -36,6 +36,33 @@ impl<Actual> Flow<Actual> {
             scheduler,
         )))
     }
+
+    pub fn on_backpressure_drop<'o>(
+        self,
+    ) -> marker::Flow<operators::local::FlowOnBackpressureDrop<'o, Actual>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(operators::local::FlowOnBackpressureDrop::new(self.actual))
+    }
+
+    pub fn on_backpressure_error<'o>(
+        self,
+    ) -> marker::Flow<operators::local::FlowOnBackpressureError<'o, Actual>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(operators::local::FlowOnBackpressureError::new(self.actual))
+    }
+
+    pub fn on_backpressure_latest<'o>(
+        self,
+    ) -> marker::Flow<operators::local::FlowOnBackpressureLatest<'o, Actual>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(operators::local::FlowOnBackpressureLatest::new(self.actual))
+    }
 }
 
 impl<Cancellable, Item, Error, T> core::Subscriber<Cancellable, Item, Error> for Flow<T>

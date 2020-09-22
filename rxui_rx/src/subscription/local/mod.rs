@@ -1,3 +1,3 @@
-mod lambda_subscription;
+mod accumulate_subscription;
 
-pub use lambda_subscription::*;
+pub use accumulate_subscription::*;

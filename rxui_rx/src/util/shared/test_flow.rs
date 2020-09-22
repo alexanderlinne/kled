@@ -1,6 +1,5 @@
 use crate::core;
 use crate::core::IntoSharedFlowEmitter;
-use crate::flow;
 use crate::marker;
 use crate::subscription::shared::*;
 use std::sync::{Arc, Mutex};
@@ -11,26 +10,13 @@ pub struct TestFlow<Item, Error> {
 }
 
 struct Data<Item, Error> {
-    strategy: flow::BackpressureStrategy,
     emitter: Option<Box<dyn core::FlowEmitter<Item, Error> + Send + 'static>>,
 }
 
 impl<Item, Error> TestFlow<Item, Error> {
     pub fn default() -> marker::Shared<marker::Flow<Self>> {
         marker::Shared::new(marker::Flow::new(Self {
-            data: Arc::new(Mutex::new(Data {
-                strategy: flow::BackpressureStrategy::Missing,
-                emitter: None,
-            })),
-        }))
-    }
-
-    pub fn new(strategy: flow::BackpressureStrategy) -> marker::Shared<marker::Flow<Self>> {
-        marker::Shared::new(marker::Flow::new(Self {
-            data: Arc::new(Mutex::new(Data {
-                strategy,
-                emitter: None,
-            })),
+            data: Arc::new(Mutex::new(Data { emitter: None })),
         }))
     }
 }
@@ -101,7 +87,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = LambdaSubscription;
+    type Subscription = AccumulateSubscription;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
@@ -109,7 +95,7 @@ where
     {
         assert!(!self.has_observer());
         let mut data = self.data.lock().unwrap();
-        data.emitter = Some(Box::new(subscriber.into_shared_emitter(data.strategy)));
+        data.emitter = Some(Box::new(subscriber.into_shared_emitter()));
     }
 }
 

@@ -64,26 +64,58 @@ where
     }
 }
 
-impl<Flow> Shared<marker::Flow<Flow>>
+impl<Actual> Shared<marker::Flow<Actual>>
 where
-    Flow: core::Flow,
+    Actual: core::Flow,
+    Actual::Item: Send,
+    Actual::Error: Send,
 {
     pub fn observe_on<Scheduler>(
         self,
         scheduler: Scheduler,
-    ) -> Shared<marker::Flow<operators::FlowObserveOn<Flow, Scheduler>>>
+    ) -> Shared<marker::Flow<operators::FlowObserveOn<Actual, Scheduler>>>
     where
         Self: Sized,
-        Flow: core::SharedFlow,
-        Flow::Subscription: Send,
-        Flow::Item: Send,
-        Flow::Error: Send,
+        Actual: core::SharedFlow,
         Scheduler: core::Scheduler + Send,
     {
         Shared::new(marker::Flow::new(operators::FlowObserveOn::new(
             self.actual.actual,
             scheduler,
         )))
+    }
+
+    pub fn on_backpressure_drop(
+        self,
+    ) -> marker::Shared<marker::Flow<operators::shared::FlowOnBackpressureDrop<Actual>>>
+    where
+        Actual: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(
+            operators::shared::FlowOnBackpressureDrop::new(self.actual.actual),
+        ))
+    }
+
+    pub fn on_backpressure_error(
+        self,
+    ) -> marker::Shared<marker::Flow<operators::shared::FlowOnBackpressureError<Actual>>>
+    where
+        Actual: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(
+            operators::shared::FlowOnBackpressureError::new(self.actual.actual),
+        ))
+    }
+
+    pub fn on_backpressure_latest(
+        self,
+    ) -> marker::Shared<marker::Flow<operators::shared::FlowOnBackpressureLatest<Actual>>>
+    where
+        Actual: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(
+            operators::shared::FlowOnBackpressureLatest::new(self.actual.actual),
+        ))
     }
 }
 

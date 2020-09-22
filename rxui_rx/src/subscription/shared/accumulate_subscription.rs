@@ -1,32 +1,32 @@
 use crate::core;
-use parking_lot::ReentrantMutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct LambdaSubscriptionStub {
+pub struct AccumulateSubscriptionStub {
     data: Arc<Data>,
 }
 
-impl LambdaSubscriptionStub {
-    pub fn new<RequestFn>(request_fn: RequestFn) -> Self
-    where
-        RequestFn: Fn(usize) + Send + 'static,
-    {
+impl Default for AccumulateSubscriptionStub {
+    fn default() -> Self {
         Self {
             data: Arc::new(Data {
                 cancelled: AtomicBool::new(false),
-                request_fn: ReentrantMutex::new(Box::new(request_fn)),
+                requested: AtomicUsize::new(0),
             }),
         }
     }
 }
 
-impl LambdaSubscriptionStub {
-    pub fn subscription(&self) -> LambdaSubscription {
-        LambdaSubscription {
+impl AccumulateSubscriptionStub {
+    pub fn subscription(&self) -> AccumulateSubscription {
+        AccumulateSubscription {
             data: self.data.clone(),
         }
+    }
+
+    pub fn get_and_reset_requested(&self) -> usize {
+        self.data.requested.swap(0, Ordering::Relaxed)
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -35,11 +35,11 @@ impl LambdaSubscriptionStub {
 }
 
 #[derive(Clone)]
-pub struct LambdaSubscription {
+pub struct AccumulateSubscription {
     data: Arc<Data>,
 }
 
-impl core::Subscription for LambdaSubscription {
+impl core::Subscription for AccumulateSubscription {
     fn cancel(&self) {
         self.data.cancelled.store(true, Ordering::Relaxed);
     }
@@ -49,11 +49,11 @@ impl core::Subscription for LambdaSubscription {
     }
 
     fn request(&self, count: usize) {
-        (self.data.request_fn.lock())(count);
+        self.data.requested.fetch_add(count, Ordering::Relaxed);
     }
 }
 
 struct Data {
     cancelled: AtomicBool,
-    request_fn: ReentrantMutex<Box<dyn Fn(usize) + Send + 'static>>,
+    requested: AtomicUsize,
 }

@@ -1,6 +1,5 @@
 use crate::core;
 use crate::core::IntoFlowEmitter;
-use crate::flow;
 use crate::marker;
 use crate::subscription::local::*;
 use std::cell::RefCell;
@@ -8,37 +7,20 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct TestFlow<'o, Item, Error> {
-    data: Rc<RefCell<Data<'o, Item, Error>>>,
-}
-
-struct Data<'o, Item, Error> {
-    strategy: flow::BackpressureStrategy,
-    emitter: Option<Box<dyn core::FlowEmitter<Item, Error> + 'o>>,
+    emitter: Rc<RefCell<Option<Box<dyn core::FlowEmitter<Item, Error> + 'o>>>>,
 }
 
 impl<'o, Item, Error> TestFlow<'o, Item, Error> {
     pub fn default() -> marker::Flow<Self> {
         marker::Flow::new(Self {
-            data: Rc::new(RefCell::new(Data {
-                strategy: flow::BackpressureStrategy::Missing,
-                emitter: None,
-            })),
-        })
-    }
-
-    pub fn new(strategy: flow::BackpressureStrategy) -> marker::Flow<Self> {
-        marker::Flow::new(Self {
-            data: Rc::new(RefCell::new(Data {
-                strategy,
-                emitter: None,
-            })),
+            emitter: Rc::new(RefCell::new(None)),
         })
     }
 }
 
 impl<'o, Item, Error> TestFlow<'o, Item, Error> {
     pub fn has_observer(&self) -> bool {
-        self.data.borrow().emitter.is_some()
+        self.emitter.borrow().is_some()
     }
 }
 
@@ -57,7 +39,7 @@ impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.actual.data.borrow().emitter {
+        match *self.actual.emitter.borrow() {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -65,7 +47,7 @@ impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match *self.actual.emitter.borrow_mut() {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -82,7 +64,7 @@ impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match *self.actual.emitter.borrow_mut() {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -90,7 +72,7 @@ impl<'o, Item, Error> marker::Flow<TestFlow<'o, Item, Error>> {
 
     pub fn emit_completed(&self) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match *self.actual.emitter.borrow_mut() {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
@@ -102,15 +84,14 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = LambdaSubscription<'o>;
+    type Subscription = AccumulateSubscription;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
         Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + 'o,
     {
         assert!(!self.has_observer());
-        let mut data = self.data.borrow_mut();
-        data.emitter = Some(Box::new(subscriber.into_emitter(data.strategy)));
+        *self.emitter.borrow_mut() = Some(Box::new(subscriber.into_emitter()));
     }
 }
 

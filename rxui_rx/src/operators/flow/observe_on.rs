@@ -202,7 +202,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
-            .into_flow(flow::BackpressureStrategy::Missing)
+            .into_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();
@@ -215,7 +215,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
-            .into_shared_flow(flow::BackpressureStrategy::Missing)
+            .into_shared_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();

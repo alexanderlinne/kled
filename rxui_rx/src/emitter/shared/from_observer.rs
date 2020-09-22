@@ -1,5 +1,6 @@
 use crate::cancellable::shared::*;
 use crate::core;
+use crate::core::Cancellable;
 use std::marker::PhantomData;
 
 pub struct FromObserver<Observer, Item, Error> {
@@ -41,7 +42,6 @@ where
     }
 
     fn is_cancelled(&self) -> bool {
-        use self::core::Cancellable;
         self.cancellable.is_cancelled()
     }
 }
