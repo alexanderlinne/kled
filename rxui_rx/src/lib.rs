@@ -6,6 +6,7 @@
 
 #[macro_use]
 extern crate derive_new;
+extern crate parking_lot;
 #[macro_use]
 extern crate rxui_rx_derive;
 extern crate threadpool;

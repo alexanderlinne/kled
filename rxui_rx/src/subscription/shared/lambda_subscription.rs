@@ -1,6 +1,7 @@
 use crate::core;
+use parking_lot::ReentrantMutex;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct LambdaSubscriptionStub {
@@ -15,7 +16,7 @@ impl LambdaSubscriptionStub {
         Self {
             data: Arc::new(Data {
                 cancelled: AtomicBool::new(false),
-                request_fn: Mutex::new(Box::new(request_fn)),
+                request_fn: ReentrantMutex::new(Box::new(request_fn)),
             }),
         }
     }
@@ -48,11 +49,11 @@ impl core::Subscription for LambdaSubscription {
     }
 
     fn request(&self, count: usize) {
-        (self.data.request_fn.lock().unwrap())(count);
+        (self.data.request_fn.lock())(count);
     }
 }
 
 struct Data {
     cancelled: AtomicBool,
-    request_fn: Mutex<Box<dyn Fn(usize) + Send + 'static>>,
+    request_fn: ReentrantMutex<Box<dyn Fn(usize) + Send + 'static>>,
 }

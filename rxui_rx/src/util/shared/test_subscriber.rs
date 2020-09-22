@@ -1,19 +1,21 @@
 use crate::core;
 use crate::flow;
+use parking_lot::ReentrantMutex;
+use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 pub struct TestSubscriber<Subscription, Item, Error> {
-    data: Arc<Mutex<Data<Subscription, Item, Error>>>,
+    subscription: Arc<ReentrantMutex<RefCell<Option<Subscription>>>>,
+    data: Arc<Mutex<Data<Item, Error>>>,
 }
 
-struct Data<Subscription, Item, Error> {
-    subscription: Option<Subscription>,
+struct Data<Item, Error> {
     items: Vec<Item>,
     error: Option<flow::Error<Error>>,
     is_completed: bool,
-    is_cancelled: bool,
     request_on_subscribe: usize,
     request_on_next: usize,
+    execute_on_next: Option<Box<dyn FnOnce() + Send + 'static>>,
 }
 
 impl<Subscription, Item, Error> Default for TestSubscriber<Subscription, Item, Error> {
@@ -25,14 +27,14 @@ impl<Subscription, Item, Error> Default for TestSubscriber<Subscription, Item, E
 impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
     pub fn new(request_on_subscribe: usize) -> Self {
         Self {
+            subscription: Arc::new(ReentrantMutex::new(RefCell::new(None))),
             data: Arc::new(Mutex::new(Data {
-                subscription: None,
                 items: vec![],
                 error: None,
                 is_completed: false,
-                is_cancelled: false,
                 request_on_subscribe,
                 request_on_next: 0,
+                execute_on_next: None,
             })),
         }
     }
@@ -41,6 +43,7 @@ impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
 impl<Subscription, Item, Error> Clone for TestSubscriber<Subscription, Item, Error> {
     fn clone(&self) -> Self {
         Self {
+            subscription: self.subscription.clone(),
             data: self.data.clone(),
         }
     }
@@ -53,7 +56,7 @@ where
     Subscription: core::Subscription,
 {
     pub fn status(&self) -> SubscriberStatus {
-        if self.data.lock().unwrap().is_cancelled {
+        if self.is_cancelled() {
             return SubscriberStatus::Cancelled;
         }
 
@@ -73,24 +76,21 @@ where
     }
 
     pub fn is_subscribed(&self) -> bool {
-        self.data.lock().unwrap().subscription.is_some()
+        self.subscription.lock().borrow().is_some()
     }
 
     pub fn cancel(&mut self) {
         assert!(self.is_subscribed());
-        let mut data = self.data.lock().unwrap();
-        data.subscription.take().unwrap().cancel();
-        data.is_cancelled = true;
+        self.subscription.lock().borrow().as_ref().unwrap().cancel();
     }
 
     pub fn request_direct(&self, count: usize) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
-        self.data
+        self.subscription
             .lock()
-            .unwrap()
-            .subscription
+            .borrow()
             .as_ref()
-            .expect("")
+            .unwrap()
             .request(count)
     }
 
@@ -98,8 +98,26 @@ where
         self.data.lock().unwrap().request_on_next += count;
     }
 
+    pub fn execute_on_next<Fn>(&mut self, f: Fn)
+    where
+        Fn: FnOnce() + Send + 'static,
+    {
+        self.data.lock().unwrap().execute_on_next = Some(Box::new(f));
+    }
+
     pub fn has_error(&self) -> bool {
         self.data.lock().unwrap().error.is_some()
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        false
+            || self
+                .subscription
+                .lock()
+                .borrow()
+                .as_ref()
+                .map(|subscription| subscription.is_cancelled())
+                .unwrap_or(false)
     }
 
     pub fn is_completed(&self) -> bool {
@@ -128,17 +146,19 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         assert_eq!(self.status(), SubscriberStatus::Unsubscribed);
-        let mut data = self.data.lock().unwrap();
-        subscription.request(data.request_on_subscribe);
-        data.subscription = Some(subscription);
+        subscription.request(self.data.lock().unwrap().request_on_subscribe);
+        *self.subscription.lock().borrow_mut() = Some(subscription);
     }
     fn on_next(&mut self, item: Item) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
         let mut data = self.data.lock().unwrap();
         data.items.push(item);
-        data.subscription
+        data.execute_on_next.take().map(|f| f());
+        self.subscription
+            .lock()
+            .borrow()
             .as_ref()
-            .expect("")
+            .unwrap()
             .request(data.request_on_next);
         data.request_on_next = 0;
     }

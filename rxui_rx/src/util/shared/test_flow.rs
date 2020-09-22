@@ -15,22 +15,22 @@ struct Data<Item, Error> {
 }
 
 impl<Item, Error> TestFlow<Item, Error> {
-    pub fn default() -> marker::Flow<Self> {
-        marker::Flow::new(Self {
+    pub fn default() -> marker::Shared<marker::Flow<Self>> {
+        marker::Shared::new(marker::Flow::new(Self {
             data: Arc::new(Mutex::new(Data {
                 strategy: flow::BackpressureStrategy::Missing,
                 emitter: None,
             })),
-        })
+        }))
     }
 
-    pub fn new(strategy: flow::BackpressureStrategy) -> marker::Flow<Self> {
-        marker::Flow::new(Self {
+    pub fn new(strategy: flow::BackpressureStrategy) -> marker::Shared<marker::Flow<Self>> {
+        marker::Shared::new(marker::Flow::new(Self {
             data: Arc::new(Mutex::new(Data {
                 strategy,
                 emitter: None,
             })),
-        })
+        }))
     }
 }
 
@@ -40,7 +40,7 @@ impl<Item, Error> TestFlow<Item, Error> {
     }
 }
 
-impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
+impl<Item, Error> marker::Shared<marker::Flow<TestFlow<Item, Error>>> {
     pub fn annotate_item_type(self, _: Item) -> Self {
         self
     }
@@ -50,12 +50,12 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
     }
 
     pub fn has_observer(&self) -> bool {
-        self.actual.has_observer()
+        self.actual.actual.has_observer()
     }
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().unwrap().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -63,7 +63,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -80,7 +80,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -88,7 +88,7 @@ impl<Item, Error> marker::Flow<TestFlow<Item, Error>> {
 
     pub fn emit_completed(&self) {
         assert!(self.has_observer());
-        match self.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }

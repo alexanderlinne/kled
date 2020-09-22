@@ -84,4 +84,15 @@ mod tests {
         assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![1, 3, 4]);
     }
+
+    #[test]
+    fn latest_error() {
+        let test_subscriber = TestSubscriber::default();
+        let test_flow = TestFlow::new(flow::BackpressureStrategy::Latest);
+        test_flow.clone().subscribe(test_subscriber.clone());
+        test_flow.emit(0);
+        test_flow.emit_error(());
+        assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
+        assert_eq!(test_subscriber.items(), vec![]);
+    }
 }

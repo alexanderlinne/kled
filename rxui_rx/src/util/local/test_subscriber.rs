@@ -3,27 +3,27 @@ use crate::flow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct TestSubscriber<Subscription, Item, Error> {
+pub struct TestSubscriber<'o, Subscription, Item, Error> {
     subscription: Rc<RefCell<Option<Subscription>>>,
-    data: Rc<RefCell<Data<Item, Error>>>,
+    data: Rc<RefCell<Data<'o, Item, Error>>>,
 }
 
-struct Data<Item, Error> {
+struct Data<'o, Item, Error> {
     items: Vec<Item>,
     error: Option<flow::Error<Error>>,
     is_completed: bool,
-    is_cancelled: bool,
     request_on_subscribe: usize,
     request_on_next: usize,
+    execute_on_next: Option<Box<dyn FnOnce() + 'o>>,
 }
 
-impl<Subscription, Item, Error> Default for TestSubscriber<Subscription, Item, Error> {
+impl<'o, Subscription, Item, Error> Default for TestSubscriber<'o, Subscription, Item, Error> {
     fn default() -> Self {
         Self::new(0)
     }
 }
 
-impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
+impl<'o, Subscription, Item, Error> TestSubscriber<'o, Subscription, Item, Error> {
     pub fn new(request_on_subscribe: usize) -> Self {
         Self {
             subscription: Rc::new(RefCell::new(None)),
@@ -31,15 +31,15 @@ impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error> {
                 items: vec![],
                 error: None,
                 is_completed: false,
-                is_cancelled: false,
                 request_on_subscribe,
                 request_on_next: 0,
+                execute_on_next: None,
             })),
         }
     }
 }
 
-impl<Subscription, Item, Error> Clone for TestSubscriber<Subscription, Item, Error> {
+impl<'o, Subscription, Item, Error> Clone for TestSubscriber<'o, Subscription, Item, Error> {
     fn clone(&self) -> Self {
         Self {
             subscription: self.subscription.clone(),
@@ -50,12 +50,12 @@ impl<Subscription, Item, Error> Clone for TestSubscriber<Subscription, Item, Err
 
 pub type SubscriberStatus = crate::util::DownstreamStatus;
 
-impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error>
+impl<'o, Subscription, Item, Error> TestSubscriber<'o, Subscription, Item, Error>
 where
     Subscription: core::Subscription,
 {
     pub fn status(&self) -> SubscriberStatus {
-        if self.data.borrow().is_cancelled {
+        if self.is_cancelled() {
             return SubscriberStatus::Cancelled;
         }
 
@@ -80,9 +80,7 @@ where
 
     pub fn cancel(&mut self) {
         assert!(self.is_subscribed());
-        let mut data = self.data.borrow_mut();
         self.subscription.borrow().as_ref().unwrap().cancel();
-        data.is_cancelled = true;
     }
 
     pub fn request_direct(&self, count: usize) {
@@ -94,8 +92,25 @@ where
         self.data.borrow_mut().request_on_next += count;
     }
 
+    pub fn execute_on_next<Fn>(&mut self, f: Fn)
+    where
+        Fn: FnOnce() + 'o,
+    {
+        self.data.borrow_mut().execute_on_next = Some(Box::new(f));
+    }
+
     pub fn has_error(&self) -> bool {
         self.data.borrow().error.is_some()
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        false
+            || self
+                .subscription
+                .borrow()
+                .as_ref()
+                .map(|subscription| subscription.is_cancelled())
+                .unwrap_or(false)
     }
 
     pub fn is_completed(&self) -> bool {
@@ -103,7 +118,7 @@ where
     }
 }
 
-impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error>
+impl<'o, Subscription, Item, Error> TestSubscriber<'o, Subscription, Item, Error>
 where
     Item: Clone,
     Error: Clone,
@@ -117,8 +132,8 @@ where
     }
 }
 
-impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
-    for TestSubscriber<Subscription, Item, Error>
+impl<'o, Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
+    for TestSubscriber<'o, Subscription, Item, Error>
 where
     Subscription: core::Subscription,
 {
@@ -131,10 +146,11 @@ where
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
         let mut data = self.data.borrow_mut();
         data.items.push(item);
+        data.execute_on_next.take().map(|f| f());
         self.subscription
             .borrow()
             .as_ref()
-            .expect("")
+            .unwrap()
             .request(data.request_on_next);
         data.request_on_next = 0;
     }
