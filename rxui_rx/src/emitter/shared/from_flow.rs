@@ -62,7 +62,7 @@ mod tests {
     use crate::util::shared::*;
 
     #[test]
-    fn missing() {
+    fn basic() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]

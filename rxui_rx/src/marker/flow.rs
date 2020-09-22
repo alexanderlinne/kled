@@ -37,6 +37,35 @@ impl<Actual> Flow<Actual> {
         )))
     }
 
+    pub fn on_backpressure_buffer<'o>(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+    ) -> marker::Flow<operators::local::FlowOnBackpressureBuffer<'o, Actual>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(operators::local::FlowOnBackpressureBuffer::new(
+            self.actual,
+            buffer_strategy,
+            flow::default_buffer_capacity(),
+        ))
+    }
+
+    pub fn on_backpressure_buffer_with_capacity<'o>(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+        buffer_capacity: usize,
+    ) -> marker::Flow<operators::local::FlowOnBackpressureBuffer<'o, Actual>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(operators::local::FlowOnBackpressureBuffer::new(
+            self.actual,
+            buffer_strategy,
+            buffer_capacity,
+        ))
+    }
+
     pub fn on_backpressure_drop<'o>(
         self,
     ) -> marker::Flow<operators::local::FlowOnBackpressureDrop<'o, Actual>>

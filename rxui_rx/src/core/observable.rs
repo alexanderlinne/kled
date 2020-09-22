@@ -24,7 +24,7 @@ pub trait LocalObservable<'o>: Observable {
 }
 
 pub trait SharedObservable: Observable {
-    type Cancellable: core::Cancellable;
+    type Cancellable: core::Cancellable + Send + Sync + 'static;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where

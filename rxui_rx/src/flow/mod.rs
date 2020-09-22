@@ -1,9 +1,9 @@
-mod backpressure_strategy;
+mod backpressure;
 mod create;
 mod error;
 mod from_iter;
 
-pub use backpressure_strategy::*;
+pub use backpressure::*;
 pub use create::*;
 pub use error::*;
 pub use from_iter::*;

@@ -84,7 +84,8 @@ where
     }
 
     pub fn request_direct(&self, count: usize) {
-        assert_eq!(self.status(), SubscriberStatus::Subscribed);
+        assert_ne!(self.status(), SubscriberStatus::Unsubscribed);
+        assert_ne!(self.status(), SubscriberStatus::Cancelled);
         self.subscription.borrow().as_ref().unwrap().request(count)
     }
 
