@@ -2,6 +2,7 @@ use crate::core;
 use crate::core::IntoSharedFlowEmitter;
 use crate::flow;
 use crate::marker;
+use crate::subscription::shared::*;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -100,7 +101,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Subscription = Box<dyn core::Subscription + Send + 'static>;
+    type Subscription = LambdaSubscription;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

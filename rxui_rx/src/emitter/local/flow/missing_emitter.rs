@@ -3,19 +3,19 @@ use crate::flow;
 use crate::subscription::local::*;
 use std::marker::PhantomData;
 
-pub struct MissingEmitter<Subscriber, Item, Error> {
+pub struct MissingEmitter<'o, Subscriber, Item, Error> {
     subscriber: Subscriber,
-    stub: IgnoreSubscriptionStub,
+    stub: LambdaSubscriptionStub<'o>,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<'o, Subscriber, Item, Error> MissingEmitter<Subscriber, Item, Error>
+impl<'o, Subscriber, Item, Error> MissingEmitter<'o, Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + 'o>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<LambdaSubscription<'o>, Item, Error> + 'o,
 {
     pub fn new(mut subscriber: Subscriber) -> Self {
-        let stub = IgnoreSubscriptionStub::default();
-        subscriber.on_subscribe(Box::new(stub.subscription()));
+        let stub = LambdaSubscriptionStub::new(|_| {});
+        subscriber.on_subscribe(stub.subscription());
         Self {
             subscriber,
             stub,
@@ -25,9 +25,9 @@ where
 }
 
 impl<'o, Subscriber, Item, Error> core::FlowEmitter<Item, Error>
-    for MissingEmitter<Subscriber, Item, Error>
+    for MissingEmitter<'o, Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + 'o>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<LambdaSubscription<'o>, Item, Error> + 'o,
 {
     fn on_next(&mut self, item: Item) {
         self.subscriber.on_next(item);

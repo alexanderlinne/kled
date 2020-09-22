@@ -2,49 +2,48 @@ use crate::core;
 use crate::flow;
 use crate::subscription::shared::*;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 pub struct DropEmitter<Subscriber, Item, Error> {
     subscriber: Subscriber,
-    stub: AccumulateSubscriptionStub,
-    requested: usize,
+    stub: LambdaSubscriptionStub,
+    requested: Arc<AtomicUsize>,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Subscriber, Item, Error> DropEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
-        + Send
-        + 'static,
+    Subscriber: core::Subscriber<LambdaSubscription, Item, Error> + Send + 'static,
 {
     pub fn new(mut subscriber: Subscriber) -> Self {
-        let stub = AccumulateSubscriptionStub::default();
-        subscriber.on_subscribe(Box::new(stub.subscription()));
+        let requested = Arc::new(AtomicUsize::default());
+        let stub = Self::create_subscription(requested.clone());
+        subscriber.on_subscribe(stub.subscription());
         Self {
             subscriber,
             stub,
-            requested: 0,
+            requested,
             phantom: PhantomData,
         }
     }
 
-    fn update_request_count(&mut self) -> usize {
-        self.requested += self.stub.get_and_reset_requested();
-        self.requested
+    fn create_subscription(requested: Arc<AtomicUsize>) -> LambdaSubscriptionStub {
+        LambdaSubscriptionStub::new(move |count: usize| {
+            requested.fetch_add(count, Ordering::Relaxed);
+        })
     }
 }
 
 impl<Subscriber, Item, Error> core::FlowEmitter<Item, Error>
     for DropEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
-        + Send
-        + 'static,
+    Subscriber: core::Subscriber<LambdaSubscription, Item, Error> + Send + 'static,
 {
     fn on_next(&mut self, item: Item) {
-        let requested = self.update_request_count();
-        if requested > 0 {
+        if self.requested.load(Ordering::Relaxed) > 0 {
             self.subscriber.on_next(item);
-            self.requested -= 1;
+            self.requested.fetch_sub(1, Ordering::Relaxed);
         }
     }
 

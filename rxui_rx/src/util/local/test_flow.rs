@@ -2,6 +2,7 @@ use crate::core;
 use crate::core::IntoFlowEmitter;
 use crate::flow;
 use crate::marker;
+use crate::subscription::local::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -101,7 +102,7 @@ where
     Item: 'o,
     Error: 'o,
 {
-    type Subscription = Box<dyn core::Subscription + 'o>;
+    type Subscription = LambdaSubscription<'o>;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

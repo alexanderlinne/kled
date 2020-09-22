@@ -9,7 +9,7 @@ pub trait LocalFlow<'o>: Flow {
 }
 
 pub trait SharedFlow: Flow {
-    type Subscription: core::Subscription;
+    type Subscription: core::Subscription + Send + Sync + 'static;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where

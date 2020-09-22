@@ -1,9 +1,10 @@
 use crate::core;
 use crate::flow;
+use crate::subscription::local::*;
 
 impl<'o, Subscriber, Item, Error> core::IntoFlowEmitter<'o, Item, Error> for Subscriber
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + 'o>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<LambdaSubscription<'o>, Item, Error> + 'o,
     Item: 'o,
     Error: 'o,
 {

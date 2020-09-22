@@ -19,7 +19,7 @@ pub struct Data<Item> {
 
 impl<'o, Subscriber, Item, Error> LatestEmitter<'o, Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + 'o>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<LambdaSubscription<'o>, Item, Error> + 'o,
     Item: 'o,
 {
     pub fn new(subscriber: Subscriber) -> Self {
@@ -29,9 +29,7 @@ where
             latest: None,
         }));
         let stub = Self::create_subscription(subscriber.clone(), data.clone());
-        subscriber
-            .borrow_mut()
-            .on_subscribe(Box::new(stub.subscription()));
+        subscriber.borrow_mut().on_subscribe(stub.subscription());
         Self {
             subscriber,
             stub,
@@ -68,7 +66,7 @@ where
 impl<'o, Subscriber, Item, Error> core::FlowEmitter<Item, Error>
     for LatestEmitter<'o, Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + 'o>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<LambdaSubscription<'o>, Item, Error> + 'o,
 {
     fn on_next(&mut self, item: Item) {
         // data must be borrowed individually here to allow on_next to call

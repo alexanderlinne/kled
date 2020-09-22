@@ -19,9 +19,7 @@ pub struct Data<Subscriber, Item> {
 
 impl<Subscriber, Item, Error> LatestEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
-        + Send
-        + 'static,
+    Subscriber: core::Subscriber<LambdaSubscription, Item, Error> + Send + 'static,
     Item: Send + 'static,
 {
     pub fn new(subscriber: Subscriber) -> Self {
@@ -34,7 +32,7 @@ where
         data.subscriber
             .lock()
             .unwrap()
-            .on_subscribe(Box::new(stub.subscription()));
+            .on_subscribe(stub.subscription());
         Self {
             data,
             stub,
@@ -61,9 +59,7 @@ where
 impl<Subscriber, Item, Error> core::FlowEmitter<Item, Error>
     for LatestEmitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<Box<dyn core::Subscription + Send + 'static>, Item, Error>
-        + Send
-        + 'static,
+    Subscriber: core::Subscriber<LambdaSubscription, Item, Error> + Send + 'static,
 {
     fn on_next(&mut self, item: Item) {
         if self.data.requested.load(Ordering::Relaxed) > 0 {
