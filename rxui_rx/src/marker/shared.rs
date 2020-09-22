@@ -1,4 +1,5 @@
 use crate::core;
+use crate::flow;
 use crate::marker;
 use crate::operators;
 
@@ -83,6 +84,39 @@ where
             self.actual.actual,
             scheduler,
         )))
+    }
+
+    pub fn on_backpressure_buffer(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+    ) -> marker::Shared<marker::Flow<operators::shared::FlowOnBackpressureBuffer<Actual>>>
+    where
+        Actual: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(
+            operators::shared::FlowOnBackpressureBuffer::new(
+                self.actual.actual,
+                buffer_strategy,
+                flow::default_buffer_capacity(),
+            ),
+        ))
+    }
+
+    pub fn on_backpressure_buffer_with_capacity(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+        buffer_capacity: usize,
+    ) -> marker::Shared<marker::Flow<operators::shared::FlowOnBackpressureBuffer<Actual>>>
+    where
+        Actual: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(
+            operators::shared::FlowOnBackpressureBuffer::new(
+                self.actual.actual,
+                buffer_strategy,
+                buffer_capacity,
+            ),
+        ))
     }
 
     pub fn on_backpressure_drop(
