@@ -75,13 +75,9 @@ where
             use flow::BufferStrategy::*;
             match self.buffer_strategy {
                 Error => {
-                    self.data
-                        .subscriber
-                        .borrow_mut()
-                        .take()
-                        .map(|mut subscriber| {
-                            subscriber.on_error(flow::Error::MissingBackpressure)
-                        });
+                    if let Some(mut subscriber) = self.data.subscriber.borrow_mut().take() {
+                        subscriber.on_error(flow::Error::MissingBackpressure)
+                    };
                 }
                 DropOldest => {
                     queue.pop_front();
@@ -119,13 +115,9 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let data = Rc::downgrade(&self.data);
-        self.data
-            .subscriber
-            .borrow_mut()
-            .as_mut()
-            .map(move |subscriber| {
-                subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
-            });
+        if let Some(subscriber) = self.data.subscriber.borrow_mut().as_mut() {
+            subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
+        };
     }
 
     fn on_next(&mut self, item: Item) {
@@ -139,19 +131,15 @@ where
     }
 
     fn on_error(&mut self, error: flow::Error<Error>) {
-        self.data
-            .subscriber
-            .borrow_mut()
-            .as_mut()
-            .map(|subscriber| subscriber.on_error(error));
+        if let Some(subscriber) = self.data.subscriber.borrow_mut().as_mut() {
+            subscriber.on_error(error)
+        };
     }
 
     fn on_completed(&mut self) {
-        self.data
-            .subscriber
-            .borrow_mut()
-            .as_mut()
-            .map(|subscriber| subscriber.on_completed());
+        if let Some(subscriber) = self.data.subscriber.borrow_mut().as_mut() {
+            subscriber.on_completed()
+        };
     }
 }
 
@@ -189,9 +177,9 @@ where
             // This prevents more than one reentrant call of request is the
             // subscriber is borrowed mutably either here or in on_next
             if let Ok(mut subscriber) = data.subscriber.try_borrow_mut() {
-                (&mut *subscriber)
-                    .as_mut()
-                    .map(|mut subscriber| drain(&data, &mut subscriber, requested));
+                if let Some(mut subscriber) = (&mut *subscriber).as_mut() {
+                    drain(&data, &mut subscriber, requested)
+                };
             }
         }
     }

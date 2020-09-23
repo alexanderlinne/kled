@@ -57,22 +57,16 @@ where
 {
     pub fn status(&self) -> SubscriberStatus {
         if self.is_cancelled() {
-            return SubscriberStatus::Cancelled;
+            SubscriberStatus::Cancelled
+        } else if !self.is_subscribed() {
+            SubscriberStatus::Unsubscribed
+        } else if self.has_error() {
+            SubscriberStatus::Error
+        } else if self.is_completed() {
+            SubscriberStatus::Completed
+        } else {
+            SubscriberStatus::Subscribed
         }
-
-        if !self.is_subscribed() {
-            return SubscriberStatus::Unsubscribed;
-        }
-
-        if self.has_error() {
-            return SubscriberStatus::Error;
-        }
-
-        if self.is_completed() {
-            return SubscriberStatus::Completed;
-        }
-
-        return SubscriberStatus::Subscribed;
     }
 
     pub fn is_subscribed(&self) -> bool {
@@ -111,14 +105,12 @@ where
     }
 
     pub fn is_cancelled(&self) -> bool {
-        false
-            || self
-                .subscription
-                .lock()
-                .borrow()
-                .as_ref()
-                .map(|subscription| subscription.is_cancelled())
-                .unwrap_or(false)
+        self.subscription
+            .lock()
+            .borrow()
+            .as_ref()
+            .map(|subscription| subscription.is_cancelled())
+            .unwrap_or(false)
     }
 
     pub fn is_completed(&self) -> bool {
@@ -154,7 +146,9 @@ where
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
         let mut data = self.data.lock().unwrap();
         data.items.push(item);
-        data.execute_on_next.take().map(|f| f());
+        if let Some(f) = data.execute_on_next.take() {
+            f()
+        };
         self.subscription
             .lock()
             .borrow()

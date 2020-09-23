@@ -1,19 +1,23 @@
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, Weak};
 
+type SignalFn<Output> = Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>;
+
 pub struct SignalBuilder<Input, Output> {
-    combinator: Option<Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>>,
+    combinator: Option<SignalFn<Output>>,
     phantom: PhantomData<Input>,
 }
 
-impl<Input: 'static, Output: 'static> SignalBuilder<Input, Output> {
-    pub fn new() -> Self {
+impl<Input: 'static, Output: 'static> Default for SignalBuilder<Input, Output> {
+    fn default() -> Self {
         Self {
             combinator: None,
             phantom: PhantomData,
         }
     }
+}
 
+impl<Input: 'static, Output: 'static> SignalBuilder<Input, Output> {
     pub fn with_combinator<F: 'static>(mut self, combinator: F) -> Self
     where
         F: Fn(Output, Output) -> Output + Send,
@@ -33,12 +37,14 @@ pub struct Signal<Input, Output> {
     data: Arc<Mutex<SignalData<Input, Output>>>,
 }
 
-impl<Input: 'static, Output: 'static> Signal<Input, Output> {
-    pub fn new() -> Self {
+impl<Input: 'static, Output: 'static> Default for Signal<Input, Output> {
+    fn default() -> Self {
         let data = Arc::new(Mutex::new(SignalData::new(None)));
         Self { data }
     }
+}
 
+impl<Input: 'static, Output: 'static> Signal<Input, Output> {
     pub fn connector(&self) -> SignalConnector<Input, Output> {
         SignalConnector::new(self.data.clone())
     }
@@ -46,7 +52,7 @@ impl<Input: 'static, Output: 'static> Signal<Input, Output> {
     pub fn invoke(&self, arg: &Input) -> Option<Output> {
         let data = self.data.lock().unwrap();
         (&data.slots)
-            .into_iter()
+            .iter()
             .map(|slot| slot.call(&arg))
             .fold(None, &data.combinator)
     }
@@ -57,22 +63,17 @@ impl<Input: 'static, Output: 'static> Signal<Input, Output> {
 
     pub fn slot_count(&self) -> usize {
         let data = self.data.lock().unwrap();
-        (&data.slots)
-            .into_iter()
-            .filter(|slot| slot.connected())
-            .count()
+        (&data.slots).iter().filter(|slot| slot.connected()).count()
     }
 }
 
 struct SignalData<Input, Output> {
     slots: Vec<Arc<Mutex<ConnectionInfo<Input, Output>>>>,
-    combinator: Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>,
+    combinator: SignalFn<Output>,
 }
 
 impl<Input: 'static, Output: 'static> SignalData<Input, Output> {
-    fn new(
-        combinator: Option<Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>>,
-    ) -> Self {
+    fn new(combinator: Option<SignalFn<Output>>) -> Self {
         let combinator = match combinator {
             Some(c) => c,
             None => Box::new(lift_combinator(|_, t| t)),
@@ -91,9 +92,7 @@ impl<Input: 'static, Output: 'static> SignalData<Input, Output> {
     }
 }
 
-fn lift_combinator<F: 'static, Output: 'static>(
-    combinator: F,
-) -> Box<dyn Fn(Option<Output>, Option<Output>) -> Option<Output> + Send>
+fn lift_combinator<F: 'static, Output: 'static>(combinator: F) -> SignalFn<Output>
 where
     F: Fn(Output, Output) -> Output + Send,
 {
@@ -210,7 +209,7 @@ mod tests {
 
     #[test]
     fn basic_connections() {
-        let mut signal = Signal::<i32, i32>::new();
+        let mut signal = Signal::<i32, i32>::default();
         assert_eq!(signal.invoke(&1), None);
         signal.connect(Box::new(|v| v + 1));
         assert_eq!(signal.invoke(&1), Some(2));
@@ -222,7 +221,7 @@ mod tests {
 
     #[test]
     fn slot_count() {
-        let mut signal = Signal::<i32, i32>::new();
+        let mut signal = Signal::<i32, i32>::default();
         assert_eq!(signal.slot_count(), 0);
         signal.connect(Box::new(|v| v + 1));
         assert_eq!(signal.slot_count(), 1);
@@ -234,7 +233,7 @@ mod tests {
 
     #[test]
     fn connection_and_signal_are_send() {
-        let mut signal = Signal::<i32, i32>::new();
+        let mut signal = Signal::<i32, i32>::default();
         let connection = signal.connect(Box::new(|v| v + 1));
         let _thread = thread::spawn(move || {
             let _conn = connection;
@@ -246,7 +245,7 @@ mod tests {
 
     #[test]
     fn combinator() {
-        let mut signal = SignalBuilder::<i32, i32>::new()
+        let mut signal = SignalBuilder::<i32, i32>::default()
             .with_combinator(|a, b| a + b)
             .finalize();
         signal.connect(Box::new(|v| *v));
@@ -256,7 +255,7 @@ mod tests {
 
     #[test]
     fn scoped_connection() {
-        let mut signal = Signal::<i32, i32>::new();
+        let mut signal = Signal::<i32, i32>::default();
         assert_eq!(signal.invoke(&1), None);
         let connection = signal.connect(Box::new(|v| *v));
         assert_eq!(signal.invoke(&1), Some(1));
@@ -269,7 +268,7 @@ mod tests {
 
     #[test]
     fn signal_connector() {
-        let mut signal = Signal::<i32, i32>::new();
+        let mut signal = Signal::<i32, i32>::default();
         assert_eq!(signal.invoke(&1), None);
         signal.connect(Box::new(|v| v + 1));
         assert_eq!(signal.invoke(&1), Some(2));

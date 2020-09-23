@@ -37,22 +37,16 @@ where
 {
     pub fn status(&self) -> ObserverStatus {
         if self.data.borrow().is_cancelled {
-            return ObserverStatus::Cancelled;
+            ObserverStatus::Cancelled
+        } else if !self.is_subscribed() {
+            ObserverStatus::Unsubscribed
+        } else if self.has_error() {
+            ObserverStatus::Error
+        } else if self.is_completed() {
+            ObserverStatus::Completed
+        } else {
+            ObserverStatus::Subscribed
         }
-
-        if !self.is_subscribed() {
-            return ObserverStatus::Unsubscribed;
-        }
-
-        if self.has_error() {
-            return ObserverStatus::Error;
-        }
-
-        if self.is_completed() {
-            return ObserverStatus::Completed;
-        }
-
-        return ObserverStatus::Subscribed;
     }
 
     pub fn is_subscribed(&self) -> bool {

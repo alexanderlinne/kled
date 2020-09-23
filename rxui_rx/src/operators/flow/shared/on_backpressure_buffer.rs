@@ -25,14 +25,14 @@ pub struct OnBackpressureBufferSubscriber<Subscription, Item, Error> {
     buffer_strategy: flow::BufferStrategy,
 }
 
-type SubscriberTy<Subscription, Item, Error> = Box<
+type BoxedSubscriber<Subscription, Item, Error> = Box<
     dyn core::Subscriber<OnBackpressureBufferSubscription<Subscription, Item, Error>, Item, Error>
         + Send
         + 'static,
 >;
 
 pub struct Data<Subscription, Item, Error> {
-    subscriber: Mutex<Option<SubscriberTy<Subscription, Item, Error>>>,
+    subscriber: Mutex<Option<BoxedSubscriber<Subscription, Item, Error>>>,
     requested: AtomicUsize,
     channel: (Sender<Item>, Receiver<Item>),
 }
@@ -72,14 +72,9 @@ where
             use flow::BufferStrategy::*;
             match self.buffer_strategy {
                 Error => {
-                    self.data
-                        .subscriber
-                        .lock()
-                        .unwrap()
-                        .take()
-                        .map(|mut subscriber| {
-                            subscriber.on_error(flow::Error::MissingBackpressure)
-                        });
+                    if let Some(mut subscriber) = self.data.subscriber.lock().unwrap().take() {
+                        subscriber.on_error(flow::Error::MissingBackpressure)
+                    };
                 }
                 DropOldest => {
                     self.data.channel.1.recv().unwrap();
@@ -93,7 +88,7 @@ where
 
 fn drain<Subscription, Item, Error>(
     data: &Arc<Data<Subscription, Item, Error>>,
-    subscriber: &mut SubscriberTy<Subscription, Item, Error>,
+    subscriber: &mut BoxedSubscriber<Subscription, Item, Error>,
     mut requested: usize,
 ) {
     let mut emitted = 0;
@@ -121,14 +116,9 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let data = Arc::downgrade(&self.data);
-        self.data
-            .subscriber
-            .lock()
-            .unwrap()
-            .as_mut()
-            .map(move |subscriber| {
-                subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
-            });
+        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+            subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
+        };
     }
 
     fn on_next(&mut self, item: Item) {
@@ -142,21 +132,15 @@ where
     }
 
     fn on_error(&mut self, error: flow::Error<Error>) {
-        self.data
-            .subscriber
-            .lock()
-            .unwrap()
-            .as_mut()
-            .map(|subscriber| subscriber.on_error(error));
+        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+            subscriber.on_error(error)
+        };
     }
 
     fn on_completed(&mut self) {
-        self.data
-            .subscriber
-            .lock()
-            .unwrap()
-            .as_mut()
-            .map(|subscriber| subscriber.on_completed());
+        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+            subscriber.on_completed()
+        };
     }
 }
 
@@ -195,9 +179,9 @@ where
             // This prevents more than one reentrant call of request is the
             // subscriber is borrowed mutably either here or in on_next
             if let Ok(mut subscriber) = data.subscriber.try_lock() {
-                (&mut *subscriber)
-                    .as_mut()
-                    .map(|mut subscriber| drain(&data, &mut subscriber, requested));
+                if let Some(mut subscriber) = (&mut *subscriber).as_mut() {
+                    drain(&data, &mut subscriber, requested)
+                };
             }
         }
     }

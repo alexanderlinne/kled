@@ -40,7 +40,7 @@ where
         ObserveOnSubscriber {
             task: Arc::new(ObserveOnTaskWrapper::new(receiver, subscriber)),
             sender,
-            scheduler: scheduler.clone(),
+            scheduler,
             phantom: PhantomData,
         }
     }

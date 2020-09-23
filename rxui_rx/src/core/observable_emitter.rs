@@ -69,9 +69,7 @@ where
     }
 
     fn is_cancelled(&self) -> bool {
-        self.iter().fold(true, |is_cancelled, item| {
-            is_cancelled && item.is_cancelled()
-        })
+        self.iter().all(|item| item.is_cancelled())
     }
 }
 
@@ -94,8 +92,6 @@ where
     }
 
     fn is_cancelled(&self) -> bool {
-        self.iter().fold(true, |is_cancelled, item| {
-            is_cancelled && item.is_cancelled()
-        })
+        self.iter().all(|item| item.is_cancelled())
     }
 }

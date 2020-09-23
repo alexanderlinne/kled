@@ -42,15 +42,15 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        &mut self.data.lock().unwrap().emitters.on_next(item);
+        self.data.lock().unwrap().emitters.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        &mut self.data.lock().unwrap().emitters.on_error(error);
+        self.data.lock().unwrap().emitters.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        &mut self.data.lock().unwrap().emitters.on_completed();
+        self.data.lock().unwrap().emitters.on_completed();
     }
 }
 

@@ -38,21 +38,29 @@ fn derive_struct(
         panic! {"Exactly one field has to be marked as the source"};
     }
     let source = &sources[0];
-    if source.kind.is_observable() {
-        derive_observable(&ast, &source, &data_fields)
+
+    let base = generate_base_impl(ast, source);
+    let local = if let Some(local_info) = source.info.as_local() {
+        generate_actual_subscribe_impl(&ast, &source, &data_fields, local_info)
     } else {
-        derive_flow(&ast, &source, &data_fields)
-    }
+        TokenStream::default().into()
+    };
+    let shared = if let Some(shared_info) = source.info.as_shared() {
+        generate_actual_subscribe_impl(&ast, &source, &data_fields, shared_info)
+    } else {
+        TokenStream::default().into()
+    };
+    quote! {#base #local #shared}
 }
 
-fn try_parse_field<'a>(field: &'a syn::Field) -> Option<Field<'a>> {
+fn try_parse_field(field: &syn::Field) -> Option<Field<'_>> {
     match get_attr_by_name(&field.attrs, "upstream") {
         Some(_) => None,
         None => parse_field(field),
     }
 }
 
-fn parse_field<'a>(field: &'a syn::Field) -> Option<Field<'a>> {
+fn parse_field(field: &syn::Field) -> Option<Field<'_>> {
     match get_attr_by_name(&field.attrs, "reactive_operator") {
         Some(_) => None,
         None => Some(Field::new(field)),
@@ -92,62 +100,10 @@ fn name_of_attr(attr: &syn::Attribute) -> &syn::Ident {
     &(*attr_name).ident
 }
 
-fn derive_observable(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    let observable = generate_observable_impl(&ast, &source);
-    let local = if source.kind.supports_local() {
-        generate_local_observable_impl(&ast, &source, &data_fields)
-    } else {
-        TokenStream::default().into()
-    };
-    let shared = if source.kind.supports_shared() {
-        generate_shared_observable_impl(&ast, &source, &data_fields)
-    } else {
-        TokenStream::default().into()
-    };
-    quote! {#observable #local #shared}
-}
-
-fn derive_flow(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    let observable = generate_flow_impl(&ast, &source);
-    let local = if source.kind.supports_local() {
-        generate_local_flow_impl(&ast, &source, &data_fields)
-    } else {
-        TokenStream::default().into()
-    };
-    let shared = if source.kind.supports_shared() {
-        generate_shared_flow_impl(&ast, &source, &data_fields)
-    } else {
-        TokenStream::default().into()
-    };
-    quote! {#observable #local #shared}
-}
-
-fn generate_observable_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-) -> proc_macro2::TokenStream {
-    generate_base_impl(ast, source, quote! {core::Observable})
-}
-
-fn generate_flow_impl(ast: &syn::DeriveInput, source: &UpstreamField) -> proc_macro2::TokenStream {
-    generate_base_impl(ast, source, quote! {core::Flow})
-}
-
-fn generate_base_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    base_trait: proc_macro2::TokenStream,
-) -> proc_macro2::TokenStream {
+fn generate_base_impl(ast: &syn::DeriveInput, source: &UpstreamField) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let base_trait = source.info.base_trait();
     let source_type = source.field.ty;
     let item_ty = match &source.settings.item_ty {
         Some(ty) => ty.clone(),
@@ -168,84 +124,21 @@ fn generate_base_impl(
     }
 }
 
-fn generate_local_observable_impl(
+fn generate_actual_subscribe_impl<Tokens>(
     ast: &syn::DeriveInput,
     source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    generate_actual_subscribe_impl(
-        ast,
-        source,
-        data_fields,
-        quote! {core::LocalObservable},
-        quote! {Cancellable},
-        quote! {core::Observer},
-        Some(quote! {'o}),
-        None,
-    )
-}
+    data_fields: &[Field],
+    tokens: Tokens,
+) -> proc_macro2::TokenStream
+where
+    Tokens: UpstreamImplTokens,
+{
+    let impl_type = tokens.impl_type();
+    let type_param_ident = tokens.type_param_ident();
+    let downstream_trait = tokens.downstream_trait();
+    let lifetime_impl_params = tokens.lifetime_impl_params();
+    let additional_bounds = tokens.additional_bounds();
 
-fn generate_shared_observable_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    generate_actual_subscribe_impl(
-        ast,
-        source,
-        data_fields,
-        quote! {core::SharedObservable},
-        quote! {Cancellable},
-        quote! {core::Observer},
-        None,
-        Some(quote! {+ Send + 'static}),
-    )
-}
-
-fn generate_local_flow_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    generate_actual_subscribe_impl(
-        ast,
-        source,
-        data_fields,
-        quote! {core::LocalFlow},
-        quote! {Subscription},
-        quote! {core::Subscriber},
-        Some(quote! {'o}),
-        None,
-    )
-}
-
-fn generate_shared_flow_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-) -> proc_macro2::TokenStream {
-    generate_actual_subscribe_impl(
-        ast,
-        source,
-        data_fields,
-        quote! {core::SharedFlow},
-        quote! {Subscription},
-        quote! {core::Subscriber},
-        None,
-        Some(quote! {+ Send + 'static}),
-    )
-}
-
-fn generate_actual_subscribe_impl(
-    ast: &syn::DeriveInput,
-    source: &UpstreamField,
-    data_fields: &Vec<Field>,
-    impl_type: proc_macro2::TokenStream,
-    type_param_ident: proc_macro2::TokenStream,
-    downstream_trait: proc_macro2::TokenStream,
-    lifetime_impl_params: Option<proc_macro2::TokenStream>,
-    additional_bounds: Option<proc_macro2::TokenStream>,
-) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let source_type = source.field.ty;
     let generic_params = &ast.generics.params;
@@ -306,7 +199,7 @@ fn remove_predicates_for_type<'a>(
 
 fn contains_o_lifetime(generics: &syn::Generics) -> bool {
     for lifetime in generics.lifetimes() {
-        if lifetime.lifetime.ident.to_string() == "o" {
+        if lifetime.lifetime.ident == "o" {
             return true;
         }
     }
@@ -329,7 +222,7 @@ impl<'a> Field<'a> {
 
 struct UpstreamField<'a> {
     field: Field<'a>,
-    kind: UpstreamKind,
+    info: UpstreamInfo,
     settings: Settings,
 }
 
@@ -349,7 +242,7 @@ impl<'a> UpstreamField<'a> {
         };
         UpstreamField {
             field: Field::new(field),
-            kind: UpstreamKind::from(&field.ty, where_clause),
+            info: UpstreamInfo::from(&field.ty, where_clause),
             settings: Settings::from(list),
         }
     }
@@ -398,37 +291,66 @@ impl Settings {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum UpstreamKind {
-    Observable,
-    LocalObservable,
-    SharedObservable,
-    Flow,
-    LocalFlow,
-    SharedFlow,
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct UpstreamInfo {
+    kind: UpstreamKind,
+    supports_local: bool,
+    supports_shared: bool,
 }
 
-impl UpstreamKind {
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct UpstreamLocalInfo {
+    kind: UpstreamKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct UpstreamSharedInfo {
+    kind: UpstreamKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum UpstreamKind {
+    Observable,
+    Flow,
+}
+
+trait UpstreamImplTokens {
+    fn impl_type(&self) -> proc_macro2::TokenStream;
+    fn type_param_ident(&self) -> proc_macro2::TokenStream;
+    fn downstream_trait(&self) -> proc_macro2::TokenStream;
+    fn lifetime_impl_params(&self) -> Option<proc_macro2::TokenStream>;
+    fn additional_bounds(&self) -> Option<proc_macro2::TokenStream>;
+}
+
+impl UpstreamInfo {
+    fn new(kind: UpstreamKind, supports_local: bool, supports_shared: bool) -> Self {
+        Self {
+            kind,
+            supports_local,
+            supports_shared,
+        }
+    }
+
     fn from(source_ty: &syn::Type, where_clause: &syn::WhereClause) -> Self {
         for pred in where_clause.predicates.iter() {
             if let Some(pred) = try_get_predicate_type(source_ty, pred) {
                 if Self::contains_bound(quote_and_parse! { core::Observable }, pred) {
-                    return Self::Observable;
+                    return Self::new(UpstreamKind::Observable, true, true);
                 }
                 if Self::contains_bound(quote_and_parse! { core::LocalObservable<'o> }, pred) {
-                    return Self::LocalObservable;
+                    return Self::new(UpstreamKind::Observable, true, false);
                 }
                 if Self::contains_bound(quote_and_parse! { core::SharedObservable }, pred) {
-                    return Self::SharedObservable;
+                    return Self::new(UpstreamKind::Observable, false, true);
                 }
                 if Self::contains_bound(quote_and_parse! { core::Flow }, pred) {
-                    return Self::Flow;
+                    return Self::new(UpstreamKind::Flow, true, true);
                 }
                 if Self::contains_bound(quote_and_parse! { core::LocalFlow<'o> }, pred) {
-                    return Self::LocalFlow;
+                    return Self::new(UpstreamKind::Flow, true, false);
                 }
                 if Self::contains_bound(quote_and_parse! { core::SharedFlow }, pred) {
-                    return Self::SharedFlow;
+                    return Self::new(UpstreamKind::Flow, false, true);
                 }
             }
         }
@@ -450,24 +372,106 @@ impl UpstreamKind {
         false
     }
 
+    fn as_local(&self) -> Option<UpstreamLocalInfo> {
+        if self.supports_local {
+            Some(UpstreamLocalInfo {
+                kind: self.kind.clone(),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn as_shared(&self) -> Option<UpstreamSharedInfo> {
+        if self.supports_shared {
+            Some(UpstreamSharedInfo {
+                kind: self.kind.clone(),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn base_trait(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {core::Observable}
+        } else {
+            quote! {core::Flow}
+        }
+    }
+}
+
+impl UpstreamKind {
     fn is_observable(&self) -> bool {
-        *self == Self::Observable
-            || *self == Self::LocalObservable
-            || *self == Self::SharedObservable
+        *self == UpstreamKind::Observable
+    }
+}
+
+impl UpstreamImplTokens for UpstreamLocalInfo {
+    fn impl_type(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {core::LocalObservable}
+        } else {
+            quote! {core::LocalFlow}
+        }
     }
 
-    fn supports_local(&self) -> bool {
-        *self == Self::Observable
-            || *self == Self::Flow
-            || *self == Self::LocalObservable
-            || *self == Self::LocalFlow
+    fn type_param_ident(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {Cancellable}
+        } else {
+            quote! {Subscription}
+        }
     }
 
-    fn supports_shared(&self) -> bool {
-        *self == Self::Observable
-            || *self == Self::Flow
-            || *self == Self::SharedObservable
-            || *self == Self::SharedFlow
+    fn downstream_trait(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {core::Observer}
+        } else {
+            quote! {core::Subscriber}
+        }
+    }
+
+    fn lifetime_impl_params(&self) -> Option<proc_macro2::TokenStream> {
+        Some(quote! {'o})
+    }
+
+    fn additional_bounds(&self) -> Option<proc_macro2::TokenStream> {
+        None
+    }
+}
+
+impl UpstreamImplTokens for UpstreamSharedInfo {
+    fn impl_type(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {core::SharedObservable}
+        } else {
+            quote! {core::SharedFlow}
+        }
+    }
+
+    fn type_param_ident(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {Cancellable}
+        } else {
+            quote! {Subscription}
+        }
+    }
+
+    fn downstream_trait(&self) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {core::Observer}
+        } else {
+            quote! {core::Subscriber}
+        }
+    }
+
+    fn lifetime_impl_params(&self) -> Option<proc_macro2::TokenStream> {
+        None
+    }
+
+    fn additional_bounds(&self) -> Option<proc_macro2::TokenStream> {
+        Some(quote! {+ Send + 'static})
     }
 }
 

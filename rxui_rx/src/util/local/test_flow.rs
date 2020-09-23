@@ -5,9 +5,11 @@ use crate::subscription::local::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+type BoxedFlowEmitter<'o, Item, Error> = Box<dyn core::FlowEmitter<Item, Error> + 'o>;
+
 #[derive(Clone)]
 pub struct TestFlow<'o, Item, Error> {
-    emitter: Rc<RefCell<Option<Box<dyn core::FlowEmitter<Item, Error> + 'o>>>>,
+    emitter: Rc<RefCell<Option<BoxedFlowEmitter<'o, Item, Error>>>>,
 }
 
 impl<'o, Item, Error> TestFlow<'o, Item, Error> {

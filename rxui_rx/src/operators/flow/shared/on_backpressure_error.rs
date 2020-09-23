@@ -49,12 +49,12 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let requested = self.requested.clone();
-        self.subscriber.as_mut().map(move |subscriber| {
+        if let Some(subscriber) = self.subscriber.as_mut() {
             subscriber.on_subscribe(OnBackpressureErrorSubscription::new(
                 subscription,
                 requested,
             ))
-        });
+        };
     }
 
     fn on_next(&mut self, item: Item) {

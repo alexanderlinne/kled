@@ -18,8 +18,14 @@ where
     flow: Flow,
 }
 
-pub struct OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error> {
-    subscriber: Arc<Mutex<Subscriber>>,
+type BoxedSubscriber<Subscription, Item, Error> = Box<
+    dyn core::Subscriber<OnBackpressureLatestSubscription<Subscription, Item, Error>, Item, Error>
+        + Send
+        + 'static,
+>;
+
+pub struct OnBackpressureLatestSubscriber<Subscription, Item, Error> {
+    subscriber: Arc<Mutex<BoxedSubscriber<Subscription, Item, Error>>>,
     data: Arc<Data<Item>>,
     phantom: PhantomData<(Subscription, Item, Error)>,
 }
@@ -29,39 +35,37 @@ pub struct Data<Item> {
     latest: Mutex<Option<Item>>,
 }
 
-impl<Subscription, Subscriber, Item, Error>
-    OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error>
+impl<Subscription, Item, Error> OnBackpressureLatestSubscriber<Subscription, Item, Error>
 where
-    Subscriber: core::Subscriber<OnBackpressureLatestSubscription<Subscription, Item, Error>, Item, Error>
-        + Send
-        + 'static,
     Item: Send + 'static,
 {
-    pub fn new(subscriber: Subscriber) -> Self {
-        let subscriber = Arc::new(Mutex::new(subscriber));
-        let data = Arc::new(Data {
-            requested: AtomicUsize::default(),
-            latest: Mutex::new(None),
-        });
+    pub fn new<Subscriber>(subscriber: Subscriber) -> Self
+    where
+        Subscriber: core::Subscriber<
+                OnBackpressureLatestSubscription<Subscription, Item, Error>,
+                Item,
+                Error,
+            > + Send
+            + 'static,
+    {
         Self {
-            subscriber,
-            data,
+            subscriber: Arc::new(Mutex::new(Box::new(subscriber))),
+            data: Arc::new(Data {
+                requested: AtomicUsize::default(),
+                latest: Mutex::new(None),
+            }),
             phantom: PhantomData,
         }
     }
 }
 
-impl<Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
-    for OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error>
-where
-    Subscriber: core::Subscriber<OnBackpressureLatestSubscription<Subscription, Item, Error>, Item, Error>
-        + Send
-        + 'static,
+impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
+    for OnBackpressureLatestSubscriber<Subscription, Item, Error>
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let subscription = OnBackpressureLatestSubscription::new(
             subscription,
-            Arc::downgrade(&self.subscriber).clone(),
+            Arc::downgrade(&self.subscriber),
             Arc::downgrade(&self.data),
         );
         self.subscriber.lock().unwrap().on_subscribe(subscription);
@@ -94,7 +98,7 @@ where
 #[derive(new)]
 pub struct OnBackpressureLatestSubscription<Upstream, Item, Error> {
     upstream: Upstream,
-    subscriber: Weak<Mutex<dyn core::Subscriber<Self, Item, Error> + Send + 'static>>,
+    subscriber: Weak<Mutex<BoxedSubscriber<Upstream, Item, Error>>>,
     data: Weak<Data<Item>>,
     phantom: PhantomData<Error>,
 }
@@ -125,7 +129,7 @@ where
 
         let requested = data.requested.fetch_add(count, Ordering::Relaxed) + count;
         if requested > 0 {
-            self.subscriber.upgrade().map(|subscriber| {
+            if let Some(subscriber) = self.subscriber.upgrade() {
                 if let Ok(mut subscriber) = subscriber.try_lock() {
                     let item = data.latest.lock().unwrap().take();
                     if let Some(item) = item {
@@ -133,7 +137,7 @@ where
                         data.requested.fetch_sub(1, Ordering::Relaxed);
                     }
                 }
-            });
+            };
         }
     }
 }

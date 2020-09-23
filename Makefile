@@ -7,6 +7,7 @@ all:
 
 test:
 	cargo test
+	cargo clippy --all-targets --all-features -- -D warnings
 	cargo fmt -- --check
 
 coverage:

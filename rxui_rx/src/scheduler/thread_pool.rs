@@ -28,12 +28,12 @@ impl core::Scheduler for ThreadPoolScheduler {
     where
         F: FnOnce() + Send + 'static,
     {
-        &self.data.lock().unwrap().execute(move || {
+        self.data.lock().unwrap().execute(move || {
             task();
         });
     }
 
     fn join(&self) {
-        &self.data.lock().unwrap().join();
+        self.data.lock().unwrap().join();
     }
 }

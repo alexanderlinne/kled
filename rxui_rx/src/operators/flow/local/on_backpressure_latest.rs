@@ -18,8 +18,16 @@ where
     phantom: PhantomData<&'o Self>,
 }
 
-pub struct OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error> {
-    subscriber: Rc<RefCell<Subscriber>>,
+type BoxedSubscriber<'o, Subscription, Item, Error> = Box<
+    dyn core::Subscriber<
+            OnBackpressureLatestSubscription<'o, Subscription, Item, Error>,
+            Item,
+            Error,
+        > + 'o,
+>;
+
+pub struct OnBackpressureLatestSubscriber<'o, Subscription, Item, Error> {
+    subscriber: Rc<RefCell<BoxedSubscriber<'o, Subscription, Item, Error>>>,
     data: Rc<RefCell<Data<Item>>>,
     phantom: PhantomData<(Subscription, Error)>,
 }
@@ -29,43 +37,36 @@ pub struct Data<Item> {
     latest: Option<Item>,
 }
 
-impl<'o, Subscription, Subscriber, Item, Error>
-    OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error>
+impl<'o, Subscription, Item, Error> OnBackpressureLatestSubscriber<'o, Subscription, Item, Error>
 where
-    Subscriber: core::Subscriber<
-            OnBackpressureLatestSubscription<'o, Subscription, Item, Error>,
-            Item,
-            Error,
-        > + 'o,
     Item: 'o,
 {
-    pub fn new(subscriber: Subscriber) -> Self {
-        let subscriber = Rc::new(RefCell::new(subscriber));
-        let data = Rc::new(RefCell::new(Data {
-            requested: 0,
-            latest: None,
-        }));
+    pub fn new<Subscriber>(subscriber: Subscriber) -> Self
+    where
+        Subscriber: core::Subscriber<
+                OnBackpressureLatestSubscription<'o, Subscription, Item, Error>,
+                Item,
+                Error,
+            > + 'o,
+    {
         Self {
-            subscriber,
-            data,
+            subscriber: Rc::new(RefCell::new(Box::new(subscriber))),
+            data: Rc::new(RefCell::new(Data {
+                requested: 0,
+                latest: None,
+            })),
             phantom: PhantomData,
         }
     }
 }
 
-impl<'o, Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
-    for OnBackpressureLatestSubscriber<Subscription, Subscriber, Item, Error>
-where
-    Subscriber: core::Subscriber<
-            OnBackpressureLatestSubscription<'o, Subscription, Item, Error>,
-            Item,
-            Error,
-        > + 'o,
+impl<'o, Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
+    for OnBackpressureLatestSubscriber<'o, Subscription, Item, Error>
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let subscription = OnBackpressureLatestSubscription::new(
             subscription,
-            Rc::downgrade(&self.subscriber).clone(),
+            Rc::downgrade(&self.subscriber),
             Rc::downgrade(&self.data),
         );
         self.subscriber.borrow_mut().on_subscribe(subscription);
@@ -94,7 +95,7 @@ where
 #[derive(new)]
 pub struct OnBackpressureLatestSubscription<'o, Upstream, Item, Error> {
     upstream: Upstream,
-    subscriber: Weak<RefCell<dyn core::Subscriber<Self, Item, Error> + 'o>>,
+    subscriber: Weak<RefCell<BoxedSubscriber<'o, Upstream, Item, Error>>>,
     data: Weak<RefCell<Data<Item>>>,
     phantom: PhantomData<Error>,
 }
@@ -130,9 +131,9 @@ where
             // code (unless the subscriber is the producer, which is not a
             // sensible use case)
             if let Some(item) = item {
-                self.subscriber
-                    .upgrade()
-                    .map(|subscriber| subscriber.borrow_mut().on_next(item));
+                if let Some(subscriber) = self.subscriber.upgrade() {
+                    subscriber.borrow_mut().on_next(item)
+                };
                 data.borrow_mut().requested -= 1;
             }
         }

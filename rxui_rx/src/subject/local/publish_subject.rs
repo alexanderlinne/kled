@@ -43,15 +43,15 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        &mut self.data.borrow_mut().emitters.on_next(item);
+        self.data.borrow_mut().emitters.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        &mut self.data.borrow_mut().emitters.on_error(error);
+        self.data.borrow_mut().emitters.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        &mut self.data.borrow_mut().emitters.on_completed();
+        self.data.borrow_mut().emitters.on_completed();
     }
 }
 
@@ -173,6 +173,6 @@ mod tests {
         test_observable.clone().subscribe(subject.clone());
         test_observable.emit(0);
         let test_observer = TestObserver::default();
-        subject.subscribe(test_observer.clone());
+        subject.subscribe(test_observer);
     }
 }
