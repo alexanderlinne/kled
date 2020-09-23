@@ -4,13 +4,13 @@ use crate::marker;
 pub trait IntoObservable {
     type Observable: core::Observable;
 
-    fn into_observable(self) -> Self::Observable;
+    fn into_observable(self) -> marker::Observable<Self::Observable>;
 }
 
 pub trait IntoSharedObservable {
     type Observable: core::SharedObservable;
 
-    fn into_shared_observable(self) -> marker::Shared<Self::Observable>;
+    fn into_shared_observable(self) -> marker::Shared<marker::Observable<Self::Observable>>;
 }
 
 impl<T> IntoSharedObservable for T
@@ -20,8 +20,7 @@ where
 {
     type Observable = T::Observable;
 
-    fn into_shared_observable(self) -> marker::Shared<Self::Observable> {
-        use crate::core::SharedObservable;
+    fn into_shared_observable(self) -> marker::Shared<marker::Observable<Self::Observable>> {
         self.into_observable().into_shared()
     }
 }

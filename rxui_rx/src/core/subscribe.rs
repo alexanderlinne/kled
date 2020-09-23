@@ -6,17 +6,18 @@ pub trait Subcribe<'o, Downstream>: util::Sealed {
     fn subscribe(self, _: Downstream);
 }
 
-impl<'o, Observer, Observable> Subcribe<'o, Observer> for Observable
+impl<'o, Observer, Observable> Subcribe<'o, Observer> for marker::Observable<Observable>
 where
     Observer: core::Observer<Observable::Cancellable, Observable::Item, Observable::Error> + 'o,
     Observable: core::LocalObservable<'o> + 'o,
 {
     fn subscribe(self, observer: Observer) {
-        self.actual_subscribe(observer);
+        self.actual.actual_subscribe(observer);
     }
 }
 
-impl<'o, Observer, Observable> Subcribe<'o, Observer> for marker::Shared<Observable>
+impl<'o, Observer, Observable> Subcribe<'o, Observer>
+    for marker::Shared<marker::Observable<Observable>>
 where
     Observer: core::Observer<Observable::Cancellable, Observable::Item, Observable::Error>
         + Send
@@ -24,7 +25,7 @@ where
     Observable: core::SharedObservable + Send + 'static,
 {
     fn subscribe(self, observer: Observer) {
-        self.actual.actual_subscribe(observer);
+        self.actual.actual.actual_subscribe(observer);
     }
 }
 

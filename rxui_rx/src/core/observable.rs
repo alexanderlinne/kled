@@ -1,6 +1,5 @@
 use crate::core;
 use crate::marker;
-use crate::operators;
 
 pub trait LocalObservable<'o>: Observable {
     type Cancellable: core::Cancellable;
@@ -8,19 +7,6 @@ pub trait LocalObservable<'o>: Observable {
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o;
-
-    fn scan<ItemOut, BinaryOp>(
-        self,
-        initial_value: ItemOut,
-        binary_op: BinaryOp,
-    ) -> operators::ObservableScan<Self, ItemOut, BinaryOp>
-    where
-        Self: Sized,
-        ItemOut: Clone,
-        BinaryOp: FnMut(ItemOut, Self::Item) -> ItemOut,
-    {
-        operators::ObservableScan::new(self, initial_value, binary_op)
-    }
 }
 
 pub trait SharedObservable: Observable {

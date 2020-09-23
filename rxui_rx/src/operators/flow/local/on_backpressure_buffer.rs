@@ -1,5 +1,6 @@
 use crate::core;
 use crate::flow;
+use crate::marker;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
@@ -11,6 +12,7 @@ where
     Flow: core::LocalFlow<'o>,
 {
     #[upstream(
+        operator = "on_backpressure_buffer_with_capacity",
         subscription = "OnBackpressureBufferSubscription<'o, Flow::Subscription, Flow::Item, Flow::Error>"
     )]
     flow: Flow,
@@ -18,6 +20,22 @@ where
     buffer_capacity: usize,
     #[reactive_operator(ignore)]
     phantom: PhantomData<&'o Self>,
+}
+
+impl<Flow> marker::Flow<Flow> {
+    pub fn on_backpressure_buffer<'o>(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+    ) -> marker::Flow<FlowOnBackpressureBuffer<'o, Flow>>
+    where
+        Flow: core::LocalFlow<'o> + Sized,
+    {
+        marker::Flow::new(FlowOnBackpressureBuffer::new(
+            self.actual,
+            buffer_strategy,
+            flow::default_buffer_capacity(),
+        ))
+    }
 }
 
 pub struct OnBackpressureBufferSubscriber<'o, Subscription, Item, Error> {

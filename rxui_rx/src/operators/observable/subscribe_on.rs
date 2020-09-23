@@ -1,10 +1,12 @@
 use crate::core;
 
-#[derive(new)]
+#[derive(new, reactive_operator)]
 pub struct ObservableSubscribeOn<Observable, Scheduler>
 where
+    Observable: core::SharedObservable,
     Scheduler: core::Scheduler + Send + 'static,
 {
+    #[upstream(derive_impls = "base")]
     observable: Observable,
     scheduler: Scheduler,
 }
@@ -25,15 +27,6 @@ where
             observable.actual_subscribe(observer);
         });
     }
-}
-
-impl<Observable, Scheduler> core::Observable for ObservableSubscribeOn<Observable, Scheduler>
-where
-    Observable: core::Observable,
-    Scheduler: core::Scheduler + Send + 'static,
-{
-    type Item = Observable::Item;
-    type Error = Observable::Error;
 }
 
 #[cfg(test)]

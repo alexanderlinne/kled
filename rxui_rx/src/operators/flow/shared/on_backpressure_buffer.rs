@@ -1,5 +1,6 @@
 use crate::core;
 use crate::flow;
+use crate::marker;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -12,11 +13,33 @@ where
     Flow::Error: Send,
 {
     #[upstream(
+        operator = "on_backpressure_buffer_with_capacity",
         subscription = "OnBackpressureBufferSubscription<Flow::Subscription, Flow::Item, Flow::Error>"
     )]
     flow: Flow,
     buffer_strategy: flow::BufferStrategy,
     buffer_capacity: usize,
+}
+
+impl<Flow> marker::Shared<marker::Flow<Flow>>
+where
+    Flow: core::Flow,
+    Flow::Item: Send,
+    Flow::Error: Send,
+{
+    pub fn on_backpressure_buffer(
+        self,
+        buffer_strategy: flow::BufferStrategy,
+    ) -> marker::Shared<marker::Flow<FlowOnBackpressureBuffer<Flow>>>
+    where
+        Flow: core::SharedFlow + Sized,
+    {
+        marker::Shared::new(marker::Flow::new(FlowOnBackpressureBuffer::new(
+            self.actual.actual,
+            buffer_strategy,
+            flow::default_buffer_capacity(),
+        )))
+    }
 }
 
 pub struct OnBackpressureBufferSubscriber<Subscription, Item, Error> {

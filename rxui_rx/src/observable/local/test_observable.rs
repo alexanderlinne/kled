@@ -1,6 +1,7 @@
 use crate::cancellable::local::*;
 use crate::core;
 use crate::core::IntoObservableEmitter;
+use crate::marker;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -13,15 +14,19 @@ struct Data<'o, Item, Error> {
     emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + 'o>>,
 }
 
-impl<'o, Item, Error> Default for TestObservable<'o, Item, Error> {
-    fn default() -> Self {
-        Self {
+impl<'o, Item, Error> TestObservable<'o, Item, Error> {
+    pub fn default() -> marker::Observable<Self> {
+        marker::Observable::new(Self {
             data: Rc::new(RefCell::new(Data { emitter: None })),
-        }
+        })
+    }
+
+    pub fn has_observer(&self) -> bool {
+        self.data.borrow().emitter.is_some()
     }
 }
 
-impl<'o, Item, Error> TestObservable<'o, Item, Error> {
+impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
     pub fn annotate_item_type(self, _: Item) -> Self {
         self
     }
@@ -31,12 +36,12 @@ impl<'o, Item, Error> TestObservable<'o, Item, Error> {
     }
 
     pub fn has_observer(&self) -> bool {
-        self.data.borrow().emitter.is_some()
+        self.actual.has_observer()
     }
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.data.borrow().emitter {
+        match self.actual.data.borrow().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -44,7 +49,7 @@ impl<'o, Item, Error> TestObservable<'o, Item, Error> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.data.borrow_mut().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -61,7 +66,7 @@ impl<'o, Item, Error> TestObservable<'o, Item, Error> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.data.borrow_mut().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -69,7 +74,7 @@ impl<'o, Item, Error> TestObservable<'o, Item, Error> {
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.data.borrow_mut().emitter {
+        match self.actual.data.borrow_mut().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }

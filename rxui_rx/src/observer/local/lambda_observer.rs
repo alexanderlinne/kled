@@ -1,8 +1,10 @@
 use crate::cancellable::local::*;
 use crate::core;
+use crate::marker;
 use crate::util;
 
-impl<'o, Observable, NextFn> core::ObservableSubsribeNext<'o, NextFn> for Observable
+impl<'o, Observable, NextFn> core::ObservableSubsribeNext<'o, NextFn>
+    for marker::Observable<Observable>
 where
     Observable: core::LocalObservable<'o> + 'o,
     Observable::Error: util::Inconstructible,
@@ -20,13 +22,13 @@ where
             || {},
         );
         let cancellable = observer.cancellable();
-        self.actual_subscribe(observer);
+        self.actual.actual_subscribe(observer);
         cancellable
     }
 }
 
 impl<'o, Observable, NextFn, ErrorFn, CompletedFn>
-    core::ObservableSubsribeAll<'o, NextFn, ErrorFn, CompletedFn> for Observable
+    core::ObservableSubsribeAll<'o, NextFn, ErrorFn, CompletedFn> for marker::Observable<Observable>
 where
     Observable: core::LocalObservable<'o> + 'o,
     NextFn: FnMut(Observable::Item) + 'o,
@@ -44,7 +46,7 @@ where
         use crate::core::CancellableProvider;
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
         let cancellable = observer.cancellable();
-        self.actual_subscribe(observer);
+        self.actual.actual_subscribe(observer);
         cancellable
     }
 }

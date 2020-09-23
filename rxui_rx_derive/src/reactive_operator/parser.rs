@@ -54,7 +54,9 @@ impl<'a> Parser<'a> {
             data_fields,
             settings: Settings {
                 upstream,
-                downstream_ty: upstream_attr.downstream_ty,
+                operator_ident: upstream_attr.operator_ident,
+                trait_impls: upstream_attr.trait_impls,
+                subscriber_ty: upstream_attr.subscriber_ty,
                 subscription_ty: upstream_attr.subscription_ty,
                 item_ty: upstream_attr.item_ty,
                 error_ty: upstream_attr.error_ty,
@@ -72,7 +74,9 @@ pub struct ParserOutput<'a> {
 
 pub struct Settings {
     pub upstream: UpstreamInfo,
-    pub downstream_ty: Option<syn::Type>,
+    pub operator_ident: Option<syn::Ident>,
+    pub trait_impls: Option<TraitImpls>,
+    pub subscriber_ty: Option<syn::Type>,
     pub subscription_ty: Option<syn::Type>,
     pub item_ty: Option<syn::Type>,
     pub error_ty: Option<syn::Type>,
@@ -130,9 +134,11 @@ impl<'a> Field<'a> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 struct UpstreamAttr {
-    downstream_ty: Option<syn::Type>,
+    operator_ident: Option<syn::Ident>,
+    trait_impls: Option<TraitImpls>,
+    subscriber_ty: Option<syn::Type>,
     subscription_ty: Option<syn::Type>,
     item_ty: Option<syn::Type>,
     error_ty: Option<syn::Type>,
@@ -141,18 +147,13 @@ struct UpstreamAttr {
 impl UpstreamAttr {
     pub fn from(attr: &syn::Attribute) -> Self {
         let list = as_meta_list(attr);
-        let mut result = Self {
-            downstream_ty: None,
-            subscription_ty: None,
-            item_ty: None,
-            error_ty: None,
-        };
+        let mut result = Self::default();
         for item in list.nested.iter() {
             match *item {
                 syn::NestedMeta::Meta(syn::Meta::NameValue(ref kv)) => {
                     if let syn::Lit::Str(ref s) = kv.lit {
-                        if kv.path.is_ident("downstream") {
-                            result.downstream_ty =
+                        if kv.path.is_ident("subscriber") {
+                            result.subscriber_ty =
                                 Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else if kv.path.is_ident("subscription") {
                             result.subscription_ty =
@@ -161,14 +162,41 @@ impl UpstreamAttr {
                             result.item_ty = Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else if kv.path.is_ident("error") {
                             result.error_ty = Some(syn::parse_str(s.value().as_str()).unwrap());
+                        } else if kv.path.is_ident("derive_impls") {
+                            result.trait_impls = Some(TraitImpls::from(s.value().as_str()));
+                        } else if kv.path.is_ident("operator") {
+                            result.operator_ident =
+                                Some(syn::parse_str(s.value().as_str()).unwrap());
                         } else {
-                            panic! {"Invalid key in rx_observable attribute"};
+                            panic! {"#[derive(reactive_operator)] invalid key in reactive_operator attribute"};
                         }
                     } else {
-                        panic! {"Found non-string key"}
+                        panic! {"#[derive(reactive_operator)] non-string key"}
                     }
                 }
-                _ => panic! {"Expected only name-value pairs"},
+                _ => panic! {"#[derive(reactive_operator)] expected only name-value pairs"},
+            }
+        }
+        result
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct TraitImpls {
+    pub base: bool,
+    pub local: bool,
+    pub shared: bool,
+}
+
+impl TraitImpls {
+    fn from(string: &str) -> Self {
+        let mut result = Self::default();
+        for elem in string.split_whitespace().map(|e| e.split(',')).flatten() {
+            match elem {
+                "base" => result.base = true,
+                "local" => result.local = true,
+                "shared" => result.shared = true,
+                _ => panic! {"#[derive(reactive_operator)] unknown derive_impls element"},
             }
         }
         result
@@ -227,6 +255,9 @@ enum UpstreamKind {
 
 pub trait UpstreamImplTokens {
     fn impl_type(&self) -> proc_macro2::TokenStream;
+    fn with_marker_tys(&self, ty: proc_macro2::TokenStream) -> proc_macro2::TokenStream;
+    fn with_markers(&self, expr: proc_macro2::TokenStream) -> proc_macro2::TokenStream;
+    fn marker_accessor(&self) -> proc_macro2::TokenStream;
     fn type_param_ident(&self) -> proc_macro2::TokenStream;
     fn downstream_trait(&self) -> proc_macro2::TokenStream;
     fn lifetime_impl_params(&self) -> Option<proc_macro2::TokenStream>;
@@ -327,6 +358,26 @@ impl UpstreamImplTokens for UpstreamLocalInfo {
         }
     }
 
+    fn with_marker_tys(&self, ty: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {crate::marker::Observable<#ty>}
+        } else {
+            quote! {crate::marker::Flow<#ty>}
+        }
+    }
+
+    fn with_markers(&self, expr: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {crate::marker::Observable::new(#expr)}
+        } else {
+            quote! {crate::marker::Flow::new(#expr)}
+        }
+    }
+
+    fn marker_accessor(&self) -> proc_macro2::TokenStream {
+        quote! {.actual}
+    }
+
     fn type_param_ident(&self) -> proc_macro2::TokenStream {
         if self.kind.is_observable() {
             quote! {Cancellable}
@@ -359,6 +410,26 @@ impl UpstreamImplTokens for UpstreamSharedInfo {
         } else {
             quote! {core::SharedFlow}
         }
+    }
+
+    fn with_marker_tys(&self, ty: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {crate::marker::Shared<crate::marker::Observable<#ty>>}
+        } else {
+            quote! {crate::marker::Shared<crate::marker::Flow<#ty>>}
+        }
+    }
+
+    fn with_markers(&self, expr: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+        if self.kind.is_observable() {
+            quote! {crate::marker::Shared::new(crate::marker::Observable::new(#expr))}
+        } else {
+            quote! {crate::marker::Shared::new(crate::marker::Flow::new(#expr))}
+        }
+    }
+
+    fn marker_accessor(&self) -> proc_macro2::TokenStream {
+        quote! {.actual.actual}
     }
 
     fn type_param_ident(&self) -> proc_macro2::TokenStream {

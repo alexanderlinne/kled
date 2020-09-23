@@ -18,7 +18,6 @@ pub mod flow;
 pub mod marker;
 pub mod observable;
 pub mod observer;
-#[doc(hidden)]
 pub mod operators;
 pub mod scheduler;
 pub mod subject;

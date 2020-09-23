@@ -1,13 +1,12 @@
 use crate::core;
-use crate::flow;
 use crate::marker;
 
 #[derive(Clone)]
-pub struct Flow<Actual> {
+pub struct Observable<Actual> {
     pub(crate) actual: Actual,
 }
 
-impl<Actual> Flow<Actual> {
+impl<Actual> Observable<Actual> {
     pub fn new(actual: Actual) -> Self {
         Self { actual }
     }
@@ -20,19 +19,19 @@ impl<Actual> Flow<Actual> {
     }
 }
 
-impl<Subscription, Item, Error, T> core::Subscriber<Subscription, Item, Error> for Flow<T>
+impl<Cancellable, Item, Error, T> core::Observer<Cancellable, Item, Error> for Observable<T>
 where
-    T: core::Subscriber<Subscription, Item, Error>,
+    T: core::Observer<Cancellable, Item, Error>,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.actual.on_subscribe(subscription);
+    fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.actual.on_subscribe(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
         self.actual.on_next(item);
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    fn on_error(&mut self, error: Error) {
         self.actual.on_error(error);
     }
 

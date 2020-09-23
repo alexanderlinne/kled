@@ -1,6 +1,7 @@
 use crate::cancellable::local::*;
 use crate::core;
 use crate::core::{IntoObservableEmitter, ObservableEmitter};
+use crate::marker;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -13,14 +14,14 @@ struct Data<'o, Cancellable, Item, Error> {
     emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + 'o>>,
 }
 
-impl<'o, Cancellable, Item, Error> Default for PublishSubject<'o, Cancellable, Item, Error> {
-    fn default() -> Self {
-        Self {
+impl<'o, Cancellable, Item, Error> PublishSubject<'o, Cancellable, Item, Error> {
+    pub fn default() -> marker::Observable<Self> {
+        marker::Observable::new(Self {
             data: Rc::new(RefCell::new(Data {
                 cancellable: None,
                 emitters: vec![],
             })),
-        }
+        })
     }
 }
 

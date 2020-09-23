@@ -1,6 +1,7 @@
 use crate::cancellable;
 use crate::core;
 use crate::core::{IntoObservableEmitter, IntoSharedObservableEmitter};
+use crate::marker;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -58,8 +59,10 @@ impl<F, Item, Error> core::Observable for ObservableCreate<F, Item, Error> {
     type Error = Error;
 }
 
-pub fn create<F, Item, Error>(emitter_consumer: F) -> ObservableCreate<F, Item, Error> {
-    ObservableCreate::new(emitter_consumer)
+pub fn create<F, Item, Error>(
+    emitter_consumer: F,
+) -> marker::Observable<ObservableCreate<F, Item, Error>> {
+    marker::Observable::new(ObservableCreate::new(emitter_consumer))
 }
 
 #[cfg(test)]

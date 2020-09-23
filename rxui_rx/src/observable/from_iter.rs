@@ -1,6 +1,7 @@
 use crate::cancellable::{local, shared};
 use crate::core;
 use crate::core::{IntoObservableEmitter, IntoSharedObservableEmitter, ObservableEmitter};
+use crate::marker;
 use crate::util;
 
 #[doc(hidden)]
@@ -79,7 +80,7 @@ where
 {
     type Observable = IntoIterObservable<IntoIter>;
 
-    fn into_observable(self) -> Self::Observable {
-        IntoIterObservable::new(self)
+    fn into_observable(self) -> marker::Observable<Self::Observable> {
+        marker::Observable::new(IntoIterObservable::new(self))
     }
 }

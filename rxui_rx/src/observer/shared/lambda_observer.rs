@@ -3,7 +3,8 @@ use crate::core;
 use crate::marker;
 use crate::util;
 
-impl<'o, Observable, NextFn> core::ObservableSubsribeNext<'o, NextFn> for marker::Shared<Observable>
+impl<'o, Observable, NextFn> core::ObservableSubsribeNext<'o, NextFn>
+    for marker::Shared<marker::Observable<Observable>>
 where
     Observable: core::SharedObservable + Send + 'static,
     Observable::Cancellable: Send + 'static,
@@ -22,13 +23,14 @@ where
             || {},
         );
         let cancellable = observer.cancellable();
-        self.actual.actual_subscribe(observer);
+        self.actual.actual.actual_subscribe(observer);
         cancellable
     }
 }
 
 impl<'o, Observable, NextFn, ErrorFn, CompletedFn>
-    core::ObservableSubsribeAll<'o, NextFn, ErrorFn, CompletedFn> for marker::Shared<Observable>
+    core::ObservableSubsribeAll<'o, NextFn, ErrorFn, CompletedFn>
+    for marker::Shared<marker::Observable<Observable>>
 where
     Observable: core::SharedObservable + Send + 'static,
     Observable::Cancellable: Send + 'static,
@@ -47,7 +49,7 @@ where
         use crate::core::CancellableProvider;
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
         let cancellable = observer.cancellable();
-        self.actual.actual_subscribe(observer);
+        self.actual.actual.actual_subscribe(observer);
         cancellable
     }
 }

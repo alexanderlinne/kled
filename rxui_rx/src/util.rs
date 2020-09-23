@@ -3,9 +3,12 @@ use crate::marker;
 
 pub trait Sealed {}
 
-impl<'o, Observable> Sealed for Observable where Observable: core::LocalObservable<'o> + 'o {}
+impl<'o, Observable> Sealed for marker::Observable<Observable> where
+    Observable: core::LocalObservable<'o> + 'o
+{
+}
 
-impl<Observable> Sealed for marker::Shared<Observable> where
+impl<Observable> Sealed for marker::Shared<marker::Observable<Observable>> where
     Observable: core::SharedObservable + Send + 'static
 {
 }

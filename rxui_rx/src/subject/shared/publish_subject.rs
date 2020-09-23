@@ -1,6 +1,7 @@
 use crate::cancellable::shared::*;
 use crate::core;
 use crate::core::{IntoSharedObservableEmitter, ObservableEmitter};
+use crate::marker;
 use std::sync::{Arc, Mutex};
 
 pub struct PublishSubject<Cancellable, Item, Error> {
@@ -12,14 +13,14 @@ struct Data<Cancellable, Item, Error> {
     emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
-impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
-    fn default() -> Self {
-        Self {
+impl<Cancellable, Item, Error> PublishSubject<Cancellable, Item, Error> {
+    pub fn default() -> marker::Shared<marker::Observable<Self>> {
+        marker::Shared::new(marker::Observable::new(Self {
             data: Arc::new(Mutex::new(Data {
                 cancellable: None,
                 emitters: vec![],
             })),
-        }
+        }))
     }
 }
 
@@ -97,7 +98,7 @@ mod tests {
 
     #[test]
     fn simple() {
-        let subject = PublishSubject::default().into_shared();
+        let subject = PublishSubject::default();
 
         let subject2 = subject.clone();
         let barrier = Arc::new(Barrier::new(2));
@@ -126,7 +127,7 @@ mod tests {
 
     #[test]
     fn interleaved() {
-        let subject = PublishSubject::default().into_shared();
+        let subject = PublishSubject::default();
         let test_observable = TestObservable::default().annotate_error_type(());
         test_observable.clone().subscribe(subject.clone());
 
@@ -149,7 +150,7 @@ mod tests {
 
     #[test]
     fn error() {
-        let subject = PublishSubject::default().into_shared();
+        let subject = PublishSubject::default();
         let test_observable = TestObservable::default().annotate_item_type(());
         test_observable.clone().subscribe(subject.clone());
 
