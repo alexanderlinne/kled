@@ -10,7 +10,6 @@ where
     Flow: core::LocalFlow<'o>,
 {
     #[upstream(
-        downstream = "OnBackpressureLatestSubscriber",
         subscription = "OnBackpressureLatestSubscription<'o, Flow::Subscription, Flow::Item, Flow::Error>"
     )]
     flow: Flow,

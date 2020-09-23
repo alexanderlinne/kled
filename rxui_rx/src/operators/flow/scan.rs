@@ -8,7 +8,7 @@ where
     ItemOut: Clone,
     BinaryOp: FnMut(ItemOut, Flow::Item) -> ItemOut,
 {
-    #[upstream(downstream = "ScanSubscriber", item = "ItemOut")]
+    #[upstream(item = "ItemOut")]
     flow: Flow,
     initial_value: ItemOut,
     binary_op: BinaryOp,

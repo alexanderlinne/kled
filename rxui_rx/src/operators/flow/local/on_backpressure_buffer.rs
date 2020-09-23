@@ -11,7 +11,6 @@ where
     Flow: core::LocalFlow<'o>,
 {
     #[upstream(
-        downstream = "OnBackpressureBufferSubscriber",
         subscription = "OnBackpressureBufferSubscription<'o, Flow::Subscription, Flow::Item, Flow::Error>"
     )]
     flow: Flow,

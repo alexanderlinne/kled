@@ -11,10 +11,7 @@ where
     Flow::Item: Send,
     Flow::Error: Send,
 {
-    #[upstream(
-        downstream = "OnBackpressureDropSubscriber",
-        subscription = "OnBackpressureDropSubscription<Flow::Subscription, Flow::Error>"
-    )]
+    #[upstream(subscription = "OnBackpressureDropSubscription<Flow::Subscription, Flow::Error>")]
     flow: Flow,
 }
 

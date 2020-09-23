@@ -12,7 +12,6 @@ where
     Flow::Error: Send,
 {
     #[upstream(
-        downstream = "OnBackpressureLatestSubscriber",
         subscription = "OnBackpressureLatestSubscription<Flow::Subscription, Flow::Item, Flow::Error>"
     )]
     flow: Flow,

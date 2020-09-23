@@ -77,7 +77,10 @@ where
         &where_clause.as_ref().expect("").predicates,
     );
     let upstream_name = &output.upstream_field.ident;
-    let downstream_ty = &output.settings.downstream_ty;
+    let downstream_ty = match &output.settings.downstream_ty {
+        Some(ty) => ty.clone(),
+        None => derive_downstream_ty(name),
+    };
     let subscription_ty = match &output.settings.subscription_ty {
         Some(subscription_ty) => quote! { #subscription_ty },
         None => quote! {#upstream_type :: #type_param_ident},
@@ -110,6 +113,17 @@ where
                 ));
             }
         }
+    }
+}
+
+fn derive_downstream_ty(ident: &proc_macro2::Ident) -> syn::Type {
+    let ident = ident.to_string();
+    if let Some(ident) = ident.strip_prefix("Observable") {
+        syn::parse_str(format!("{}Observer", ident).as_str()).unwrap()
+    } else if let Some(ident) = ident.strip_prefix("Flow") {
+        syn::parse_str(format!("{}Subscriber", ident).as_str()).unwrap()
+    } else {
+        panic! {"#[derive(reactive_operator)] unexpected struct identifier"};
     }
 }
 

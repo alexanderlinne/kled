@@ -14,7 +14,7 @@ where
     Flow::Error: Send,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    #[upstream(downstream = "ObserveOnSubscriber")]
+    #[upstream()]
     flow: Flow,
     scheduler: Scheduler,
 }

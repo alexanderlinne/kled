@@ -13,7 +13,7 @@ where
     Observable::Error: Send,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    #[upstream(downstream = "ObserveOnObserver")]
+    #[upstream()]
     observable: Observable,
     scheduler: Scheduler,
 }

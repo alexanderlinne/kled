@@ -7,7 +7,7 @@ where
     ItemOut: Clone,
     BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut,
 {
-    #[upstream(downstream = "ScanObserver", item = "ItemOut")]
+    #[upstream(item = "ItemOut")]
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,

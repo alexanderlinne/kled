@@ -9,10 +9,7 @@ pub struct FlowOnBackpressureError<'o, Flow>
 where
     Flow: core::LocalFlow<'o>,
 {
-    #[upstream(
-        downstream = "OnBackpressureErrorSubscriber",
-        subscription = "OnBackpressureErrorSubscription<Flow::Subscription, Flow::Error>"
-    )]
+    #[upstream(subscription = "OnBackpressureErrorSubscription<Flow::Subscription, Flow::Error>")]
     flow: Flow,
     #[reactive_operator(ignore)]
     phantom: PhantomData<&'o Self>,
