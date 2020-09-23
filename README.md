@@ -1,7 +1,7 @@
 # rxui: Rust-native desktop GUI framework
 
-[![Build Status](https://img.shields.io/travis/alexanderlinne/rxui/master?style=flat-square&logo=appveyor)](https://travis-ci.org/alexanderlinne/rxui)
-[![Coverage Status](https://img.shields.io/coveralls/github/alexanderlinne/rxui/master?style=flat-square&logo=appveyor)](https://coveralls.io/github/alexanderlinne/rxui?branch=master)
+[![Build Status](https://img.shields.io/github/workflow/status/alexanderlinne/rxui/CI?style=flat-square&logo=github)](https://github.com/alexanderlinne/rxui/actions?query=workflow%3ACI)
+[![Coverage Status](https://img.shields.io/codecov/c/github/alexanderlinne/rxui/master?style=flat-square&logo=codecov)](https://codecov.io/gh/alexanderlinne/rxui)
 
 ## Warning: WIP
 
