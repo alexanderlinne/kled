@@ -58,29 +58,4 @@ pub trait Observable {
 
     /// The type of error which may be emitted by this observable
     type Error;
-
-    fn observe_on<Scheduler>(
-        self,
-        scheduler: Scheduler,
-    ) -> marker::Shared<operators::ObservableObserveOn<Self, Scheduler>>
-    where
-        Self: SharedObservable + Sized,
-        Self::Cancellable: Send,
-        Self::Item: Send,
-        Self::Error: Send,
-        Scheduler: core::Scheduler + Send,
-    {
-        marker::Shared::new(operators::ObservableObserveOn::new(self, scheduler))
-    }
-
-    fn subscribe_on<Scheduler>(
-        self,
-        scheduler: Scheduler,
-    ) -> marker::Shared<operators::ObservableSubscribeOn<Self, Scheduler>>
-    where
-        Self: Sized,
-        Scheduler: core::Scheduler + Send,
-    {
-        marker::Shared::new(operators::ObservableSubscribeOn::new(self, scheduler))
-    }
 }

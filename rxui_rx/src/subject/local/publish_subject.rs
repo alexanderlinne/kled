@@ -92,8 +92,9 @@ impl<'o, Cancellable, Item, Error> core::Observable
 #[cfg(test)]
 mod tests {
     use super::PublishSubject;
+    use crate::observable::local::*;
+    use crate::observer::local::*;
     use crate::prelude::*;
-    use crate::util::local::*;
 
     #[test]
     fn simple() {

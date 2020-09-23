@@ -1,9 +1,6 @@
 use crate::core;
 use crate::marker;
 
-pub mod local;
-pub mod shared;
-
 pub trait Sealed {}
 
 impl<'o, Observable> Sealed for Observable where Observable: core::LocalObservable<'o> + 'o {}

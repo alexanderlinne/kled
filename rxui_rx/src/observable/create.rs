@@ -64,8 +64,8 @@ pub fn create<F, Item, Error>(emitter_consumer: F) -> ObservableCreate<F, Item, 
 
 #[cfg(test)]
 mod tests {
+    use crate::observer::local::*;
     use crate::prelude::*;
-    use crate::util::local::*;
 
     #[test]
     fn create() {

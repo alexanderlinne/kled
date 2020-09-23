@@ -38,16 +38,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::observer::shared::*;
     use crate::prelude::*;
     use crate::scheduler;
-    use crate::util::shared::*;
 
     #[test]
     fn subscribe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
-            .into_observable()
+            .into_shared_observable()
             .subscribe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();

@@ -22,6 +22,7 @@ pub mod observer;
 pub mod operators;
 pub mod scheduler;
 pub mod subject;
+pub mod subscriber;
 pub mod subscription;
 pub mod util;
 

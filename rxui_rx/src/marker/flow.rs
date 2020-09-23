@@ -20,23 +20,6 @@ impl<Actual> Flow<Actual> {
         marker::Shared::new(self)
     }
 
-    pub fn observe_on<Scheduler>(
-        self,
-        scheduler: Scheduler,
-    ) -> marker::Shared<marker::Flow<operators::FlowObserveOn<Actual, Scheduler>>>
-    where
-        Actual: core::SharedFlow + Sized,
-        Actual::Subscription: Send,
-        Actual::Item: Send,
-        Actual::Error: Send,
-        Scheduler: core::Scheduler + Send,
-    {
-        marker::Shared::new(marker::Flow::new(operators::FlowObserveOn::new(
-            self.actual,
-            scheduler,
-        )))
-    }
-
     pub fn on_backpressure_buffer<'o>(
         self,
         buffer_strategy: flow::BufferStrategy,
@@ -91,6 +74,23 @@ impl<Actual> Flow<Actual> {
         Actual: core::LocalFlow<'o> + Sized,
     {
         marker::Flow::new(operators::local::FlowOnBackpressureLatest::new(self.actual))
+    }
+
+    pub fn scan<'o, ItemOut, BinaryOp>(
+        self,
+        initial_value: ItemOut,
+        binary_op: BinaryOp,
+    ) -> marker::Flow<operators::FlowScan<Actual, ItemOut, BinaryOp>>
+    where
+        Actual: core::LocalFlow<'o> + Sized,
+        ItemOut: Clone,
+        BinaryOp: FnMut(ItemOut, Actual::Item) -> ItemOut,
+    {
+        marker::Flow::new(operators::FlowScan::new(
+            self.actual,
+            initial_value,
+            binary_op,
+        ))
     }
 }
 

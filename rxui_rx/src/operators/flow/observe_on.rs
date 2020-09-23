@@ -193,16 +193,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::flow::shared::*;
     use crate::prelude::*;
     use crate::scheduler;
-    use crate::util::shared::*;
+    use crate::subscriber::shared::*;
 
     #[test]
     fn observe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
-            .into_flow()
+            .into_shared_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();

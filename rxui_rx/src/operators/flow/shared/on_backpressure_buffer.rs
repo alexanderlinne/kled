@@ -189,8 +189,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::flow::shared::*;
     use crate::prelude::*;
-    use crate::util::shared::*;
+    use crate::subscriber::shared::*;
 
     #[test]
     fn basic() {

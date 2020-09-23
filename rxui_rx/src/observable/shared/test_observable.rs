@@ -1,6 +1,7 @@
 use crate::cancellable::shared::*;
 use crate::core;
 use crate::core::IntoSharedObservableEmitter;
+use crate::marker;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -12,15 +13,19 @@ struct Data<Item, Error> {
     emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
-impl<Item, Error> Default for TestObservable<Item, Error> {
-    fn default() -> Self {
-        Self {
+impl<Item, Error> TestObservable<Item, Error> {
+    pub fn default() -> marker::Shared<Self> {
+        marker::Shared::new(Self {
             data: Arc::new(Mutex::new(Data { emitter: None })),
-        }
+        })
+    }
+
+    pub fn has_observer(&self) -> bool {
+        self.data.lock().unwrap().emitter.is_some()
     }
 }
 
-impl<Item, Error> TestObservable<Item, Error> {
+impl<Item, Error> marker::Shared<TestObservable<Item, Error>> {
     pub fn annotate_item_type(self, _: Item) -> Self {
         self
     }
@@ -30,12 +35,12 @@ impl<Item, Error> TestObservable<Item, Error> {
     }
 
     pub fn has_observer(&self) -> bool {
-        self.data.lock().unwrap().emitter.is_some()
+        self.actual.has_observer()
     }
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().emitter {
+        match self.actual.data.lock().unwrap().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -43,7 +48,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().emitter {
+        match self.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -60,7 +65,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().emitter {
+        match self.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -68,7 +73,7 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.data.lock().unwrap().emitter {
+        match self.actual.data.lock().unwrap().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }

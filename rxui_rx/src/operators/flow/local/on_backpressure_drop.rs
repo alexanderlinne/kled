@@ -93,8 +93,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::flow::local::*;
     use crate::prelude::*;
-    use crate::util::local::*;
+    use crate::subscriber::local::*;
 
     #[test]
     fn drop() {
@@ -103,7 +104,7 @@ mod tests {
             .into_flow()
             .on_backpressure_drop()
             .subscribe(test_subscriber.clone());
-        assert_eq!(test_subscriber.status(), ObserverStatus::Completed);
+        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![0]);
     }
 

@@ -151,6 +151,23 @@ where
             operators::shared::FlowOnBackpressureLatest::new(self.actual.actual),
         ))
     }
+
+    pub fn scan<ItemOut, BinaryOp>(
+        self,
+        initial_value: ItemOut,
+        binary_op: BinaryOp,
+    ) -> marker::Shared<marker::Flow<operators::FlowScan<Actual, ItemOut, BinaryOp>>>
+    where
+        Actual: core::SharedFlow + Sized,
+        ItemOut: Clone,
+        BinaryOp: FnMut(ItemOut, Actual::Item) -> ItemOut,
+    {
+        marker::Shared::new(marker::Flow::new(operators::FlowScan::new(
+            self.actual.actual,
+            initial_value,
+            binary_op,
+        )))
+    }
 }
 
 impl<Cancellable, Item, Error, T> core::Observer<Cancellable, Item, Error> for Shared<T>

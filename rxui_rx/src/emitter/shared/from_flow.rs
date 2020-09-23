@@ -59,18 +59,18 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::util::shared::*;
+    use crate::subscriber::shared::*;
 
     #[test]
     fn basic() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]
-            .into_flow()
+            .into_shared_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();
-        assert_eq!(test_subscriber.status(), ObserverStatus::Completed);
+        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![0, 1, 2]);
     }
 }

@@ -106,8 +106,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::flow::local::*;
     use crate::prelude::*;
-    use crate::util::local::*;
+    use crate::subscriber::local::*;
 
     #[test]
     fn missing_backpressure() {

@@ -89,8 +89,9 @@ impl<Cancellable, Item, Error> core::Observable for PublishSubject<Cancellable, 
 #[cfg(test)]
 mod tests {
     use super::PublishSubject;
+    use crate::observable::shared::*;
+    use crate::observer::shared::*;
     use crate::prelude::*;
-    use crate::util::shared::*;
     use std::sync::{Arc, Barrier};
     use std::thread;
 
@@ -127,10 +128,7 @@ mod tests {
     fn interleaved() {
         let subject = PublishSubject::default().into_shared();
         let test_observable = TestObservable::default().annotate_error_type(());
-        test_observable
-            .clone()
-            .into_shared()
-            .subscribe(subject.clone());
+        test_observable.clone().subscribe(subject.clone());
 
         let test_observer1 = TestObserver::default();
         subject.clone().subscribe(test_observer1.clone());
@@ -153,10 +151,7 @@ mod tests {
     fn error() {
         let subject = PublishSubject::default().into_shared();
         let test_observable = TestObservable::default().annotate_item_type(());
-        test_observable
-            .clone()
-            .into_shared()
-            .subscribe(subject.clone());
+        test_observable.clone().subscribe(subject.clone());
 
         let test_observer1 = TestObserver::default();
         subject.clone().subscribe(test_observer1.clone());

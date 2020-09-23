@@ -59,14 +59,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::flow::local::*;
     use crate::prelude::*;
-    use crate::util::local::*;
+    use crate::subscriber::local::*;
 
     #[test]
     fn basic() {
         let test_subscriber = TestSubscriber::new(1);
         vec![0, 1, 2].into_flow().subscribe(test_subscriber.clone());
-        assert_eq!(test_subscriber.status(), ObserverStatus::Completed);
+        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![0, 1, 2]);
     }
 
