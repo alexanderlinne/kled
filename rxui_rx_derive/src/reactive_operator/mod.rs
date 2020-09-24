@@ -114,7 +114,7 @@ where
     let type_param_ident = tokens.type_param_ident();
     let downstream_trait = tokens.downstream_trait();
     let lifetime_impl_params = tokens.lifetime_impl_params();
-    let additional_bounds = tokens.additional_bounds();
+    let additional_bounds = tokens.additional_bounds().map(|t| quote! {+ #t});
 
     let struct_ident = &output.ast.ident;
     let upstream_ty = output.upstream_field.ty;
@@ -124,6 +124,7 @@ where
         &output.upstream_field.ty,
         &where_clause.as_ref().expect("").predicates,
     );
+    let missing_clauses = generate_missing_where_clauses(output, &tokens);
     let upstream_name = &output.upstream_field.ident;
     let subscriber_ty = match &output.settings.subscriber_ty {
         Some(ty) => ty.clone(),
@@ -148,6 +149,7 @@ where
         where
             #upstream_ty: #impl_type #lifetime_impl_params_with_lg,
             #(#where_preds #lifetime_impl_params_with_plus #additional_bounds),*
+            #missing_clauses
         {
             type #type_param_ident = #subscription_ty;
 
@@ -161,6 +163,53 @@ where
                 ));
             }
         }
+    }
+}
+
+fn generate_missing_where_clauses<Tokens>(
+    output: &ParserOutput<'_>,
+    tokens: &Tokens,
+) -> Option<proc_macro2::TokenStream>
+where
+    Tokens: UpstreamImplTokens,
+{
+    let lifetime_impl_params = tokens.lifetime_impl_params();
+    let additional_bounds = tokens.additional_bounds();
+    let covered_idents: Vec<_> = output
+        .ast
+        .generics
+        .where_clause
+        .as_ref()
+        .unwrap()
+        .predicates
+        .iter()
+        .filter_map(|pred| {
+            if let syn::WherePredicate::Type(pred) = pred {
+                let ty = &pred.bounded_ty;
+                Some(quote! {#ty}.to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+    let missing_clauses: Vec<_> = output
+        .ast
+        .generics
+        .type_params()
+        .map(|param| param.ident.to_string())
+        .filter_map(|ident| {
+            if !covered_idents.contains(&ident) {
+                let ident = format_ident! {"{}", ident};
+                Some(quote! {#ident: #lifetime_impl_params #additional_bounds})
+            } else {
+                None
+            }
+        })
+        .collect();
+    if missing_clauses.is_empty() {
+        None
+    } else {
+        Some(quote! {,#( #missing_clauses),*})
     }
 }
 
@@ -230,7 +279,7 @@ where
     let impl_type = tokens.impl_type();
     let marker_accessor = tokens.marker_accessor();
     let lifetime_impl_params = tokens.lifetime_impl_params();
-    let additional_bounds = tokens.additional_bounds();
+    let additional_bounds = tokens.additional_bounds().map(|t| quote! {+ #t});
 
     let struct_ident = &output.ast.ident;
     let operator_ident = match &output.settings.operator_ident {
@@ -246,6 +295,8 @@ where
         &output.upstream_field.ty,
         &where_clause.as_ref().expect("").predicates,
     );
+    let missing_clauses = generate_missing_where_clauses(output, &tokens);
+    //println!("MISSING: {}", missing_clauses);
     let field_idents = output.data_fields.iter().map(|f| &f.ident);
     let arguments = output.data_fields.iter().map(|f| {
         let ident = &f.ident;
@@ -266,6 +317,7 @@ where
             where
                 #upstream_ty: #impl_type #lifetime_impl_params_with_lg + Sized,
                 #(#where_preds #lifetime_impl_params_with_plus #additional_bounds),*
+                #missing_clauses
             {
                 #result_expr
             }

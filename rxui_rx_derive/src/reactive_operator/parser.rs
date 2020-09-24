@@ -453,6 +453,6 @@ impl UpstreamImplTokens for UpstreamSharedInfo {
     }
 
     fn additional_bounds(&self) -> Option<proc_macro2::TokenStream> {
-        Some(quote! {+ Send + 'static})
+        Some(quote! {Send + 'static})
     }
 }
