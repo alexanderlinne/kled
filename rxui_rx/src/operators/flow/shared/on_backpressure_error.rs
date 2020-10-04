@@ -1,8 +1,8 @@
 use crate::core;
 use crate::flow;
+use crate::sync::atomic::{AtomicUsize, Ordering};
+use crate::sync::Arc;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
 #[derive(new, reactive_operator)]
 pub struct FlowOnBackpressureError<Flow>

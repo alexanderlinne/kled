@@ -1,8 +1,7 @@
 use crate::core;
 use crate::flow;
-use parking_lot::ReentrantMutex;
+use crate::sync::{Arc, Mutex, ReentrantMutex};
 use std::cell::RefCell;
-use std::sync::{Arc, Mutex};
 
 pub struct TestSubscriber<Subscription, Item, Error> {
     subscription: Arc<ReentrantMutex<RefCell<Option<Subscription>>>>,
@@ -90,18 +89,18 @@ where
     }
 
     pub fn request_on_next(&mut self, count: usize) {
-        self.data.lock().unwrap().request_on_next += count;
+        self.data.lock().request_on_next += count;
     }
 
     pub fn execute_on_next<Fn>(&mut self, f: Fn)
     where
         Fn: FnOnce() + Send + 'static,
     {
-        self.data.lock().unwrap().execute_on_next = Some(Box::new(f));
+        self.data.lock().execute_on_next = Some(Box::new(f));
     }
 
     pub fn has_error(&self) -> bool {
-        self.data.lock().unwrap().error.is_some()
+        self.data.lock().error.is_some()
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -114,7 +113,7 @@ where
     }
 
     pub fn is_completed(&self) -> bool {
-        self.data.lock().unwrap().is_completed
+        self.data.lock().is_completed
     }
 }
 
@@ -124,11 +123,11 @@ where
     Error: Clone,
 {
     pub fn items(&self) -> Vec<Item> {
-        self.data.lock().unwrap().items.clone()
+        self.data.lock().items.clone()
     }
 
     pub fn error(&self) -> Option<flow::Error<Error>> {
-        self.data.lock().unwrap().error.clone()
+        self.data.lock().error.clone()
     }
 }
 
@@ -139,12 +138,12 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         assert_eq!(self.status(), SubscriberStatus::Unsubscribed);
-        subscription.request(self.data.lock().unwrap().request_on_subscribe);
+        subscription.request(self.data.lock().request_on_subscribe);
         *self.subscription.lock().borrow_mut() = Some(subscription);
     }
     fn on_next(&mut self, item: Item) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock();
         data.items.push(item);
         if let Some(f) = data.execute_on_next.take() {
             f()
@@ -159,10 +158,10 @@ where
     }
     fn on_error(&mut self, error: flow::Error<Error>) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
-        self.data.lock().unwrap().error = Some(error)
+        self.data.lock().error = Some(error)
     }
     fn on_completed(&mut self) {
         assert_eq!(self.status(), SubscriberStatus::Subscribed);
-        self.data.lock().unwrap().is_completed = true;
+        self.data.lock().is_completed = true;
     }
 }

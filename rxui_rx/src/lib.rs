@@ -6,10 +6,17 @@
 
 #[macro_use]
 extern crate derive_new;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate lazy_static;
+extern crate num_cpus;
 extern crate parking_lot;
 #[macro_use]
+extern crate rxui_mock;
+#[macro_use]
 extern crate rxui_rx_derive;
-extern crate threadpool;
+
+rxui_mock_init! {}
 
 pub mod cancellable;
 pub mod core;

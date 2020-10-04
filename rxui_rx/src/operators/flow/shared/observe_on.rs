@@ -1,9 +1,9 @@
 use crate::core;
 use crate::flow;
+use crate::sync::mpsc;
+use crate::sync::{Arc, Mutex};
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 
 #[derive(new, reactive_operator)]
 pub struct FlowObserveOn<Flow, Scheduler>
@@ -36,7 +36,7 @@ where
     Scheduler: core::Scheduler + Send + 'static,
 {
     fn new(subscriber: Subscriber, scheduler: Scheduler) -> Self {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::unbounded();
         ObserveOnSubscriber {
             task: Arc::new(ObserveOnTaskWrapper::new(receiver, subscriber)),
             sender,
@@ -50,7 +50,7 @@ where
         F: FnOnce(&mut Data<Error>),
     {
         let last_pending_count = unsafe {
-            let mut data = (*self.task.inner.get()).data.lock().unwrap();
+            let mut data = (*self.task.inner.get()).data.lock();
             let last_pending_count = data.pending_count;
             f(&mut data);
             last_pending_count
@@ -163,7 +163,7 @@ where
         let mut expected_count: usize = 0;
         loop {
             for _ in 0..expected_count {
-                let mut data = self.data.lock().unwrap();
+                let mut data = self.data.lock();
                 if data.done && data.error.is_some() {
                     self.subscriber.on_error(data.error.take().unwrap());
                     return;
@@ -174,7 +174,7 @@ where
                 self.subscriber.on_next(item);
             }
 
-            let mut data = self.data.lock().unwrap();
+            let mut data = self.data.lock();
             data.pending_count -= expected_count;
             expected_count = data.pending_count;
             if expected_count == 0 {

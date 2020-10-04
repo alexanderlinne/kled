@@ -1,8 +1,8 @@
 use crate::core;
 use crate::flow;
+use crate::sync::atomic::{AtomicUsize, Ordering};
+use crate::sync::{Arc, Mutex, Weak};
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, Weak};
 
 #[derive(new, reactive_operator)]
 pub struct FlowOnBackpressureLatest<Flow>
@@ -67,29 +67,29 @@ impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
             Arc::downgrade(&self.subscriber),
             Arc::downgrade(&self.data),
         );
-        self.subscriber.lock().unwrap().on_subscribe(subscription);
+        self.subscriber.lock().on_subscribe(subscription);
     }
 
     fn on_next(&mut self, item: Item) {
         if self.data.requested.load(Ordering::Relaxed) > 0 {
-            let mut subscriber = self.subscriber.lock().unwrap();
-            *self.data.latest.lock().unwrap() = None;
+            let mut subscriber = self.subscriber.lock();
+            *self.data.latest.lock() = None;
             subscriber.on_next(item);
             self.data.requested.fetch_sub(1, Ordering::Relaxed);
         } else {
-            *self.data.latest.lock().unwrap() = Some(item);
+            *self.data.latest.lock() = Some(item);
         }
     }
 
     fn on_error(&mut self, error: flow::Error<Error>) {
-        let mut subscriber = self.subscriber.lock().unwrap();
-        *self.data.latest.lock().unwrap() = None;
+        let mut subscriber = self.subscriber.lock();
+        *self.data.latest.lock() = None;
         subscriber.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        let mut subscriber = self.subscriber.lock().unwrap();
-        *self.data.latest.lock().unwrap() = None;
+        let mut subscriber = self.subscriber.lock();
+        *self.data.latest.lock() = None;
         subscriber.on_completed();
     }
 }
@@ -129,8 +129,8 @@ where
         let requested = data.requested.fetch_add(count, Ordering::Relaxed) + count;
         if requested > 0 {
             if let Some(subscriber) = self.subscriber.upgrade() {
-                if let Ok(mut subscriber) = subscriber.try_lock() {
-                    let item = data.latest.lock().unwrap().take();
+                if let Some(mut subscriber) = subscriber.try_lock() {
+                    let item = data.latest.lock().take();
                     if let Some(item) = item {
                         subscriber.on_next(item);
                         data.requested.fetch_sub(1, Ordering::Relaxed);

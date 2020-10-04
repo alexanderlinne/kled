@@ -1,5 +1,5 @@
 use crate::core;
-use std::sync::{Arc, Mutex};
+use crate::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct EitherCancellable<Left, Right> {
@@ -20,11 +20,11 @@ impl<Left, Right> EitherCancellable<Left, Right> {
     }
 
     pub fn set_left(&mut self, left: Left) {
-        *self.data.lock().unwrap() = Data::Left(left);
+        *self.data.lock() = Data::Left(left);
     }
 
     pub fn set_right(&mut self, right: Right) {
-        *self.data.lock().unwrap() = Data::Right(right);
+        *self.data.lock() = Data::Right(right);
     }
 }
 
@@ -34,11 +34,11 @@ where
     Right: core::Cancellable,
 {
     fn cancel(&self) {
-        self.data.lock().unwrap().cancel()
+        self.data.lock().cancel()
     }
 
     fn is_cancelled(&self) -> bool {
-        self.data.lock().unwrap().is_cancelled()
+        self.data.lock().is_cancelled()
     }
 }
 

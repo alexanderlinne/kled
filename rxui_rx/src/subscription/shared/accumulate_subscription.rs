@@ -1,6 +1,6 @@
 use crate::core;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
+use crate::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use crate::sync::Arc;
 
 #[derive(Clone)]
 pub struct AccumulateSubscriptionStub {

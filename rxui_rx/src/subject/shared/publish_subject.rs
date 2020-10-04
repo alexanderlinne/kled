@@ -2,7 +2,7 @@ use crate::cancellable::shared::*;
 use crate::core;
 use crate::core::{IntoSharedObservableEmitter, ObservableEmitter};
 use crate::marker;
-use std::sync::{Arc, Mutex};
+use crate::sync::{Arc, Mutex};
 
 pub struct PublishSubject<Cancellable, Item, Error> {
     data: Arc<Mutex<Data<Cancellable, Item, Error>>>,
@@ -39,19 +39,19 @@ where
     Error: Clone,
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
-        self.data.lock().unwrap().cancellable = Some(cancellable);
+        self.data.lock().cancellable = Some(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
-        self.data.lock().unwrap().emitters.on_next(item);
+        self.data.lock().emitters.on_next(item);
     }
 
     fn on_error(&mut self, error: Error) {
-        self.data.lock().unwrap().emitters.on_error(error);
+        self.data.lock().emitters.on_error(error);
     }
 
     fn on_completed(&mut self) {
-        self.data.lock().unwrap().emitters.on_completed();
+        self.data.lock().emitters.on_completed();
     }
 }
 
@@ -76,7 +76,6 @@ where
     {
         self.data
             .lock()
-            .unwrap()
             .emitters
             .push(Box::new(observer.into_shared_emitter()))
     }
@@ -93,8 +92,8 @@ mod tests {
     use crate::observable::shared::*;
     use crate::observer::shared::*;
     use crate::prelude::*;
-    use std::sync::{Arc, Barrier};
-    use std::thread;
+    use crate::sync::{Arc, Barrier};
+    use crate::thread;
 
     #[test]
     fn simple() {

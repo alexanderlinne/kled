@@ -2,7 +2,7 @@ use crate::core;
 use crate::core::IntoSharedFlowEmitter;
 use crate::marker;
 use crate::subscription::shared::*;
-use std::sync::{Arc, Mutex};
+use crate::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct TestFlow<Item, Error> {
@@ -23,7 +23,7 @@ impl<Item, Error> TestFlow<Item, Error> {
 
 impl<Item, Error> TestFlow<Item, Error> {
     pub fn has_observer(&self) -> bool {
-        self.data.lock().unwrap().emitter.is_some()
+        self.data.lock().emitter.is_some()
     }
 }
 
@@ -42,7 +42,7 @@ impl<Item, Error> marker::Shared<marker::Flow<TestFlow<Item, Error>>> {
 
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.actual.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -50,7 +50,7 @@ impl<Item, Error> marker::Shared<marker::Flow<TestFlow<Item, Error>>> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.actual.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -67,7 +67,7 @@ impl<Item, Error> marker::Shared<marker::Flow<TestFlow<Item, Error>>> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.actual.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -75,7 +75,7 @@ impl<Item, Error> marker::Shared<marker::Flow<TestFlow<Item, Error>>> {
 
     pub fn emit_completed(&self) {
         assert!(self.has_observer());
-        match self.actual.actual.data.lock().unwrap().emitter {
+        match self.actual.actual.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
@@ -94,7 +94,7 @@ where
         Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock();
         data.emitter = Some(Box::new(subscriber.into_shared_emitter()));
     }
 }

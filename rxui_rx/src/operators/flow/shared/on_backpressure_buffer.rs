@@ -1,9 +1,9 @@
 use crate::core;
 use crate::flow;
 use crate::marker;
-use crossbeam::channel::{bounded, Receiver, Sender};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, Weak};
+use crate::sync::atomic::{AtomicUsize, Ordering};
+use crate::sync::mpsc::{bounded, Receiver, Sender};
+use crate::sync::{Arc, Mutex, Weak};
 
 #[derive(new, reactive_operator)]
 pub struct FlowOnBackpressureBuffer<Flow>
@@ -94,7 +94,7 @@ where
             use flow::BufferStrategy::*;
             match self.buffer_strategy {
                 Error => {
-                    if let Some(mut subscriber) = self.data.subscriber.lock().unwrap().take() {
+                    if let Some(mut subscriber) = self.data.subscriber.lock().take() {
                         subscriber.on_error(flow::Error::MissingBackpressure)
                     };
                 }
@@ -138,7 +138,7 @@ where
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let data = Arc::downgrade(&self.data);
-        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+        if let Some(subscriber) = self.data.subscriber.lock().as_mut() {
             subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
         };
     }
@@ -147,20 +147,20 @@ where
         let requested = self.data.requested.load(Ordering::Relaxed);
         self.add_to_queue(item);
         if requested > 0 {
-            if let Some(ref mut subscriber) = *self.data.subscriber.lock().unwrap() {
+            if let Some(ref mut subscriber) = *self.data.subscriber.lock() {
                 drain(&self.data, subscriber, requested);
             }
         }
     }
 
     fn on_error(&mut self, error: flow::Error<Error>) {
-        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+        if let Some(subscriber) = self.data.subscriber.lock().as_mut() {
             subscriber.on_error(error)
         };
     }
 
     fn on_completed(&mut self) {
-        if let Some(subscriber) = self.data.subscriber.lock().unwrap().as_mut() {
+        if let Some(subscriber) = self.data.subscriber.lock().as_mut() {
             subscriber.on_completed()
         };
     }
@@ -200,7 +200,7 @@ where
         if requested > 0 {
             // This prevents more than one reentrant call of request is the
             // subscriber is borrowed mutably either here or in on_next
-            if let Ok(mut subscriber) = data.subscriber.try_lock() {
+            if let Some(mut subscriber) = data.subscriber.try_lock() {
                 if let Some(mut subscriber) = (&mut *subscriber).as_mut() {
                     drain(&data, &mut subscriber, requested)
                 };

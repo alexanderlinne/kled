@@ -1,5 +1,5 @@
 use crate::core;
-use std::sync::{Arc, Mutex};
+use crate::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct TestObserver<Cancellable, Item, Error> {
@@ -35,7 +35,7 @@ where
     Cancellable: core::Cancellable,
 {
     pub fn status(&self) -> ObserverStatus {
-        if self.data.lock().unwrap().is_cancelled {
+        if self.data.lock().is_cancelled {
             ObserverStatus::Cancelled
         } else if !self.is_subscribed() {
             ObserverStatus::Unsubscribed
@@ -49,22 +49,22 @@ where
     }
 
     pub fn is_subscribed(&self) -> bool {
-        self.data.lock().unwrap().cancellable.is_some()
+        self.data.lock().cancellable.is_some()
     }
 
     pub fn cancel(&mut self) {
         assert!(self.is_subscribed());
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock();
         data.cancellable.take().unwrap().cancel();
         data.is_cancelled = true;
     }
 
     pub fn has_error(&self) -> bool {
-        self.data.lock().unwrap().error.is_some()
+        self.data.lock().error.is_some()
     }
 
     pub fn is_completed(&self) -> bool {
-        self.data.lock().unwrap().is_completed
+        self.data.lock().is_completed
     }
 }
 
@@ -74,11 +74,11 @@ where
     Error: Clone,
 {
     pub fn items(&self) -> Vec<Item> {
-        self.data.lock().unwrap().items.clone()
+        self.data.lock().items.clone()
     }
 
     pub fn error(&self) -> Option<Error> {
-        self.data.lock().unwrap().error.clone()
+        self.data.lock().error.clone()
     }
 }
 
@@ -89,18 +89,18 @@ where
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
         assert_eq!(self.status(), ObserverStatus::Unsubscribed);
-        self.data.lock().unwrap().cancellable = Some(cancellable);
+        self.data.lock().cancellable = Some(cancellable);
     }
     fn on_next(&mut self, item: Item) {
         assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().unwrap().items.push(item);
+        self.data.lock().items.push(item);
     }
     fn on_error(&mut self, error: Error) {
         assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().unwrap().error = Some(error)
+        self.data.lock().error = Some(error)
     }
     fn on_completed(&mut self) {
         assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().unwrap().is_completed = true;
+        self.data.lock().is_completed = true;
     }
 }

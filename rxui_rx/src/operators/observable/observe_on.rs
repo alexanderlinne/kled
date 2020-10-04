@@ -1,8 +1,8 @@
 use crate::core;
+use crate::sync::mpsc;
+use crate::sync::{Arc, Mutex};
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 
 #[derive(new, reactive_operator)]
 pub struct ObservableObserveOn<Observable, Scheduler>
@@ -35,7 +35,7 @@ where
     Scheduler: core::Scheduler + Send + 'static,
 {
     fn new(observer: Observer, scheduler: Scheduler) -> Self {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::unbounded();
         ObserveOnObserver {
             task: Arc::new(ObserveOnTaskWrapper::new(receiver, observer)),
             sender,
@@ -49,7 +49,7 @@ where
         F: FnOnce(&mut Data<Error>),
     {
         let last_pending_count = unsafe {
-            let mut data = (*self.task.inner.get()).data.lock().unwrap();
+            let mut data = (*self.task.inner.get()).data.lock();
             let last_pending_count = data.pending_count;
             f(&mut data);
             last_pending_count
@@ -158,7 +158,7 @@ where
         let mut expected_count: usize = 0;
         loop {
             for _ in 0..expected_count {
-                let mut data = self.data.lock().unwrap();
+                let mut data = self.data.lock();
                 if data.done && data.error.is_some() {
                     self.observer.on_error(data.error.take().unwrap());
                     return;
@@ -169,7 +169,7 @@ where
                 self.observer.on_next(item);
             }
 
-            let mut data = self.data.lock().unwrap();
+            let mut data = self.data.lock();
             data.pending_count -= expected_count;
             expected_count = data.pending_count;
             if expected_count == 0 {

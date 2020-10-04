@@ -1,0 +1,9 @@
+[package]
+name = "rxui_mock"
+version = "0.1.0"
+authors = ["Alexander Linne <alexander.linne@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+crossbeam = "0.7"
+parking_lot = { version = "0.11" }
