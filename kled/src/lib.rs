@@ -1,22 +1,18 @@
-//! [![github]](https://github.com/alexanderlinne/rxui)&ensp;
+//! [![github]](https://github.com/alexanderlinne/kled)&ensp;
 //!
-//! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
+//! [github]: https://img.shields.io/github/workflow/status/alexanderlinne/kled/CI?style=for-the-badge&logo=github
 //!
 #![deny(intra_doc_link_resolution_failure)]
 
 #[macro_use]
 extern crate derive_new;
-#[allow(unused_imports)]
 #[macro_use]
-extern crate lazy_static;
+extern crate kled_derive;
 extern crate num_cpus;
 extern crate parking_lot;
-#[macro_use]
-extern crate rxui_mock;
-#[macro_use]
-extern crate rxui_rx_derive;
 
-rxui_mock_init! {}
+mod mock;
+use mock::*;
 
 pub mod cancellable;
 pub mod core;

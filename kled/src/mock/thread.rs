@@ -41,10 +41,6 @@ where
 pub struct JoinHandle<T>(Arc<Mutex<Option<Duration>>>, thread::JoinHandle<T>);
 
 impl<T> JoinHandle<T> {
-    pub fn thread(&self) -> &thread::Thread {
-        self.1.thread()
-    }
-
     pub fn join(self) -> thread::Result<T> {
         let result = self.1.join();
         if let Some(auto_inc) = *self.0.lock() {

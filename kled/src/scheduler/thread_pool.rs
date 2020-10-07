@@ -44,6 +44,7 @@ impl ThreadPoolScheduler {
 
             data.active_count.fetch_sub(1, Ordering::SeqCst);
             if !data.has_work() {
+                let _ = data.join_mutex.lock();
                 data.join_cond.notify_all();
             }
         });
@@ -92,7 +93,9 @@ impl core::Scheduler for ThreadPoolScheduler {
         }
 
         let mut lock = self.data.join_mutex.lock();
-        self.data.join_cond.wait(&mut lock);
+        if self.data.has_work() {
+            self.data.join_cond.wait(&mut lock);
+        }
     }
 }
 

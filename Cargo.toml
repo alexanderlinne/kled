@@ -1,8 +1,5 @@
 [workspace]
 members = [
-    "rxui",
-    "rxui_mock",
-    "rxui_property",
-    "rxui_rx",
-    "rxui_rx_derive",
+    "kled",
+    "kled_derive",
 ]

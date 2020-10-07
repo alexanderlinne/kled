@@ -53,6 +53,8 @@ impl ClockStrategy {
             matches!(*clock_mode, None);
             *clock_mode = Some(mode);
         });
+        MANUAL_NANOS.with(|v| *v.borrow().lock() = Duration::default());
+        AUTO_INC_NANOS.with(|v| *v.borrow_mut() = Duration::default());
     }
 }
 
