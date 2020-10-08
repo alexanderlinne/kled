@@ -2,7 +2,7 @@
 //!
 //! [github]: https://img.shields.io/github/workflow/status/alexanderlinne/kled/CI?style=for-the-badge&logo=github
 //!
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(broken_intra_doc_links)]
 
 #[macro_use]
 extern crate derive_new;

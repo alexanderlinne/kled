@@ -39,8 +39,8 @@ pub trait Observable {
     fn observe_on<Scheduler>(self, scheduler: Scheduler) -> ObservableObserveOn<Self, Scheduler>
     where
         Self: Sized,
-        Self::Item: Send,
-        Self::Error: Send,
+        Self::Item: Send + 'static,
+        Self::Error: Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         ObservableObserveOn::new(self, scheduler)
@@ -62,8 +62,8 @@ pub trait Observable {
     fn subscribe_on<Scheduler>(self, scheduler: Scheduler) -> ObservableSubscribeOn<Self, Scheduler>
     where
         Self: Sized,
-        Self::Item: Send,
-        Self::Error: Send,
+        Self::Item: Send + 'static,
+        Self::Error: Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         ObservableSubscribeOn::new(self, scheduler)
