@@ -1,32 +1,30 @@
-use crate::cancellable::local::*;
+use crate::cancellable::*;
 use crate::core;
 use crate::core::IntoObservableEmitter;
-use crate::marker;
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::sync::{Arc, Mutex};
 
 #[derive(Clone)]
-pub struct TestObservable<'o, Item, Error> {
-    data: Rc<RefCell<Data<'o, Item, Error>>>,
+pub struct TestObservable<Item, Error> {
+    data: Arc<Mutex<Data<Item, Error>>>,
 }
 
-struct Data<'o, Item, Error> {
-    emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + 'o>>,
+struct Data<Item, Error> {
+    emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
-impl<'o, Item, Error> TestObservable<'o, Item, Error> {
-    pub fn default() -> marker::Observable<Self> {
-        marker::Observable::new(Self {
-            data: Rc::new(RefCell::new(Data { emitter: None })),
-        })
+impl<Item, Error> Default for TestObservable<Item, Error> {
+    fn default() -> Self {
+        Self {
+            data: Arc::new(Mutex::new(Data { emitter: None })),
+        }
     }
+}
 
+impl<Item, Error> TestObservable<Item, Error> {
     pub fn has_observer(&self) -> bool {
-        self.data.borrow().emitter.is_some()
+        self.data.lock().emitter.is_some()
     }
-}
 
-impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
     pub fn annotate_item_type(self, _: Item) -> Self {
         self
     }
@@ -35,13 +33,9 @@ impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
         self
     }
 
-    pub fn has_observer(&self) -> bool {
-        self.actual.has_observer()
-    }
-
     pub fn is_cancelled(&self) -> bool {
         assert!(self.has_observer());
-        match self.actual.data.borrow().emitter {
+        match self.data.lock().emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
@@ -49,7 +43,7 @@ impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
 
     pub fn emit(&self, item: Item) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match self.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_next(item),
             None => panic!(),
         }
@@ -66,7 +60,7 @@ impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match self.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
@@ -74,30 +68,27 @@ impl<'o, Item, Error> marker::Observable<TestObservable<'o, Item, Error>> {
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.actual.data.borrow_mut().emitter {
+        match self.data.lock().emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
     }
 }
 
-impl<'o, Item, Error> core::LocalObservable<'o> for TestObservable<'o, Item, Error>
+impl<Item, Error> core::Observable for TestObservable<Item, Error>
 where
-    Item: 'o,
-    Error: 'o,
+    Item: Send + 'static,
+    Error: Send + 'static,
 {
+    type Item = Item;
+    type Error = Error;
     type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
+        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        self.data.borrow_mut().emitter = Some(Box::new(observer.into_emitter()));
+        self.data.lock().emitter = Some(Box::new(observer.into_emitter()));
     }
-}
-
-impl<'o, Item, Error> core::Observable for TestObservable<'o, Item, Error> {
-    type Item = Item;
-    type Error = Error;
 }

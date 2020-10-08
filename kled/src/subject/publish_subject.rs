@@ -1,7 +1,6 @@
-use crate::cancellable::shared::*;
+use crate::cancellable::*;
 use crate::core;
-use crate::core::{IntoSharedObservableEmitter, ObservableEmitter};
-use crate::marker;
+use crate::core::{IntoObservableEmitter, ObservableEmitter};
 use crate::sync::{Arc, Mutex};
 
 pub struct PublishSubject<Cancellable, Item, Error> {
@@ -13,14 +12,14 @@ struct Data<Cancellable, Item, Error> {
     emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
 }
 
-impl<Cancellable, Item, Error> PublishSubject<Cancellable, Item, Error> {
-    pub fn default() -> marker::Shared<marker::Observable<Self>> {
-        marker::Shared::new(marker::Observable::new(Self {
+impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
+    fn default() -> Self {
+        Self {
             data: Arc::new(Mutex::new(Data {
                 cancellable: None,
                 emitters: vec![],
             })),
-        }))
+        }
     }
 }
 
@@ -55,7 +54,7 @@ where
     }
 }
 
-impl<Cancellable, Item, Error> core::SharedSubject<Cancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Subject<Cancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
     Item: Clone + Send + 'static,
@@ -63,11 +62,13 @@ where
 {
 }
 
-impl<Cancellable, Item, Error> core::SharedObservable for PublishSubject<Cancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Observable for PublishSubject<Cancellable, Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
+    type Item = Item;
+    type Error = Error;
     type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
@@ -77,20 +78,15 @@ where
         self.data
             .lock()
             .emitters
-            .push(Box::new(observer.into_shared_emitter()))
+            .push(Box::new(observer.into_emitter()))
     }
-}
-
-impl<Cancellable, Item, Error> core::Observable for PublishSubject<Cancellable, Item, Error> {
-    type Item = Item;
-    type Error = Error;
 }
 
 #[cfg(test)]
 mod tests {
     use super::PublishSubject;
-    use crate::observable::shared::*;
-    use crate::observer::shared::*;
+    use crate::observable::*;
+    use crate::observer::*;
     use crate::prelude::*;
     use crate::sync::{Arc, Barrier};
     use crate::thread;
@@ -104,9 +100,7 @@ mod tests {
         let barrier2 = barrier.clone();
         let handle = thread::spawn(move || {
             barrier2.wait();
-            vec![0, 1, 2, 3]
-                .into_shared_observable()
-                .subscribe(subject2)
+            vec![0, 1, 2, 3].into_observable().subscribe(subject2)
         });
 
         let test_observer1 = TestObserver::default();

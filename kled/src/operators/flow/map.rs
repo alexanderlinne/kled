@@ -6,7 +6,6 @@ use std::marker::PhantomData;
 pub struct FlowMap<Flow, ItemOut, UnaryOp>
 where
     Flow: core::Flow,
-    ItemOut: Clone,
     UnaryOp: FnMut(Flow::Item) -> ItemOut,
 {
     #[upstream(item = "ItemOut")]
@@ -26,7 +25,6 @@ impl<Subscription, ItemIn, Subscriber, ItemOut, Error, UnaryOp>
 where
     Subscriber: core::Subscriber<Subscription, ItemOut, Error>,
     UnaryOp: FnMut(ItemIn) -> ItemOut,
-    ItemOut: Clone,
 {
     fn on_subscribe(&mut self, cancellable: Subscription) {
         self.subscriber.on_subscribe(cancellable);
@@ -45,7 +43,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::subscriber::local::*;
+    use crate::subscriber::*;
 
     #[test]
     fn local_scan() {

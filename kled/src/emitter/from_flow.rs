@@ -1,6 +1,6 @@
 use crate::core;
 use crate::flow;
-use crate::subscription::shared::*;
+use crate::subscription::*;
 use std::marker::PhantomData;
 
 pub struct FromFlow<Subscriber, Item, Error> {
@@ -45,13 +45,13 @@ where
     }
 }
 
-impl<Subscriber, Item, Error> core::IntoSharedFlowEmitter<Item, Error> for Subscriber
+impl<Subscriber, Item, Error> core::IntoFlowEmitter<Item, Error> for Subscriber
 where
     Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
 {
     type Emitter = FromFlow<Subscriber, Item, Error>;
 
-    fn into_shared_emitter(self) -> Self::Emitter {
+    fn into_emitter(self) -> Self::Emitter {
         FromFlow::new(self)
     }
 }
@@ -59,14 +59,14 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::subscriber::shared::*;
+    use crate::subscriber::*;
 
     #[test]
     fn basic() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]
-            .into_shared_flow()
+            .into_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();

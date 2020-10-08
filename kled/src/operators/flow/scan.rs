@@ -46,7 +46,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::subscriber::local::*;
+    use crate::subscriber::*;
 
     #[test]
     fn local_scan() {

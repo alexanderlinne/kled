@@ -1,31 +1,20 @@
 use crate::core;
-use crate::marker;
 
-pub trait Sealed {}
+pub trait ObservableSealed {}
 
-impl<'o, Observable> Sealed for marker::Observable<Observable> where
-    Observable: core::LocalObservable<'o> + 'o
-{
-}
+impl<Observable> ObservableSealed for Observable where Observable: core::Observable + Send + 'static {}
 
-impl<Observable> Sealed for marker::Shared<marker::Observable<Observable>> where
-    Observable: core::SharedObservable + Send + 'static
-{
-}
+pub trait FlowSealed {}
 
-impl<'o, Flow> Sealed for marker::Flow<Flow> where Flow: core::LocalFlow<'o> + 'o {}
+impl<Flow> FlowSealed for Flow where Flow: core::Flow + Send + 'static {}
 
-impl<Flow> Sealed for marker::Shared<marker::Flow<Flow>> where
-    Flow: core::SharedFlow + Send + 'static
-{
-}
-
-pub trait Inconstructible: Sealed {}
+pub trait Inconstructible: ObservableSealed + FlowSealed {}
 
 #[derive(Copy, Clone)]
 pub enum Infallible {}
 
-impl Sealed for Infallible {}
+impl ObservableSealed for Infallible {}
+impl FlowSealed for Infallible {}
 
 impl Inconstructible for Infallible {}
 

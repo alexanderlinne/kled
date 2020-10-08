@@ -7,9 +7,9 @@ use std::marker::PhantomData;
 #[derive(new, reactive_operator)]
 pub struct FlowOnBackpressureLatest<Flow>
 where
-    Flow: core::SharedFlow,
-    Flow::Item: Send,
-    Flow::Error: Send,
+    Flow: core::Flow,
+    Flow::Item: Send + 'static,
+    Flow::Error: Send + 'static,
 {
     #[upstream(
         subscription = "OnBackpressureLatestSubscription<Flow::Subscription, Flow::Item, Flow::Error>"
@@ -143,9 +143,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::flow::shared::*;
+    use crate::flow::*;
     use crate::prelude::*;
-    use crate::subscriber::shared::*;
+    use crate::subscriber::*;
 
     #[test]
     fn basic() {

@@ -1,46 +1,44 @@
 use crate::core;
 use crate::flow;
-use std::cell::RefCell;
+use crate::sync::atomic::{AtomicUsize, Ordering};
+use crate::sync::Arc;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 #[derive(new, reactive_operator)]
-pub struct FlowOnBackpressureDrop<'o, Flow>
+pub struct FlowOnBackpressureDrop<Flow>
 where
-    Flow: core::LocalFlow<'o>,
+    Flow: core::Flow,
+    Flow::Item: Send + 'static,
+    Flow::Error: Send + 'static,
 {
-    #[upstream(subscription = "OnBackpressureDropSubscription<Flow::Subscription, Flow::Error>")]
+    #[upstream(subscription = "OnBackpressureDropSubscription<Flow::Subscription>")]
     flow: Flow,
-    #[reactive_operator(ignore)]
-    phantom: PhantomData<&'o Self>,
 }
 
 pub struct OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error> {
     subscriber: Subscriber,
-    requested: Rc<RefCell<usize>>,
+    requested: Arc<AtomicUsize>,
     phantom: PhantomData<(Subscription, Item, Error)>,
 }
 
-impl<'o, Subscription, Subscriber, Item, Error>
+impl<Subscription, Subscriber, Item, Error>
     OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error>
 where
-    Subscriber:
-        core::Subscriber<OnBackpressureDropSubscription<Subscription, Error>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error>,
 {
     pub fn new(subscriber: Subscriber) -> Self {
         Self {
             subscriber,
-            requested: Rc::new(RefCell::new(0)),
+            requested: Arc::new(AtomicUsize::default()),
             phantom: PhantomData,
         }
     }
 }
 
-impl<'o, Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
+impl<Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
     for OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error>
 where
-    Subscriber:
-        core::Subscriber<OnBackpressureDropSubscription<Subscription, Error>, Item, Error> + 'o,
+    Subscriber: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error>,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let requested = self.requested.clone();
@@ -49,9 +47,9 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        if *self.requested.borrow() > 0 {
+        if self.requested.load(Ordering::Relaxed) > 0 {
             self.subscriber.on_next(item);
-            *self.requested.borrow_mut() -= 1;
+            self.requested.fetch_sub(1, Ordering::Relaxed);
         }
     }
 
@@ -65,15 +63,16 @@ where
 }
 
 #[derive(new)]
-pub struct OnBackpressureDropSubscription<Upstream, Error> {
+pub struct OnBackpressureDropSubscription<Upstream> {
     upstream: Upstream,
-    requested: Rc<RefCell<usize>>,
-    phantom: PhantomData<Error>,
+    requested: Arc<AtomicUsize>,
 }
 
-impl<'o, Upstream, Error> core::Subscription for OnBackpressureDropSubscription<Upstream, Error>
+unsafe impl<Upstream> Sync for OnBackpressureDropSubscription<Upstream> {}
+
+impl<'o, Upstream> core::Subscription for OnBackpressureDropSubscription<Upstream>
 where
-    Upstream: core::Subscription,
+    Upstream: core::Subscription + Send + Sync + 'static,
 {
     fn cancel(&self) {
         self.upstream.cancel()
@@ -84,39 +83,44 @@ where
     }
 
     fn request(&self, count: usize) {
-        *self.requested.borrow_mut() += count;
+        self.requested.fetch_add(count, Ordering::Relaxed);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::flow::local::*;
+    use crate::flow::*;
     use crate::prelude::*;
-    use crate::subscriber::local::*;
+    use crate::subscriber::*;
 
     #[test]
     fn drop() {
         let test_subscriber = TestSubscriber::new(1);
+        let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]
             .into_flow()
             .on_backpressure_drop()
+            .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
+        scheduler.join();
         assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
         assert_eq!(test_subscriber.items(), vec![0]);
     }
 
     #[test]
     fn drop_error() {
+        let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::default();
         let test_flow = TestFlow::default();
         test_flow
             .clone()
             .on_backpressure_drop()
+            .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         test_flow.emit(0);
         test_flow.emit_error(());
+        scheduler.join();
         assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
-        assert_eq!(test_subscriber.items(), vec![]);
         assert_eq!(test_subscriber.error(), Some(flow::Error::Upstream(())));
     }
 }

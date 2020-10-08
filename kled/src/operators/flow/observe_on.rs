@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 #[derive(new, reactive_operator)]
 pub struct FlowObserveOn<Flow, Scheduler>
 where
-    Flow: core::SharedFlow,
+    Flow: core::Flow,
     Flow::Subscription: Send,
     Flow::Item: Send,
     Flow::Error: Send,
@@ -193,17 +193,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::flow::shared::*;
+    use crate::flow::*;
     use crate::prelude::*;
     use crate::scheduler;
-    use crate::subscriber::shared::*;
+    use crate::subscriber::*;
 
     #[test]
     fn observe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
-            .into_shared_flow()
+            .into_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();
@@ -216,7 +216,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
-            .into_shared_flow()
+            .into_flow()
             .observe_on(scheduler.clone())
             .subscribe(test_subscriber.clone());
         scheduler.join();

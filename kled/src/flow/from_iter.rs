@@ -1,6 +1,5 @@
 use crate::core;
-use crate::core::{FlowEmitter, IntoFlowEmitter, IntoSharedFlowEmitter};
-use crate::marker;
+use crate::core::{FlowEmitter, IntoFlowEmitter};
 use crate::subscription::*;
 use crate::util;
 
@@ -21,21 +20,15 @@ where
 impl<IntoIter> core::Flow for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator,
+    IntoIter::Item: Send + 'static,
 {
     type Item = IntoIter::Item;
     type Error = util::Infallible;
-}
-
-impl<'o, IntoIter> core::LocalFlow<'o> for IntoIterFlow<IntoIter>
-where
-    IntoIter: IntoIterator,
-    IntoIter::Item: 'o,
-{
-    type Subscription = local::AccumulateSubscription;
+    type Subscription = AccumulateSubscription;
 
     fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + 'o,
+        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         let mut subscriber = subscriber.into_emitter();
         for v in self.iterable.into_iter() {
@@ -51,38 +44,14 @@ where
     }
 }
 
-impl<IntoIter> core::SharedFlow for IntoIterFlow<IntoIter>
-where
-    IntoIter: IntoIterator,
-    IntoIter::Item: Send + 'static,
-{
-    type Subscription = shared::AccumulateSubscription;
-
-    fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
-    where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
-    {
-        let mut subscriber = subscriber.into_shared_emitter();
-        for v in self.iterable.into_iter() {
-            if !subscriber.is_cancelled() {
-                subscriber.on_next(v);
-            } else {
-                break;
-            }
-        }
-        if !subscriber.is_cancelled() {
-            subscriber.on_completed();
-        }
-    }
-}
-
 impl<IntoIter> core::IntoFlow for IntoIter
 where
-    IntoIter: IntoIterator,
+    IntoIter: IntoIterator + 'static,
+    IntoIter::Item: Send,
 {
     type Flow = IntoIterFlow<IntoIter>;
 
-    fn into_flow(self) -> marker::Flow<Self::Flow> {
-        marker::Flow::new(IntoIterFlow::new(self))
+    fn into_flow(self) -> Self::Flow {
+        IntoIterFlow::new(self)
     }
 }

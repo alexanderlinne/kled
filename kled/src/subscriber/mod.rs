@@ -1,2 +1,3 @@
-pub mod local;
-pub mod shared;
+mod test_subscriber;
+
+pub use test_subscriber::*;

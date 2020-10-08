@@ -1,12 +1,10 @@
-use crate::cancellable::shared::*;
+use crate::cancellable::*;
 use crate::core;
-use crate::marker;
 use crate::util;
 
-impl<'o, Observable, NextFn> core::ObservableSubsribeNext<'o, NextFn>
-    for marker::Shared<marker::Observable<Observable>>
+impl<'o, Observable, NextFn> core::ObservableSubsribeNext<NextFn> for Observable
 where
-    Observable: core::SharedObservable + Send + 'static,
+    Observable: core::Observable + Send + 'static,
     Observable::Cancellable: Send + 'static,
     Observable::Error: util::Inconstructible,
     NextFn: FnMut(Observable::Item) + Send + 'static,
@@ -23,16 +21,15 @@ where
             || {},
         );
         let cancellable = observer.cancellable();
-        self.actual.actual.actual_subscribe(observer);
+        self.actual_subscribe(observer);
         cancellable
     }
 }
 
-impl<'o, Observable, NextFn, ErrorFn, CompletedFn>
-    core::ObservableSubsribeAll<'o, NextFn, ErrorFn, CompletedFn>
-    for marker::Shared<marker::Observable<Observable>>
+impl<Observable, NextFn, ErrorFn, CompletedFn>
+    core::ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn> for Observable
 where
-    Observable: core::SharedObservable + Send + 'static,
+    Observable: core::Observable + Send + 'static,
     Observable::Cancellable: Send + 'static,
     NextFn: FnMut(Observable::Item) + Send + 'static,
     ErrorFn: FnMut(Observable::Error) + Send + 'static,
@@ -49,7 +46,7 @@ where
         use crate::core::CancellableProvider;
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
         let cancellable = observer.cancellable();
-        self.actual.actual.actual_subscribe(observer);
+        self.actual_subscribe(observer);
         cancellable
     }
 }

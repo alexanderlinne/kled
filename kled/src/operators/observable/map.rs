@@ -41,7 +41,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::observer::local::*;
+    use crate::observer::*;
     use crate::prelude::*;
 
     #[test]

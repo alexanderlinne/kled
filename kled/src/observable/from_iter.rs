@@ -1,7 +1,6 @@
-use crate::cancellable::{local, shared};
+use crate::cancellable::*;
 use crate::core;
-use crate::core::{IntoObservableEmitter, IntoSharedObservableEmitter, ObservableEmitter};
-use crate::marker;
+use crate::core::{IntoObservableEmitter, ObservableEmitter};
 use crate::util;
 
 #[doc(hidden)]
@@ -24,43 +23,13 @@ where
 {
     type Item = IntoIter::Item;
     type Error = util::Infallible;
-}
-
-impl<'o, IntoIter> core::LocalObservable<'o> for IntoIterObservable<IntoIter>
-where
-    IntoIter: IntoIterator,
-{
-    type Cancellable = local::BoolCancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
-    where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + 'o,
-    {
-        let mut observer = observer.into_emitter();
-        for v in self.iterable.into_iter() {
-            if !observer.is_cancelled() {
-                observer.on_next(v);
-            } else {
-                break;
-            }
-        }
-        if !observer.is_cancelled() {
-            observer.on_completed();
-        }
-    }
-}
-
-impl<IntoIter> core::SharedObservable for IntoIterObservable<IntoIter>
-where
-    IntoIter: IntoIterator,
-{
-    type Cancellable = shared::BoolCancellable;
+    type Cancellable = BoolCancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
-        let mut observer = observer.into_shared_emitter();
+        let mut observer = observer.into_emitter();
         for v in self.iterable.into_iter() {
             if !observer.is_cancelled() {
                 observer.on_next(v);
@@ -80,7 +49,7 @@ where
 {
     type Observable = IntoIterObservable<IntoIter>;
 
-    fn into_observable(self) -> marker::Observable<Self::Observable> {
-        marker::Observable::new(IntoIterObservable::new(self))
+    fn into_observable(self) -> Self::Observable {
+        IntoIterObservable::new(self)
     }
 }

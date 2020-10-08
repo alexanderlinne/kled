@@ -1,21 +1,22 @@
 use crate::core;
 
-#[derive(new, reactive_operator)]
+#[derive(new)]
 pub struct ObservableSubscribeOn<Observable, Scheduler>
 where
-    Observable: core::SharedObservable,
+    Observable: core::Observable,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    #[upstream(derive_impls = "base")]
     observable: Observable,
     scheduler: Scheduler,
 }
 
-impl<Observable, Scheduler> core::SharedObservable for ObservableSubscribeOn<Observable, Scheduler>
+impl<Observable, Scheduler> core::Observable for ObservableSubscribeOn<Observable, Scheduler>
 where
-    Observable: core::SharedObservable + Send + 'static,
+    Observable: core::Observable + Send + 'static,
     Scheduler: core::Scheduler + Send + 'static,
 {
+    type Item = Observable::Item;
+    type Error = Observable::Error;
     type Cancellable = Observable::Cancellable;
 
     fn actual_subscribe<Observer>(self, observer: Observer)
@@ -31,7 +32,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::observer::shared::*;
+    use crate::observer::*;
     use crate::prelude::*;
     use crate::scheduler;
 
@@ -40,7 +41,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
-            .into_shared_observable()
+            .into_observable()
             .subscribe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
@@ -53,7 +54,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
-            .into_shared_observable()
+            .into_observable()
             .subscribe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();

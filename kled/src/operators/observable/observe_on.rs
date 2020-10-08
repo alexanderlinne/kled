@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 #[derive(new, reactive_operator)]
 pub struct ObservableObserveOn<Observable, Scheduler>
 where
-    Observable: core::SharedObservable,
+    Observable: core::Observable,
     Observable::Cancellable: Send,
     Observable::Item: Send,
     Observable::Error: Send,
@@ -188,8 +188,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::observable::shared::*;
-    use crate::observer::shared::*;
+    use crate::observable::*;
+    use crate::observer::*;
     use crate::prelude::*;
     use crate::scheduler;
 
@@ -198,7 +198,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
-            .into_shared_observable()
+            .into_observable()
             .observe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
@@ -211,7 +211,7 @@ mod tests {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
-            .into_shared_observable()
+            .into_observable()
             .observe_on(scheduler.clone())
             .subscribe(test_observer.clone());
         scheduler.join();
