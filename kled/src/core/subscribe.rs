@@ -37,8 +37,20 @@ pub trait ObservableSubsribeNext<NextFn>: util::ObservableSealed {
     fn subscribe_next(self, _: NextFn) -> Self::Cancellable;
 }
 
+pub trait FlowSubsribeNext<NextFn>: util::FlowSealed {
+    type Subscription: core::Subscription;
+
+    fn subscribe_next(self, _: NextFn) -> Self::Subscription;
+}
+
 pub trait ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn>: util::ObservableSealed {
     type Cancellable: core::Cancellable;
 
     fn subscribe_all(self, _: NextFn, _: ErrorFn, _: CompletedFn) -> Self::Cancellable;
+}
+
+pub trait FlowSubsribeAll<NextFn, ErrorFn, CompletedFn>: util::FlowSealed {
+    type Subscription: core::Subscription;
+
+    fn subscribe_all(self, _: NextFn, _: ErrorFn, _: CompletedFn) -> Self::Subscription;
 }

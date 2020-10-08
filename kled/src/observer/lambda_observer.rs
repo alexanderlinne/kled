@@ -9,7 +9,7 @@ where
     Observable::Error: util::Inconstructible,
     NextFn: FnMut(Observable::Item) + Send + 'static,
 {
-    type Cancellable = EitherCancellable<BoolCancellable, Observable::Cancellable>;
+    type Cancellable = LazyCancellable<Observable::Cancellable>;
 
     fn subscribe_next(self, next_fn: NextFn) -> Self::Cancellable {
         use self::core::CancellableProvider;
@@ -20,7 +20,7 @@ where
             },
             || {},
         );
-        let cancellable = observer.cancellable();
+        let cancellable = observer.stub.cancellable();
         self.actual_subscribe(observer);
         cancellable
     }
@@ -35,7 +35,7 @@ where
     ErrorFn: FnMut(Observable::Error) + Send + 'static,
     CompletedFn: FnMut() + Send + 'static,
 {
-    type Cancellable = EitherCancellable<BoolCancellable, Observable::Cancellable>;
+    type Cancellable = LazyCancellable<Observable::Cancellable>;
 
     fn subscribe_all(
         self,
@@ -45,7 +45,7 @@ where
     ) -> Self::Cancellable {
         use crate::core::CancellableProvider;
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
-        let cancellable = observer.cancellable();
+        let cancellable = observer.stub.cancellable();
         self.actual_subscribe(observer);
         cancellable
     }
@@ -55,7 +55,7 @@ pub struct LambdaObserver<Cancellable, NextFn, ErrorFn, CompletedFn>
 where
     Cancellable: core::Cancellable,
 {
-    cancellable: EitherCancellable<BoolCancellable, Cancellable>,
+    stub: LazyCancellableStub<Cancellable>,
     item_consumer: NextFn,
     error_consumer: ErrorFn,
     completed_consumer: CompletedFn,
@@ -72,23 +72,11 @@ where
         completed_consumer: CompletedFn,
     ) -> Self {
         LambdaObserver {
-            cancellable: EitherCancellable::from_left(BoolCancellable::default()),
+            stub: LazyCancellableStub::default(),
             item_consumer,
             error_consumer,
             completed_consumer,
         }
-    }
-}
-
-impl<Cancellable, NextFn, ErrorFn, CompletedFn> core::CancellableProvider
-    for LambdaObserver<Cancellable, NextFn, ErrorFn, CompletedFn>
-where
-    Cancellable: core::Cancellable,
-{
-    type Cancellable = EitherCancellable<BoolCancellable, Cancellable>;
-
-    fn cancellable(&self) -> Self::Cancellable {
-        self.cancellable.clone()
     }
 }
 
@@ -102,11 +90,7 @@ where
     CompletedFn: FnMut(),
 {
     fn on_subscribe(&mut self, cancellable: Cancellable) {
-        use self::core::Cancellable;
-        if self.cancellable.is_cancelled() {
-            cancellable.cancel()
-        }
-        self.cancellable.set_right(cancellable);
+        self.stub.set_cancellable(cancellable);
     }
 
     fn on_next(&mut self, item: Item) {
@@ -119,5 +103,21 @@ where
 
     fn on_completed(&mut self) {
         (self.completed_consumer)()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+
+    #[test]
+    fn subscribe_next() {
+        let mut expected = 0;
+        vec![0, 1, 2, 3]
+            .into_observable()
+            .subscribe_next(move |item| {
+                assert_eq!(item, expected);
+                expected += 1;
+            });
     }
 }

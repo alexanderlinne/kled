@@ -6,6 +6,12 @@ pub trait Subscription {
     fn request(&self, count: usize);
 }
 
+pub trait SubscriptionProvider {
+    type Subscription: Subscription;
+
+    fn subscription(&self) -> Self::Subscription;
+}
+
 impl<'o> Subscription for Box<dyn Subscription + 'o> {
     fn cancel(&self) {
         (&**self).cancel()

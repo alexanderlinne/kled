@@ -14,6 +14,7 @@ where
     Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
 {
     pub fn new(mut subscriber: Subscriber) -> Self {
+        use crate::core::SubscriptionProvider;
         let stub = AccumulateSubscriptionStub::default();
         subscriber.on_subscribe(stub.subscription());
         Self {

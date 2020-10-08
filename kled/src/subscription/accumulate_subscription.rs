@@ -2,7 +2,6 @@ use crate::core;
 use crate::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use crate::sync::Arc;
 
-#[derive(Clone)]
 pub struct AccumulateSubscriptionStub {
     data: Arc<Data>,
 }
@@ -18,13 +17,17 @@ impl Default for AccumulateSubscriptionStub {
     }
 }
 
-impl AccumulateSubscriptionStub {
-    pub fn subscription(&self) -> AccumulateSubscription {
+impl core::SubscriptionProvider for AccumulateSubscriptionStub {
+    type Subscription = AccumulateSubscription;
+
+    fn subscription(&self) -> AccumulateSubscription {
         AccumulateSubscription {
             data: self.data.clone(),
         }
     }
+}
 
+impl AccumulateSubscriptionStub {
     pub fn get_and_reset_requested(&self) -> usize {
         self.data.requested.swap(0, Ordering::Relaxed)
     }

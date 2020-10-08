@@ -6,9 +6,6 @@
 pub trait Cancellable: Clone {
     /// Cancels the observable the given suscription was provided by.
     fn cancel(&self);
-
-    /// Returns true, if the observable has been cancelled
-    fn is_cancelled(&self) -> bool;
 }
 
 pub trait CancellableProvider {
