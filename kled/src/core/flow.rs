@@ -93,4 +93,14 @@ pub trait Flow {
     {
         FlowScan::new(self, initial_value, binary_op)
     }
+
+    fn subscribe_on<Scheduler>(self, scheduler: Scheduler) -> FlowSubscribeOn<Self, Scheduler>
+    where
+        Self: Sized,
+        Self::Item: Send + 'static,
+        Self::Error: Send + 'static,
+        Scheduler: core::Scheduler + Send + 'static,
+    {
+        FlowSubscribeOn::new(self, scheduler)
+    }
 }
