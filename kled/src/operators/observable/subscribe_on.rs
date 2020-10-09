@@ -24,7 +24,7 @@ where
         Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
     {
         let observable = self.observable;
-        self.scheduler.schedule(move || {
+        self.scheduler.schedule_fn(move || {
             observable.actual_subscribe(observer);
         });
     }

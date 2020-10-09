@@ -3,6 +3,8 @@ use crate::sync::atomic::{AtomicUsize, Ordering};
 use crate::sync::{Arc, Condvar, Mutex};
 use crate::thread;
 use crate::time;
+use async_std::task;
+use std::future::Future;
 
 #[derive(Clone)]
 pub struct NewThreadScheduler {
@@ -22,9 +24,9 @@ impl Default for NewThreadScheduler {
 }
 
 impl NewThreadScheduler {
-    fn schedule_impl<F>(&self, task: F, delay: Option<time::Duration>)
+    fn schedule_impl<Fut>(&self, future: Fut, delay: Option<time::Duration>)
     where
-        F: FnOnce() + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
         self.data.active_count.fetch_add(1, Ordering::SeqCst);
         let data = self.data.clone();
@@ -32,7 +34,7 @@ impl NewThreadScheduler {
             if let Some(delay) = delay {
                 thread::sleep(delay);
             }
-            task();
+            task::block_on(future);
             data.active_count.fetch_sub(1, Ordering::SeqCst);
             if !data.has_work() {
                 let _ = data.join_mutex.lock();
@@ -43,18 +45,32 @@ impl NewThreadScheduler {
 }
 
 impl core::Scheduler for NewThreadScheduler {
-    fn schedule<F>(&self, task: F)
+    fn schedule<Fut>(&self, future: Fut)
     where
-        F: FnOnce() + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
-        self.schedule_impl(task, None)
+        self.schedule_impl(future, None)
     }
 
-    fn schedule_delayed<F>(&self, delay: time::Duration, task: F)
+    fn schedule_fn<F>(&self, task: F)
     where
         F: FnOnce() + Send + 'static,
     {
-        self.schedule_impl(task, Some(delay))
+        self.schedule_impl(async move { task() }, None)
+    }
+
+    fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
+    where
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.schedule_impl(future, Some(delay))
+    }
+
+    fn schedule_fn_delayed<F>(&self, delay: time::Duration, task: F)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.schedule_impl(async move { task() }, Some(delay))
     }
 
     fn join(&self) {

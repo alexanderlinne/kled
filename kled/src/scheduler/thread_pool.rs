@@ -1,68 +1,72 @@
-use super::delay_channel::*;
-use super::task::Task;
 use crate::core;
 use crate::sync::atomic::{AtomicUsize, Ordering};
 use crate::sync::{Arc, Condvar, Mutex};
-use crate::thread;
 use crate::time;
+use futures::executor::ThreadPool;
+use futures_timer::Delay;
+use std::cell::UnsafeCell;
+use std::future::Future;
+
+thread_local! {
+    static DATA: UnsafeCell<*const Data> = UnsafeCell::new(std::ptr::null());
+}
 
 #[derive(Clone)]
 pub struct ThreadPoolScheduler {
-    sender: DelaySender,
+    thread_pool: ThreadPool,
     data: Arc<Data>,
 }
 
 impl ThreadPoolScheduler {
     pub fn new(num_threads: usize) -> Self {
-        let (sender, receiver) = unbounded();
         let data = Arc::new(Data {
-            receiver,
             join_mutex: Mutex::new(()),
             join_cond: Condvar::new(),
-            active_count: AtomicUsize::new(0),
-            queued_count: AtomicUsize::new(0),
+            job_count: AtomicUsize::new(0),
         });
-
-        for _ in 0..num_threads {
-            Self::spawn_pool_worker(data.clone());
+        ThreadPoolScheduler {
+            thread_pool: Self::create_thread_pool(num_threads, data.clone()),
+            data,
         }
-
-        ThreadPoolScheduler { sender, data }
     }
 
-    fn spawn_pool_worker(data: Arc<Data>) {
-        thread::spawn(move || loop {
-            let message = data.receiver.recv();
-            let job = match message {
-                Ok(job) => job,
-                Err(_) => break,
-            };
-            data.active_count.fetch_add(1, Ordering::SeqCst);
-            data.queued_count.fetch_sub(1, Ordering::SeqCst);
-
-            job.execute();
-
-            data.active_count.fetch_sub(1, Ordering::SeqCst);
-            if !data.has_work() {
-                let _ = data.join_mutex.lock();
-                data.join_cond.notify_all();
-            }
-        });
+    fn create_thread_pool(num_threads: usize, data: Arc<Data>) -> ThreadPool {
+        ThreadPool::builder()
+            .pool_size(num_threads)
+            .after_start(move |_| {
+                let data = data.clone();
+                DATA.with(|glob| {
+                    unsafe { *glob.get() = Arc::into_raw(data) };
+                });
+            })
+            .before_stop(|_| {
+                DATA.with(|glob| {
+                    unsafe { Arc::from_raw(glob.get()) };
+                });
+            })
+            .create()
+            .unwrap()
     }
 
-    fn schedule_impl<F>(&self, task: F, delay: Option<time::Duration>)
+    fn schedule_impl<Fut>(&self, future: Fut, delay: Option<time::Duration>)
     where
-        F: FnOnce() + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
-        let task = if let Some(delay) = delay {
-            DelayedTask::with_delay(Task::new(task), delay).expect("Unable to create task!")
-        } else {
-            Task::new(task).into()
-        };
-        self.data.queued_count.fetch_add(1, Ordering::SeqCst);
-        self.sender
-            .send(task)
-            .expect("Unable to send job into queue");
+        self.data.job_count.fetch_add(1, Ordering::SeqCst);
+        self.thread_pool.spawn_ok(async move {
+            if let Some(delay) = delay {
+                Delay::new(delay).await;
+            }
+            future.await;
+            unsafe {
+                let data = DATA.with(|data| *data.get());
+                (*data).job_count.fetch_sub(1, Ordering::SeqCst);
+                if !(*data).has_work() {
+                    let _ = (*data).join_mutex.lock();
+                    (*data).join_cond.notify_all();
+                }
+            }
+        })
     }
 }
 
@@ -73,18 +77,32 @@ impl Default for ThreadPoolScheduler {
 }
 
 impl core::Scheduler for ThreadPoolScheduler {
-    fn schedule<F>(&self, task: F)
+    fn schedule<Fut>(&self, future: Fut)
     where
-        F: FnOnce() + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
     {
-        self.schedule_impl(task, None)
+        self.schedule_impl(future, None)
     }
 
-    fn schedule_delayed<F>(&self, delay: time::Duration, task: F)
+    fn schedule_fn<F>(&self, task: F)
     where
         F: FnOnce() + Send + 'static,
     {
-        self.schedule_impl(task, Some(delay))
+        self.schedule_impl(async move { task() }, None)
+    }
+
+    fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
+    where
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.schedule_impl(future, Some(delay))
+    }
+
+    fn schedule_fn_delayed<F>(&self, delay: time::Duration, task: F)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.schedule_impl(async move { task() }, Some(delay))
     }
 
     fn join(&self) {
@@ -100,15 +118,13 @@ impl core::Scheduler for ThreadPoolScheduler {
 }
 
 struct Data {
-    receiver: DelayReceiver,
     join_mutex: Mutex<()>,
     join_cond: Condvar,
-    active_count: AtomicUsize,
-    queued_count: AtomicUsize,
+    job_count: AtomicUsize,
 }
 
 impl Data {
     fn has_work(&self) -> bool {
-        self.queued_count.load(Ordering::SeqCst) > 0 || self.active_count.load(Ordering::SeqCst) > 0
+        self.job_count.load(Ordering::SeqCst) > 0
     }
 }

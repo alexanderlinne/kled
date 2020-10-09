@@ -5,8 +5,14 @@ authors = ["Alexander Linne <alexander.linne@outlook.com>"]
 edition = "2018"
 
 [dependencies]
+async-std = "1.6"
 crossbeam = "0.7"
 derive-new = "0.5"
+futures-timer = "3.0"
 num_cpus = "1.13"
-parking_lot = { version = "0.11" }
+parking_lot = "0.11"
 kled_derive = { path = "../kled_derive" }
+
+[dependencies.futures]
+version = "0.3"
+features = ["thread-pool"]

@@ -24,7 +24,7 @@ where
         Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
     {
         let flow = self.flow;
-        self.scheduler.schedule(move || {
+        self.scheduler.schedule_fn(move || {
             flow.actual_subscribe(subscriber);
         });
     }
