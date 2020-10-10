@@ -1,9 +1,13 @@
 use crate::core;
 use crate::flow;
-use crate::sync::mpsc;
-use crate::sync::{Arc, Mutex};
+#[chronobreak]
+use crossbeam::channel::{unbounded, Receiver, Sender};
+#[chronobreak]
+use parking_lot::Mutex;
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
+#[chronobreak]
+use std::sync::Arc;
 
 #[derive(new, reactive_operator)]
 pub struct FlowObserveOn<Flow, Scheduler>
@@ -21,7 +25,7 @@ where
 
 struct ObserveOnSubscriber<Subscriber, Scheduler, Subscription, Item, Error> {
     task: Arc<ObserveOnTaskWrapper<Subscriber, Subscription, Item, Error>>,
-    sender: mpsc::Sender<Item>,
+    sender: Sender<Item>,
     scheduler: Scheduler,
     phantom: PhantomData<Subscription>,
 }
@@ -36,7 +40,7 @@ where
     Scheduler: core::Scheduler + Send + 'static,
 {
     fn new(subscriber: Subscriber, scheduler: Scheduler) -> Self {
-        let (sender, receiver) = mpsc::unbounded();
+        let (sender, receiver) = unbounded();
         ObserveOnSubscriber {
             task: Arc::new(ObserveOnTaskWrapper::new(receiver, subscriber)),
             sender,
@@ -105,7 +109,7 @@ struct ObserveOnTaskWrapper<Subscriber, Subscription, Item, Error> {
 impl<Subscriber, Subscription, Item, Error>
     ObserveOnTaskWrapper<Subscriber, Subscription, Item, Error>
 {
-    pub fn new(receiver: mpsc::Receiver<Item>, subscriber: Subscriber) -> Self {
+    pub fn new(receiver: Receiver<Item>, subscriber: Subscriber) -> Self {
         Self {
             inner: UnsafeCell::new(ObserveOnTask::new(receiver, subscriber)),
         }
@@ -122,14 +126,14 @@ unsafe impl<Subscriber, Subscription, Item, Error> Sync
 }
 
 struct ObserveOnTask<Subscriber, Subscription, Item, Error> {
-    receiver: mpsc::Receiver<Item>,
+    receiver: Receiver<Item>,
     data: Mutex<Data<Error>>,
     subscriber: Subscriber,
     phantom: PhantomData<Subscription>,
 }
 
 impl<Subscriber, Subscription, Item, Error> ObserveOnTask<Subscriber, Subscription, Item, Error> {
-    pub fn new(receiver: mpsc::Receiver<Item>, subscriber: Subscriber) -> Self {
+    pub fn new(receiver: Receiver<Item>, subscriber: Subscriber) -> Self {
         Self {
             receiver,
             data: Mutex::new(Data::default()),

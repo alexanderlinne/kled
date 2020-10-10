@@ -1,6 +1,8 @@
 use crate::core;
-use crate::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use crate::sync::Arc;
+#[chronobreak]
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+#[chronobreak]
+use std::sync::Arc;
 
 pub struct AccumulateSubscriptionStub {
     data: Arc<Data>,

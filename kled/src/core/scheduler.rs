@@ -1,5 +1,6 @@
-use crate::time;
 use std::future::Future;
+#[chronobreak]
+use std::time;
 
 pub trait Scheduler: Clone {
     fn schedule<Fut>(&self, future: Fut)

@@ -1,7 +1,10 @@
 use crate::core;
 use crate::flow;
-use crate::sync::{Arc, Mutex, ReentrantMutex};
+#[chronobreak]
+use parking_lot::{Mutex, ReentrantMutex};
 use std::cell::RefCell;
+#[chronobreak]
+use std::sync::Arc;
 
 pub struct TestSubscriber<Subscription, Item, Error> {
     subscription: Arc<ReentrantMutex<RefCell<Option<Subscription>>>>,

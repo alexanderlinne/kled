@@ -5,14 +5,11 @@
 #![deny(broken_intra_doc_links)]
 
 #[macro_use]
+extern crate chronobreak;
+#[macro_use]
 extern crate derive_new;
 #[macro_use]
 extern crate kled_derive;
-extern crate num_cpus;
-extern crate parking_lot;
-
-mod mock;
-use mock::*;
 
 pub mod cancellable;
 pub mod core;

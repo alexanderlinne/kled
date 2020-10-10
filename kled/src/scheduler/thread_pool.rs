@@ -1,14 +1,20 @@
 use crate::core;
-use crate::sync::atomic::{AtomicUsize, Ordering};
-use crate::sync::{Arc, Condvar, Mutex};
-use crate::time;
 use futures::executor::ThreadPool;
 use futures_timer::Delay;
 use std::cell::UnsafeCell;
 use std::future::Future;
 
+#[chronobreak]
+mod mock {
+    use parking_lot::{Condvar, Mutex};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::time;
+}
+use mock::*;
+
 thread_local! {
-    static DATA: UnsafeCell<*const Data> = UnsafeCell::new(std::ptr::null());
+    static DATA: UnsafeCell<Option<Arc<Data>>> = UnsafeCell::new(None);
 }
 
 #[derive(Clone)]
@@ -34,14 +40,8 @@ impl ThreadPoolScheduler {
         ThreadPool::builder()
             .pool_size(num_threads)
             .after_start(move |_| {
-                let data = data.clone();
                 DATA.with(|glob| {
-                    unsafe { *glob.get() = Arc::into_raw(data) };
-                });
-            })
-            .before_stop(|_| {
-                DATA.with(|glob| {
-                    unsafe { Arc::from_raw(glob.get()) };
+                    unsafe { *glob.get() = Some(data.clone()) };
                 });
             })
             .create()
@@ -58,13 +58,12 @@ impl ThreadPoolScheduler {
                 Delay::new(delay).await;
             }
             future.await;
-            unsafe {
-                let data = DATA.with(|data| *data.get());
-                (*data).job_count.fetch_sub(1, Ordering::SeqCst);
-                if !(*data).has_work() {
-                    let _ = (*data).join_mutex.lock();
-                    (*data).join_cond.notify_all();
-                }
+
+            let data = DATA.with(|data| unsafe { &*data.get() }.as_ref().unwrap());
+            data.job_count.fetch_sub(1, Ordering::SeqCst);
+            if !data.has_work() {
+                let _ = data.join_mutex.lock();
+                data.join_cond.notify_all();
             }
         })
     }

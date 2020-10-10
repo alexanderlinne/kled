@@ -1,10 +1,16 @@
 use crate::core;
-use crate::sync::atomic::{AtomicUsize, Ordering};
-use crate::sync::{Arc, Condvar, Mutex};
-use crate::thread;
-use crate::time;
 use async_std::task;
 use std::future::Future;
+
+#[chronobreak]
+mod mock {
+    use parking_lot::{Condvar, Mutex};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::thread;
+    use std::time;
+}
+use mock::*;
 
 #[derive(Clone)]
 pub struct NewThreadScheduler {

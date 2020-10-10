@@ -1,5 +1,8 @@
 use crate::core;
-use crate::sync::{Arc, Mutex};
+#[chronobreak]
+use parking_lot::Mutex;
+#[chronobreak]
+use std::sync::Arc;
 
 pub struct LazySubscriptionStub<Subscription> {
     data: Arc<Mutex<Data<Subscription>>>,

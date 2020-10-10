@@ -1,5 +1,8 @@
 use crate::core;
-use crate::sync::{Arc, Mutex};
+#[chronobreak]
+use parking_lot::Mutex;
+#[chronobreak]
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct TestObserver<Cancellable, Item, Error> {

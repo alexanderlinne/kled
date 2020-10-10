@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 async-std = "1.6"
+chronobreak = { git = "https://github.com/alexanderlinne/chronobreak" }
 crossbeam = "0.7"
 derive-new = "0.5"
 futures-timer = "3.0"

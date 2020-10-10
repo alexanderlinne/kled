@@ -1,7 +1,10 @@
 use crate::cancellable::*;
 use crate::core;
 use crate::core::{IntoObservableEmitter, ObservableEmitter};
-use crate::sync::{Arc, Mutex};
+#[chronobreak]
+use parking_lot::Mutex;
+#[chronobreak]
+use std::sync::Arc;
 
 pub struct PublishSubject<Cancellable, Item, Error> {
     data: Arc<Mutex<Data<Cancellable, Item, Error>>>,
@@ -88,8 +91,10 @@ mod tests {
     use crate::observable::*;
     use crate::observer::*;
     use crate::prelude::*;
-    use crate::sync::{Arc, Barrier};
-    use crate::thread;
+    #[chronobreak]
+    use std::sync::{Arc, Barrier};
+    #[chronobreak]
+    use std::thread;
 
     #[test]
     fn simple() {

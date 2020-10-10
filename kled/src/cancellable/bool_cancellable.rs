@@ -1,6 +1,9 @@
 use crate::core;
-use crate::sync::atomic::{AtomicBool, Ordering};
-use crate::sync::Arc;
+
+#[chronobreak]
+use std::sync::atomic::{AtomicBool, Ordering};
+#[chronobreak]
+use std::sync::Arc;
 
 pub struct BoolCancellableStub {
     cancelled: Arc<AtomicBool>,

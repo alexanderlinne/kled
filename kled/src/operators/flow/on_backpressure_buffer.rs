@@ -1,8 +1,13 @@
 use crate::core;
 use crate::flow;
-use crate::sync::atomic::{AtomicUsize, Ordering};
-use crate::sync::mpsc::{bounded, Receiver, Sender};
-use crate::sync::{Arc, Mutex, Weak};
+#[chronobreak]
+use crossbeam::channel::{bounded, Receiver, Sender};
+#[chronobreak]
+use parking_lot::Mutex;
+#[chronobreak]
+use std::sync::atomic::{AtomicUsize, Ordering};
+#[chronobreak]
+use std::sync::{Arc, Weak};
 
 #[derive(new, reactive_operator)]
 pub struct FlowOnBackpressureBuffer<Flow>

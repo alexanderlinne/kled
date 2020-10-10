@@ -1,8 +1,12 @@
 use crate::core;
-use crate::sync::mpsc;
-use crate::sync::{Arc, Mutex};
+#[chronobreak]
+use crossbeam::channel::{unbounded, Receiver, Sender};
+#[chronobreak]
+use parking_lot::Mutex;
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
+#[chronobreak]
+use std::sync::Arc;
 
 #[derive(new, reactive_operator)]
 pub struct ObservableObserveOn<Observable, Scheduler>
@@ -20,7 +24,7 @@ where
 
 struct ObserveOnObserver<Observer, Scheduler, Cancellable, Item, Error> {
     task: Arc<ObserveOnTaskWrapper<Observer, Cancellable, Item, Error>>,
-    sender: mpsc::Sender<Item>,
+    sender: Sender<Item>,
     scheduler: Scheduler,
     phantom: PhantomData<Cancellable>,
 }
@@ -35,7 +39,7 @@ where
     Scheduler: core::Scheduler + Send + 'static,
 {
     fn new(observer: Observer, scheduler: Scheduler) -> Self {
-        let (sender, receiver) = mpsc::unbounded();
+        let (sender, receiver) = unbounded();
         ObserveOnObserver {
             task: Arc::new(ObserveOnTaskWrapper::new(receiver, observer)),
             sender,
@@ -100,7 +104,7 @@ struct ObserveOnTaskWrapper<Observer, Cancellable, Item, Error> {
 }
 
 impl<Observer, Cancellable, Item, Error> ObserveOnTaskWrapper<Observer, Cancellable, Item, Error> {
-    pub fn new(receiver: mpsc::Receiver<Item>, observer: Observer) -> Self {
+    pub fn new(receiver: Receiver<Item>, observer: Observer) -> Self {
         Self {
             inner: UnsafeCell::new(ObserveOnTask::new(receiver, observer)),
         }
@@ -117,14 +121,14 @@ unsafe impl<Observer, Cancellable, Item, Error> Sync
 }
 
 struct ObserveOnTask<Observer, Cancellable, Item, Error> {
-    receiver: mpsc::Receiver<Item>,
+    receiver: Receiver<Item>,
     data: Mutex<Data<Error>>,
     observer: Observer,
     phantom: PhantomData<Cancellable>,
 }
 
 impl<Observer, Cancellable, Item, Error> ObserveOnTask<Observer, Cancellable, Item, Error> {
-    pub fn new(receiver: mpsc::Receiver<Item>, observer: Observer) -> Self {
+    pub fn new(receiver: Receiver<Item>, observer: Observer) -> Self {
         Self {
             receiver,
             data: Mutex::new(Data::default()),
