@@ -17,17 +17,15 @@ where
     }
 }
 
-impl<IntoIter> core::Observable for IntoIterObservable<IntoIter>
+impl<IntoIter> core::Observable<BoolCancellable, IntoIter::Item, util::Infallible>
+    for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator,
 {
-    type Item = IntoIter::Item;
-    type Error = util::Infallible;
-    type Cancellable = BoolCancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+    fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
+        Observer:
+            core::Observer<BoolCancellable, IntoIter::Item, util::Infallible> + Send + 'static,
     {
         let mut observer = observer.into_emitter();
         for v in self.iterable.into_iter() {
@@ -43,7 +41,7 @@ where
     }
 }
 
-impl<IntoIter> core::IntoObservable for IntoIter
+impl<IntoIter> core::IntoObservable<BoolCancellable, IntoIter::Item, util::Infallible> for IntoIter
 where
     IntoIter: IntoIterator,
 {

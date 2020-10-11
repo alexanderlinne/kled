@@ -78,18 +78,14 @@ impl<Item, Error> TestFlow<Item, Error> {
     }
 }
 
-impl<Item, Error> core::Flow for TestFlow<Item, Error>
+impl<Item, Error> core::Flow<AccumulateSubscription, Item, Error> for TestFlow<Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Item = Item;
-    type Error = Error;
-    type Subscription = AccumulateSubscription;
-
-    fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
+    fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
     {
         assert!(!self.has_observer());
         let mut data = self.data.lock();

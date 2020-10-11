@@ -1,4 +1,4 @@
-use crate::cancellable;
+use crate::cancellable::*;
 use crate::core;
 use crate::core::IntoObservableEmitter;
 use std::marker::PhantomData;
@@ -19,19 +19,16 @@ impl<F, Item, Error> ObservableCreate<F, Item, Error> {
     }
 }
 
-impl<F, Item, Error> core::Observable for ObservableCreate<F, Item, Error>
+impl<F, Item, Error> core::Observable<BoolCancellable, Item, Error>
+    for ObservableCreate<F, Item, Error>
 where
     F: FnOnce(Box<dyn core::ObservableEmitter<Item, Error> + Send>),
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Item = Item;
-    type Error = Error;
-    type Cancellable = cancellable::BoolCancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+    fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
     {
         let emitter = observer.into_emitter();
         (self.emitter_consumer)(Box::new(emitter));

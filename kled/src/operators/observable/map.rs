@@ -1,15 +1,33 @@
 use crate::core;
 use std::marker::PhantomData;
 
-#[derive(new, reactive_operator)]
-pub struct ObservableMap<Observable, ItemOut, UnaryOp>
+#[derive(new)]
+pub struct ObservableMap<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
 where
-    Observable: core::Observable,
-    UnaryOp: FnMut(Observable::Item) -> ItemOut,
+    Observable: core::Observable<Cancellable, Item, Error>,
+    UnaryOp: FnMut(Item) -> ItemOut,
 {
-    #[upstream(item = "ItemOut")]
     observable: Observable,
     unary_op: UnaryOp,
+    phantom: PhantomData<(Cancellable, Item, Error, ItemOut)>,
+}
+
+impl<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
+    core::Observable<Cancellable, ItemOut, Error>
+    for ObservableMap<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
+where
+    Observable: core::Observable<Cancellable, Item, Error>,
+    Cancellable: core::Cancellable,
+    UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
+    ItemOut: Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Observer<Cancellable, ItemOut, Error> + Send + 'static,
+    {
+        self.observable
+            .subscribe(MapObserver::new(downstream, self.unary_op));
+    }
 }
 
 #[derive(new)]

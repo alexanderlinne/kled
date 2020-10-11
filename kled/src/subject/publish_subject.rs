@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<Cancellable, Item, Error> core::Subject<Cancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Subject<Cancellable, BoolCancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
     Item: Clone + Send + 'static,
@@ -65,18 +65,15 @@ where
 {
 }
 
-impl<Cancellable, Item, Error> core::Observable for PublishSubject<Cancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Observable<BoolCancellable, Item, Error>
+    for PublishSubject<Cancellable, Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Item = Item;
-    type Error = Error;
-    type Cancellable = BoolCancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+    fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
     {
         self.data
             .lock()

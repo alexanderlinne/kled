@@ -3,14 +3,14 @@ use crate::flow;
 use crate::subscription::*;
 use crate::util;
 
-impl<'o, Flow, NextFn> core::FlowSubsribeNext<NextFn> for Flow
+impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscription, Item>
+    for Flow
 where
-    Flow: core::Flow + Send + 'static,
-    Flow::Subscription: Send + 'static,
-    Flow::Error: util::Inconstructible,
-    NextFn: FnMut(Flow::Item) + Send + 'static,
+    Flow: core::Flow<Subscription, Item, util::Infallible> + Send + 'static,
+    Subscription: core::Subscription + Send + 'static,
+    NextFn: FnMut(Item) + Send + 'static,
 {
-    type Subscription = LazySubscription<Flow::Subscription>;
+    type Subscription = LazySubscription<Subscription>;
 
     fn subscribe_next(self, next_fn: NextFn) -> Self::Subscription {
         use self::core::SubscriptionProvider;
@@ -22,21 +22,21 @@ where
             || {},
         );
         let subscription = subscriber.stub.subscription();
-        self.actual_subscribe(subscriber);
+        self.subscribe(subscriber);
         subscription
     }
 }
 
-impl<Flow, NextFn, ErrorFn, CompletedFn> core::FlowSubsribeAll<NextFn, ErrorFn, CompletedFn>
-    for Flow
+impl<Flow, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
+    core::FlowSubsribeAll<NextFn, ErrorFn, CompletedFn, Subscription, Item, Error> for Flow
 where
-    Flow: core::Flow + Send + 'static,
-    Flow::Subscription: Send + 'static,
-    NextFn: FnMut(Flow::Item) + Send + 'static,
-    ErrorFn: FnMut(flow::Error<Flow::Error>) + Send + 'static,
+    Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
+    Subscription: core::Subscription + Send + 'static,
+    NextFn: FnMut(Item) + Send + 'static,
+    ErrorFn: FnMut(flow::Error<Error>) + Send + 'static,
     CompletedFn: FnMut() + Send + 'static,
 {
-    type Subscription = LazySubscription<Flow::Subscription>;
+    type Subscription = LazySubscription<Subscription>;
 
     fn subscribe_all(
         self,
@@ -47,7 +47,7 @@ where
         use crate::core::SubscriptionProvider;
         let subscriber = LambdaSubscriber::new(next_fn, error_fn, complete_fn);
         let subscription = subscriber.stub.subscription();
-        self.actual_subscribe(subscriber);
+        self.subscribe(subscriber);
         subscription
     }
 }

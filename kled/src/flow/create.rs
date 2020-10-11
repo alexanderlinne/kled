@@ -10,19 +10,15 @@ pub struct FlowCreate<F, Item, Error> {
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<F, Item, Error> core::Flow for FlowCreate<F, Item, Error>
+impl<F, Item, Error> core::Flow<AccumulateSubscription, Item, Error> for FlowCreate<F, Item, Error>
 where
     F: FnOnce(Box<dyn core::FlowEmitter<Item, Error> + Send>),
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    type Item = Item;
-    type Error = Error;
-    type Subscription = AccumulateSubscription;
-
-    fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
+    fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
     {
         let emitter = subscriber.into_emitter();
         (self.emitter_consumer)(Box::new(emitter));

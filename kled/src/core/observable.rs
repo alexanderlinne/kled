@@ -15,32 +15,30 @@ use crate::operators::*;
 /// [`Error`]: trait.Observable.html#associatedtype.Error
 /// [`LocalObservable`]: trait.LocalObservable.html
 /// [`SharedObservable`]: trait.SharedObservable.html
-pub trait Observable {
-    /// The type of items emitted by this observable
-    type Item;
-
-    /// The type of error which may be emitted by this observable
-    type Error;
-
-    type Cancellable: core::Cancellable + Send + Sync + 'static;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+pub trait Observable<Cancellable, Item, Error> {
+    fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static;
+        Observer: core::Observer<Cancellable, Item, Error> + Send + 'static;
 
-    fn map<ItemOut, UnaryOp>(self, unary_op: UnaryOp) -> ObservableMap<Self, ItemOut, UnaryOp>
+    fn map<ItemOut, UnaryOp>(
+        self,
+        unary_op: UnaryOp,
+    ) -> ObservableMap<Self, Cancellable, Item, Error, ItemOut, UnaryOp>
     where
         Self: Sized,
-        UnaryOp: FnMut(Self::Item) -> ItemOut,
+        UnaryOp: FnMut(Item) -> ItemOut,
     {
         ObservableMap::new(self, unary_op)
     }
 
-    fn observe_on<Scheduler>(self, scheduler: Scheduler) -> ObservableObserveOn<Self, Scheduler>
+    fn observe_on<Scheduler>(
+        self,
+        scheduler: Scheduler,
+    ) -> ObservableObserveOn<Self, Cancellable, Item, Error, Scheduler>
     where
         Self: Sized,
-        Self::Item: Send + 'static,
-        Self::Error: Send + 'static,
+        Item: Send + 'static,
+        Error: Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         ObservableObserveOn::new(self, scheduler)
@@ -50,20 +48,23 @@ pub trait Observable {
         self,
         initial_value: ItemOut,
         binary_op: BinaryOp,
-    ) -> ObservableScan<Self, ItemOut, BinaryOp>
+    ) -> ObservableScan<Self, Cancellable, Item, Error, ItemOut, BinaryOp>
     where
         Self: Sized,
         ItemOut: Clone,
-        BinaryOp: FnMut(ItemOut, Self::Item) -> ItemOut,
+        BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
     {
         ObservableScan::new(self, initial_value, binary_op)
     }
 
-    fn subscribe_on<Scheduler>(self, scheduler: Scheduler) -> ObservableSubscribeOn<Self, Scheduler>
+    fn subscribe_on<Scheduler>(
+        self,
+        scheduler: Scheduler,
+    ) -> ObservableSubscribeOn<Self, Cancellable, Item, Error, Scheduler>
     where
         Self: Sized,
-        Self::Item: Send + 'static,
-        Self::Error: Send + 'static,
+        Item: Send + 'static,
+        Error: Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         ObservableSubscribeOn::new(self, scheduler)

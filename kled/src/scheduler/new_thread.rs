@@ -4,11 +4,11 @@ use std::future::Future;
 
 #[chronobreak]
 mod mock {
-    use parking_lot::{Condvar, Mutex};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
-    use std::thread;
-    use std::time;
+    pub use parking_lot::{Condvar, Mutex};
+    pub use std::sync::atomic::{AtomicUsize, Ordering};
+    pub use std::sync::Arc;
+    pub use std::thread;
+    pub use std::time;
 }
 use mock::*;
 

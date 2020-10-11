@@ -8,8 +8,6 @@
 extern crate chronobreak;
 #[macro_use]
 extern crate derive_new;
-#[macro_use]
-extern crate kled_derive;
 
 pub mod cancellable;
 pub mod core;

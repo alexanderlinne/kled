@@ -8,17 +8,36 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::{Arc, Weak};
 
-#[derive(new, reactive_operator)]
-pub struct FlowOnBackpressureLatest<Flow>
+#[derive(new)]
+pub struct FlowOnBackpressureLatest<Flow, Subscription, Item, Error>
 where
-    Flow: core::Flow,
-    Flow::Item: Send + 'static,
-    Flow::Error: Send + 'static,
+    Flow: core::Flow<Subscription, Item, Error>,
 {
-    #[upstream(
-        subscription = "OnBackpressureLatestSubscription<Flow::Subscription, Flow::Item, Flow::Error>"
-    )]
     flow: Flow,
+    phantom: PhantomData<(Subscription, Item, Error)>,
+}
+
+impl<Flow, Subscription, Item, Error>
+    core::Flow<OnBackpressureLatestSubscription<Subscription, Item, Error>, Item, Error>
+    for FlowOnBackpressureLatest<Flow, Subscription, Item, Error>
+where
+    Flow: core::Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription + Send + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Subscriber<
+                OnBackpressureLatestSubscription<Subscription, Item, Error>,
+                Item,
+                Error,
+            > + Send
+            + 'static,
+    {
+        self.flow
+            .subscribe(OnBackpressureLatestSubscriber::new(downstream));
+    }
 }
 
 type BoxedSubscriber<Subscription, Item, Error> = Box<

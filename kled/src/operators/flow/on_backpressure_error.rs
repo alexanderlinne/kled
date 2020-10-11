@@ -6,15 +6,33 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-#[derive(new, reactive_operator)]
-pub struct FlowOnBackpressureError<Flow>
+#[derive(new)]
+pub struct FlowOnBackpressureError<Flow, Subscription, Item, Error>
 where
-    Flow: core::Flow,
-    Flow::Item: Send + 'static,
-    Flow::Error: Send + 'static,
+    Flow: core::Flow<Subscription, Item, Error>,
 {
-    #[upstream(subscription = "OnBackpressureErrorSubscription<Flow::Subscription>")]
     flow: Flow,
+    phantom: PhantomData<(Subscription, Item, Error)>,
+}
+
+impl<Flow, Subscription, Item, Error>
+    core::Flow<OnBackpressureErrorSubscription<Subscription>, Item, Error>
+    for FlowOnBackpressureError<Flow, Subscription, Item, Error>
+where
+    Flow: core::Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription + Send + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Subscriber<OnBackpressureErrorSubscription<Subscription>, Item, Error>
+            + Send
+            + 'static,
+    {
+        self.flow
+            .subscribe(OnBackpressureErrorSubscriber::new(downstream));
+    }
 }
 
 pub struct OnBackpressureErrorSubscriber<Subscription, Subscriber, Item, Error> {

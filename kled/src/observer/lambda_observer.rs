@@ -2,14 +2,14 @@ use crate::cancellable::*;
 use crate::core;
 use crate::util;
 
-impl<'o, Observable, NextFn> core::ObservableSubsribeNext<NextFn> for Observable
+impl<'o, Observable, NextFn, Cancellable, Item>
+    core::ObservableSubsribeNext<NextFn, Cancellable, Item> for Observable
 where
-    Observable: core::Observable + Send + 'static,
-    Observable::Cancellable: Send + 'static,
-    Observable::Error: util::Inconstructible,
-    NextFn: FnMut(Observable::Item) + Send + 'static,
+    Observable: core::Observable<Cancellable, Item, util::Infallible> + Send + 'static,
+    Cancellable: core::Cancellable + Send + 'static,
+    NextFn: FnMut(Item) + Send + 'static,
 {
-    type Cancellable = LazyCancellable<Observable::Cancellable>;
+    type Cancellable = LazyCancellable<Cancellable>;
 
     fn subscribe_next(self, next_fn: NextFn) -> Self::Cancellable {
         use self::core::CancellableProvider;
@@ -21,21 +21,22 @@ where
             || {},
         );
         let cancellable = observer.stub.cancellable();
-        self.actual_subscribe(observer);
+        self.subscribe(observer);
         cancellable
     }
 }
 
-impl<Observable, NextFn, ErrorFn, CompletedFn>
-    core::ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn> for Observable
+impl<Observable, NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
+    core::ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
+    for Observable
 where
-    Observable: core::Observable + Send + 'static,
-    Observable::Cancellable: Send + 'static,
-    NextFn: FnMut(Observable::Item) + Send + 'static,
-    ErrorFn: FnMut(Observable::Error) + Send + 'static,
+    Observable: core::Observable<Cancellable, Item, Error> + Send + 'static,
+    Cancellable: core::Cancellable + Send + 'static,
+    NextFn: FnMut(Item) + Send + 'static,
+    ErrorFn: FnMut(Error) + Send + 'static,
     CompletedFn: FnMut() + Send + 'static,
 {
-    type Cancellable = LazyCancellable<Observable::Cancellable>;
+    type Cancellable = LazyCancellable<Cancellable>;
 
     fn subscribe_all(
         self,
@@ -46,7 +47,7 @@ where
         use crate::core::CancellableProvider;
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
         let cancellable = observer.stub.cancellable();
-        self.actual_subscribe(observer);
+        self.subscribe(observer);
         cancellable
     }
 }

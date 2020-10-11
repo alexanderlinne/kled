@@ -1,13 +1,13 @@
 use crate::core;
 
-pub trait IntoObservable {
-    type Observable: core::Observable;
+pub trait IntoObservable<Cancellable, Item, Error> {
+    type Observable: core::Observable<Cancellable, Item, Error>;
 
     fn into_observable(self) -> Self::Observable;
 }
 
-pub trait IntoFlow {
-    type Flow: core::Flow;
+pub trait IntoFlow<Subscription, Item, Error> {
+    type Flow: core::Flow<Subscription, Item, Error>;
 
     fn into_flow(self) -> Self::Flow;
 }

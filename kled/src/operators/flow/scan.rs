@@ -1,17 +1,38 @@
 use crate::core;
 use crate::flow;
+use std::marker::PhantomData;
 
-#[derive(new, reactive_operator)]
-pub struct FlowScan<Flow, ItemOut, BinaryOp>
+#[derive(new)]
+pub struct FlowScan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
 where
-    Flow: core::Flow,
+    Flow: core::Flow<Subscription, Item, Error>,
     ItemOut: Clone,
-    BinaryOp: FnMut(ItemOut, Flow::Item) -> ItemOut,
+    BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
 {
-    #[upstream(item = "ItemOut")]
     flow: Flow,
     initial_value: ItemOut,
     binary_op: BinaryOp,
+    phantom: PhantomData<(Subscription, Item, Error)>,
+}
+
+impl<Flow, Subscription, Item, Error, ItemOut, BinaryOp> core::Flow<Subscription, ItemOut, Error>
+    for FlowScan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
+where
+    Flow: core::Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription,
+    BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
+    ItemOut: Clone + Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Subscriber<Subscription, ItemOut, Error> + Send + 'static,
+    {
+        self.flow.subscribe(ScanSubscriber::new(
+            downstream,
+            self.initial_value,
+            self.binary_op,
+        ));
+    }
 }
 
 #[derive(new)]

@@ -2,15 +2,32 @@ use crate::core;
 use crate::flow;
 use std::marker::PhantomData;
 
-#[derive(new, reactive_operator)]
-pub struct FlowMap<Flow, ItemOut, UnaryOp>
+#[derive(new)]
+pub struct FlowMap<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
 where
-    Flow: core::Flow,
-    UnaryOp: FnMut(Flow::Item) -> ItemOut,
+    Flow: core::Flow<Subscription, Item, Error>,
+    UnaryOp: FnMut(Item) -> ItemOut,
 {
-    #[upstream(item = "ItemOut")]
     flow: Flow,
     unary_op: UnaryOp,
+    phantom: PhantomData<(Subscription, Item, Error, ItemOut)>,
+}
+
+impl<Flow, Subscription, Item, Error, ItemOut, UnaryOp> core::Flow<Subscription, ItemOut, Error>
+    for FlowMap<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
+where
+    Flow: core::Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription,
+    UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
+    ItemOut: Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Subscriber<Subscription, ItemOut, Error> + Send + 'static,
+    {
+        self.flow
+            .subscribe(MapSubscriber::new(downstream, self.unary_op));
+    }
 }
 
 #[derive(new)]

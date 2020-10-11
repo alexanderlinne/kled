@@ -1,31 +1,31 @@
 use crate::core;
+use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct FlowSubscribeOn<Flow, Scheduler>
+pub struct FlowSubscribeOn<Flow, Subscription, Item, Error, Scheduler>
 where
-    Flow: core::Flow,
+    Flow: core::Flow<Subscription, Item, Error>,
     Scheduler: core::Scheduler + Send + 'static,
 {
     flow: Flow,
     scheduler: Scheduler,
+    phantom: PhantomData<(Subscription, Item, Error)>,
 }
 
-impl<Flow, Scheduler> core::Flow for FlowSubscribeOn<Flow, Scheduler>
+impl<Flow, Subscription, Item, Error, Scheduler> core::Flow<Subscription, Item, Error>
+    for FlowSubscribeOn<Flow, Subscription, Item, Error, Scheduler>
 where
-    Flow: core::Flow + Send + 'static,
+    Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
+    Subscription: core::Subscription,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    type Item = Flow::Item;
-    type Error = Flow::Error;
-    type Subscription = Flow::Subscription;
-
-    fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
+    fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static,
     {
         let flow = self.flow;
         self.scheduler.schedule_fn(move || {
-            flow.actual_subscribe(subscriber);
+            flow.subscribe(subscriber);
         });
     }
 }

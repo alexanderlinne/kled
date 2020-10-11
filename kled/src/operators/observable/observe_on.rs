@@ -8,18 +8,33 @@ use std::marker::PhantomData;
 #[chronobreak]
 use std::sync::Arc;
 
-#[derive(new, reactive_operator)]
-pub struct ObservableObserveOn<Observable, Scheduler>
+#[derive(new)]
+pub struct ObservableObserveOn<Observable, Cancellable, Item, Error, Scheduler>
 where
-    Observable: core::Observable,
-    Observable::Cancellable: Send,
-    Observable::Item: Send,
-    Observable::Error: Send,
+    Observable: core::Observable<Cancellable, Item, Error>,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    #[upstream()]
     observable: Observable,
     scheduler: Scheduler,
+    phantom: PhantomData<(Cancellable, Item, Error)>,
+}
+
+impl<Observable, Cancellable, Item, Error, Scheduler> core::Observable<Cancellable, Item, Error>
+    for ObservableObserveOn<Observable, Cancellable, Item, Error, Scheduler>
+where
+    Observable: core::Observable<Cancellable, Item, Error>,
+    Cancellable: core::Cancellable + Send + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+    Scheduler: core::Scheduler + Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Observer<Cancellable, Item, Error> + Send + 'static,
+    {
+        self.observable
+            .subscribe(ObserveOnObserver::new(downstream, self.scheduler));
+    }
 }
 
 struct ObserveOnObserver<Observer, Scheduler, Cancellable, Item, Error> {

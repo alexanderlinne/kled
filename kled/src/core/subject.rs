@@ -1,6 +1,6 @@
 use crate::core;
 
-pub trait Subject<SubscriptionIn, Item, Error>:
-    core::Observable + core::Observer<SubscriptionIn, Item, Error>
+pub trait Subject<Cancellable, CancellableOut, Item, Error>:
+    core::Observable<CancellableOut, Item, Error> + core::Observer<Cancellable, Item, Error>
 {
 }

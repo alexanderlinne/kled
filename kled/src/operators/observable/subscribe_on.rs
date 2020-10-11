@@ -1,31 +1,31 @@
 use crate::core;
+use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct ObservableSubscribeOn<Observable, Scheduler>
+pub struct ObservableSubscribeOn<Observable, Cancellable, Item, Error, Scheduler>
 where
-    Observable: core::Observable,
+    Observable: core::Observable<Cancellable, Item, Error>,
     Scheduler: core::Scheduler + Send + 'static,
 {
     observable: Observable,
     scheduler: Scheduler,
+    phantom: PhantomData<(Cancellable, Item, Error)>,
 }
 
-impl<Observable, Scheduler> core::Observable for ObservableSubscribeOn<Observable, Scheduler>
+impl<Observable, Cancellable, Item, Error, Scheduler> core::Observable<Cancellable, Item, Error>
+    for ObservableSubscribeOn<Observable, Cancellable, Item, Error, Scheduler>
 where
-    Observable: core::Observable + Send + 'static,
+    Observable: core::Observable<Cancellable, Item, Error> + Send + 'static,
+    Cancellable: core::Cancellable,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    type Item = Observable::Item;
-    type Error = Observable::Error;
-    type Cancellable = Observable::Cancellable;
-
-    fn actual_subscribe<Observer>(self, observer: Observer)
+    fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<Self::Cancellable, Self::Item, Self::Error> + Send + 'static,
+        Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
     {
         let observable = self.observable;
         self.scheduler.schedule_fn(move || {
-            observable.actual_subscribe(observer);
+            observable.subscribe(observer);
         });
     }
 }

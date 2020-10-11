@@ -1,16 +1,38 @@
 use crate::core;
+use std::marker::PhantomData;
 
-#[derive(new, reactive_operator)]
-pub struct ObservableScan<Observable, ItemOut, BinaryOp>
+#[derive(new)]
+pub struct ObservableScan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
 where
-    Observable: core::Observable,
+    Observable: core::Observable<Cancellable, Item, Error>,
     ItemOut: Clone,
-    BinaryOp: FnMut(ItemOut, Observable::Item) -> ItemOut,
+    BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
 {
-    #[upstream(item = "ItemOut")]
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,
+    phantom: PhantomData<(Cancellable, Item, Error)>,
+}
+
+impl<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
+    core::Observable<Cancellable, ItemOut, Error>
+    for ObservableScan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
+where
+    Observable: core::Observable<Cancellable, Item, Error>,
+    Cancellable: core::Cancellable,
+    BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
+    ItemOut: Clone + Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Observer<Cancellable, ItemOut, Error> + Send + 'static,
+    {
+        self.observable.subscribe(ScanObserver::new(
+            downstream,
+            self.initial_value,
+            self.binary_op,
+        ));
+    }
 }
 
 #[derive(new)]

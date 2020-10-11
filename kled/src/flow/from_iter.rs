@@ -17,18 +17,17 @@ where
     }
 }
 
-impl<IntoIter> core::Flow for IntoIterFlow<IntoIter>
+impl<IntoIter> core::Flow<AccumulateSubscription, IntoIter::Item, util::Infallible>
+    for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator,
     IntoIter::Item: Send + 'static,
 {
-    type Item = IntoIter::Item;
-    type Error = util::Infallible;
-    type Subscription = AccumulateSubscription;
-
-    fn actual_subscribe<Subscriber>(self, subscriber: Subscriber)
+    fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<Self::Subscription, Self::Item, Self::Error> + Send + 'static,
+        Subscriber: core::Subscriber<AccumulateSubscription, IntoIter::Item, util::Infallible>
+            + Send
+            + 'static,
     {
         let mut subscriber = subscriber.into_emitter();
         for v in self.iterable.into_iter() {
@@ -44,7 +43,7 @@ where
     }
 }
 
-impl<IntoIter> core::IntoFlow for IntoIter
+impl<IntoIter> core::IntoFlow<AccumulateSubscription, IntoIter::Item, util::Infallible> for IntoIter
 where
     IntoIter: IntoIterator + 'static,
     IntoIter::Item: Send,

@@ -4,24 +4,47 @@ use crate::flow;
 use crossbeam::channel::{bounded, Receiver, Sender};
 #[chronobreak]
 use parking_lot::Mutex;
+use std::marker::PhantomData;
 #[chronobreak]
 use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::{Arc, Weak};
 
-#[derive(new, reactive_operator)]
-pub struct FlowOnBackpressureBuffer<Flow>
+#[derive(new)]
+pub struct FlowOnBackpressureBuffer<Flow, Subscription, Item, Error>
 where
-    Flow: core::Flow,
-    Flow::Item: Send + 'static,
-    Flow::Error: Send + 'static,
+    Flow: core::Flow<Subscription, Item, Error>,
 {
-    #[upstream(
-        subscription = "OnBackpressureBufferSubscription<Flow::Subscription, Flow::Item, Flow::Error>"
-    )]
     flow: Flow,
     buffer_strategy: flow::BufferStrategy,
     buffer_capacity: usize,
+    phantom: PhantomData<(Subscription, Item, Error)>,
+}
+
+impl<Flow, Subscription, Item, Error>
+    core::Flow<OnBackpressureBufferSubscription<Subscription, Item, Error>, Item, Error>
+    for FlowOnBackpressureBuffer<Flow, Subscription, Item, Error>
+where
+    Flow: core::Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription + Send + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+    fn subscribe<Downstream>(self, downstream: Downstream)
+    where
+        Downstream: core::Subscriber<
+                OnBackpressureBufferSubscription<Subscription, Item, Error>,
+                Item,
+                Error,
+            > + Send
+            + 'static,
+    {
+        self.flow.subscribe(OnBackpressureBufferSubscriber::new(
+            downstream,
+            self.buffer_strategy,
+            self.buffer_capacity,
+        ));
+    }
 }
 
 pub struct OnBackpressureBufferSubscriber<Subscription, Item, Error> {
