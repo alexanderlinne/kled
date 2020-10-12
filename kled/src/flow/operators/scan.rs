@@ -3,12 +3,7 @@ use crate::flow;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct Scan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-    ItemOut: Clone,
-    BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
-{
+pub struct Scan<Flow, Subscription, Item, Error, ItemOut, BinaryOp> {
     flow: Flow,
     initial_value: ItemOut,
     binary_op: BinaryOp,
@@ -19,7 +14,9 @@ impl<Flow, Subscription, Item, Error, ItemOut, BinaryOp> core::Flow<Subscription
     for Scan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
     ItemOut: Clone + Send + 'static,
 {

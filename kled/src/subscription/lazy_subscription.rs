@@ -16,23 +16,16 @@ impl<Subscription> Default for LazySubscriptionStub<Subscription> {
     }
 }
 
-impl<Subscription> core::SubscriptionProvider for LazySubscriptionStub<Subscription>
-where
-    Subscription: core::Subscription,
-{
-    type Subscription = LazySubscription<Subscription>;
-
-    fn subscription(&self) -> LazySubscription<Subscription> {
-        LazySubscription {
-            data: self.data.clone(),
-        }
-    }
-}
-
 impl<Subscription> LazySubscriptionStub<Subscription>
 where
     Subscription: core::Subscription,
 {
+    pub fn subscription(&self) -> LazySubscription<Subscription> {
+        LazySubscription {
+            data: self.data.clone(),
+        }
+    }
+
     pub fn set_subscription(&mut self, subscription: Subscription) {
         let mut data = self.data.lock();
         if data.cancelled {

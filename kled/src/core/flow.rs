@@ -2,18 +2,50 @@ use crate::core;
 use crate::flow;
 use crate::flow::operators::*;
 
-pub trait Flow<Subscription, Item, Error> {
+pub trait Flow<Subscription, Item, Error>
+where
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
     fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
         Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static;
+}
 
+pub trait IntoFlow<Subscription, Item, Error>
+where
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+    type Flow: core::Flow<Subscription, Item, Error>;
+
+    fn into_flow(self) -> Self::Flow;
+}
+
+impl<T: ?Sized, Subscription, Item, Error> FlowExt<Subscription, Item, Error> for T
+where
+    T: Flow<Subscription, Item, Error>,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+}
+
+pub trait FlowExt<Subscription, Item, Error>: Flow<Subscription, Item, Error>
+where
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
     fn map<ItemOut, UnaryOp>(
         self,
         unary_op: UnaryOp,
     ) -> Map<Self, Subscription, Item, Error, ItemOut, UnaryOp>
     where
         Self: Sized,
-        UnaryOp: FnMut(Item) -> ItemOut,
+        UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
     {
         Map::new(self, unary_op)
     }
@@ -24,8 +56,6 @@ pub trait Flow<Subscription, Item, Error> {
     ) -> ObserveOn<Self, Subscription, Item, Error, Scheduler>
     where
         Self: Sized,
-        Item: Send,
-        Error: Send,
         Scheduler: core::Scheduler + Send + 'static,
     {
         ObserveOn::new(self, scheduler)
@@ -37,8 +67,6 @@ pub trait Flow<Subscription, Item, Error> {
     ) -> OnBackpressureBuffer<Self, Subscription, Item, Error>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
     {
         OnBackpressureBuffer::new(self, buffer_strategy, flow::default_buffer_capacity())
     }
@@ -50,8 +78,6 @@ pub trait Flow<Subscription, Item, Error> {
     ) -> OnBackpressureBuffer<Self, Subscription, Item, Error>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
     {
         OnBackpressureBuffer::new(self, buffer_strategy, capacity)
     }
@@ -59,8 +85,6 @@ pub trait Flow<Subscription, Item, Error> {
     fn on_backpressure_drop(self) -> OnBackpressureDrop<Self, Subscription, Item, Error>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
     {
         OnBackpressureDrop::new(self)
     }
@@ -68,8 +92,6 @@ pub trait Flow<Subscription, Item, Error> {
     fn on_backpressure_error(self) -> OnBackpressureError<Self, Subscription, Item, Error>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
     {
         OnBackpressureError::new(self)
     }
@@ -77,8 +99,6 @@ pub trait Flow<Subscription, Item, Error> {
     fn on_backpressure_latest(self) -> OnBackpressureLatest<Self, Subscription, Item, Error>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
     {
         OnBackpressureLatest::new(self)
     }
@@ -90,8 +110,8 @@ pub trait Flow<Subscription, Item, Error> {
     ) -> Scan<Self, Subscription, Item, Error, ItemOut, BinaryOp>
     where
         Self: Sized,
-        ItemOut: Clone,
-        BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
+        ItemOut: Clone + Send + 'static,
+        BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
     {
         Scan::new(self, initial_value, binary_op)
     }
@@ -102,8 +122,6 @@ pub trait Flow<Subscription, Item, Error> {
     ) -> SubscribeOn<Self, Subscription, Item, Error, Scheduler>
     where
         Self: Sized,
-        Item: Send + 'static,
-        Error: Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         SubscribeOn::new(self, scheduler)

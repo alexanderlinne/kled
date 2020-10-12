@@ -10,12 +10,9 @@ extern crate blanket;
 extern crate chronobreak;
 #[macro_use]
 extern crate derive_new;
-#[macro_use]
-extern crate kled_derive;
 
 pub mod cancellable;
 pub mod core;
-pub mod emitter;
 pub mod flow;
 pub mod marker;
 pub mod observable;
@@ -24,6 +21,7 @@ pub mod scheduler;
 pub mod subject;
 pub mod subscriber;
 pub mod subscription;
+#[macro_use]
 pub mod util;
 
 #[doc(hidden)]

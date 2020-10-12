@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::IntoFlowEmitter;
+use crate::flow;
 use crate::subscription::*;
 #[chronobreak]
 use parking_lot::Mutex;
@@ -12,7 +12,7 @@ pub struct TestFlow<Item, Error> {
 }
 
 struct Data<Item, Error> {
-    emitter: Option<Box<dyn core::FlowEmitter<Item, Error> + Send + 'static>>,
+    emitter: Option<flow::BoxEmitter<Item, Error>>,
 }
 
 impl<Item, Error> Default for TestFlow<Item, Error> {
@@ -89,6 +89,6 @@ where
     {
         assert!(!self.has_observer());
         let mut data = self.data.lock();
-        data.emitter = Some(Box::new(subscriber.into_emitter()));
+        data.emitter = Some(flow::BoxEmitter::from(subscriber));
     }
 }

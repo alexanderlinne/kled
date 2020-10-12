@@ -7,13 +7,14 @@ impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscr
     for Flow
 where
     Flow: core::Flow<Subscription, Item, util::Infallible> + Send + 'static,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
     Subscription: core::Subscription + Send + 'static,
     NextFn: FnMut(Item) + Send + 'static,
 {
     type Subscription = LazySubscription<Subscription>;
 
     fn subscribe_next(self, next_fn: NextFn) -> Self::Subscription {
-        use self::core::SubscriptionProvider;
         let subscriber = LambdaSubscriber::new(
             next_fn,
             |_| {
@@ -31,7 +32,9 @@ impl<Flow, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
     core::FlowSubsribeAll<NextFn, ErrorFn, CompletedFn, Subscription, Item, Error> for Flow
 where
     Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
-    Subscription: core::Subscription + Send + 'static,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     NextFn: FnMut(Item) + Send + 'static,
     ErrorFn: FnMut(flow::Error<Error>) + Send + 'static,
     CompletedFn: FnMut() + Send + 'static,
@@ -44,7 +47,6 @@ where
         error_fn: ErrorFn,
         complete_fn: CompletedFn,
     ) -> Self::Subscription {
-        use crate::core::SubscriptionProvider;
         let subscriber = LambdaSubscriber::new(next_fn, error_fn, complete_fn);
         let subscription = subscriber.stub.subscription();
         self.subscribe(subscriber);

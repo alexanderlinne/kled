@@ -11,10 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 #[derive(new)]
-pub struct OnBackpressureBuffer<Flow, Subscription, Item, Error>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-{
+pub struct OnBackpressureBuffer<Flow, Subscription, Item, Error> {
     flow: Flow,
     buffer_strategy: flow::BufferStrategy,
     buffer_capacity: usize,
@@ -26,7 +23,7 @@ impl<Flow, Subscription, Item, Error>
     for OnBackpressureBuffer<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription + Send + 'static,
+    Subscription: core::Subscription + Send + Sync + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {

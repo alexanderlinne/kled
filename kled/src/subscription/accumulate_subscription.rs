@@ -19,17 +19,13 @@ impl Default for AccumulateSubscriptionStub {
     }
 }
 
-impl core::SubscriptionProvider for AccumulateSubscriptionStub {
-    type Subscription = AccumulateSubscription;
-
-    fn subscription(&self) -> AccumulateSubscription {
+impl AccumulateSubscriptionStub {
+    pub fn subscription(&self) -> AccumulateSubscription {
         AccumulateSubscription {
             data: self.data.clone(),
         }
     }
-}
 
-impl AccumulateSubscriptionStub {
     pub fn get_and_reset_requested(&self) -> usize {
         self.data.requested.swap(0, Ordering::Relaxed)
     }

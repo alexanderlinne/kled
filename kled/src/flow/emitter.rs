@@ -3,18 +3,17 @@ use crate::flow;
 use crate::subscription::*;
 use std::marker::PhantomData;
 
-pub struct FromFlow<Subscriber, Item, Error> {
+pub struct Emitter<Subscriber, Item, Error> {
     subscriber: Subscriber,
     stub: AccumulateSubscriptionStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<Subscriber, Item, Error> FromFlow<Subscriber, Item, Error>
+impl<Subscriber, Item, Error> Emitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
+    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error>,
 {
-    pub fn new(mut subscriber: Subscriber) -> Self {
-        use crate::core::SubscriptionProvider;
+    fn new(mut subscriber: Subscriber) -> Self {
         let stub = AccumulateSubscriptionStub::default();
         subscriber.on_subscribe(stub.subscription());
         Self {
@@ -23,37 +22,30 @@ where
             phantom: PhantomData,
         }
     }
-}
 
-impl<Subscriber, Item, Error> core::FlowEmitter<Item, Error> for FromFlow<Subscriber, Item, Error>
-where
-    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
-{
-    fn on_next(&mut self, item: Item) {
+    pub fn on_next(&mut self, item: Item) {
         self.subscriber.on_next(item);
     }
 
-    fn on_error(&mut self, error: Error) {
+    pub fn on_error(&mut self, error: Error) {
         self.subscriber.on_error(flow::Error::Upstream(error));
     }
 
-    fn on_completed(&mut self) {
+    pub fn on_completed(&mut self) {
         self.subscriber.on_completed();
     }
 
-    fn is_cancelled(&self) -> bool {
+    pub fn is_cancelled(&self) -> bool {
         self.stub.is_cancelled()
     }
 }
 
-impl<Subscriber, Item, Error> core::IntoFlowEmitter<Item, Error> for Subscriber
+impl<Subscriber, Item, Error> From<Subscriber> for Emitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
+    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error>,
 {
-    type Emitter = FromFlow<Subscriber, Item, Error>;
-
-    fn into_emitter(self) -> Self::Emitter {
-        FromFlow::new(self)
+    fn from(subscriber: Subscriber) -> Self {
+        Emitter::new(subscriber)
     }
 }
 

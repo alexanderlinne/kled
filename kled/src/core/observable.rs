@@ -26,6 +26,17 @@ where
         Observer: core::Observer<Cancellable, Item, Error> + Send + 'static;
 }
 
+pub trait IntoObservable<Cancellable, Item, Error>
+where
+    Cancellable: core::Cancellable + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
+    type Observable: core::Observable<Cancellable, Item, Error>;
+
+    fn into_observable(self) -> Self::Observable;
+}
+
 impl<T: ?Sized, Cancellable, Item, Error> ObservableExt<Cancellable, Item, Error> for T
 where
     T: Observable<Cancellable, Item, Error>,
@@ -71,7 +82,7 @@ where
     where
         Self: Sized,
         ItemOut: Clone + Send + 'static,
-        BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
+        BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
     {
         Scan::new(self, initial_value, binary_op)
     }

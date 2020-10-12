@@ -1,6 +1,6 @@
 use crate::cancellable::*;
 use crate::core;
-use crate::observer;
+use crate::observable;
 #[chronobreak]
 use parking_lot::Mutex;
 #[chronobreak]
@@ -12,7 +12,7 @@ pub struct TestObservable<Item, Error> {
 }
 
 struct Data<Item, Error> {
-    emitter: Option<observer::BoxEmitter<Item, Error>>,
+    emitter: Option<observable::BoxEmitter<Item, Error>>,
 }
 
 impl<Item, Error> Default for TestObservable<Item, Error> {
@@ -88,6 +88,6 @@ where
         Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        self.data.lock().emitter = Some(observer::BoxEmitter::from(observer));
+        self.data.lock().emitter = Some(observable::BoxEmitter::from(observer));
     }
 }

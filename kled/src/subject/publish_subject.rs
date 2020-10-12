@@ -1,6 +1,6 @@
 use crate::cancellable::*;
 use crate::core;
-use crate::observer;
+use crate::observable;
 use crate::util::distribute_value;
 #[chronobreak]
 use parking_lot::Mutex;
@@ -13,7 +13,7 @@ pub struct PublishSubject<Cancellable, Item, Error> {
 
 struct Data<Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    emitters: Vec<observer::BoxEmitter<Item, Error>>,
+    emitters: Vec<observable::BoxEmitter<Item, Error>>,
 }
 
 impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
@@ -83,7 +83,7 @@ where
         self.data
             .lock()
             .emitters
-            .push(observer::BoxEmitter::from(observer))
+            .push(observable::BoxEmitter::from(observer))
     }
 }
 

@@ -1,7 +1,5 @@
 mod cancellable;
 mod flow;
-mod flow_emitter;
-mod into;
 mod observable;
 mod observer;
 mod scheduler;
@@ -12,8 +10,6 @@ mod subscription;
 
 pub use cancellable::*;
 pub use flow::*;
-pub use flow_emitter::*;
-pub use into::*;
 pub use observable::*;
 pub use observer::*;
 pub use scheduler::*;

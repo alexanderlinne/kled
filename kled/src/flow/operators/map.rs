@@ -3,11 +3,7 @@ use crate::flow;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-    UnaryOp: FnMut(Item) -> ItemOut,
-{
+pub struct Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp> {
     flow: Flow,
     unary_op: UnaryOp,
     phantom: PhantomData<(Subscription, Item, Error, ItemOut)>,
@@ -17,7 +13,9 @@ impl<Flow, Subscription, Item, Error, ItemOut, UnaryOp> core::Flow<Subscription,
     for Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
     ItemOut: Send + 'static,
 {

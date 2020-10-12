@@ -2,11 +2,7 @@ use crate::core;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct SubscribeOn<Flow, Subscription, Item, Error, Scheduler>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-    Scheduler: core::Scheduler + Send + 'static,
-{
+pub struct SubscribeOn<Flow, Subscription, Item, Error, Scheduler> {
     flow: Flow,
     scheduler: Scheduler,
     phantom: PhantomData<(Subscription, Item, Error)>,
@@ -16,7 +12,9 @@ impl<Flow, Subscription, Item, Error, Scheduler> core::Flow<Subscription, Item, 
     for SubscribeOn<Flow, Subscription, Item, Error, Scheduler>
 where
     Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
-    Subscription: core::Subscription,
+    Subscription: core::Subscription + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     Scheduler: core::Scheduler + Send + 'static,
 {
     fn subscribe<Subscriber>(self, subscriber: Subscriber)

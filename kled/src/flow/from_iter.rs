@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::{FlowEmitter, IntoFlowEmitter};
+use crate::flow;
 use crate::subscription::*;
 use crate::util;
 
@@ -29,7 +29,7 @@ where
             + Send
             + 'static,
     {
-        let mut subscriber = subscriber.into_emitter();
+        let mut subscriber = flow::Emitter::from(subscriber);
         for v in self.iterable.into_iter() {
             if !subscriber.is_cancelled() {
                 subscriber.on_next(v);

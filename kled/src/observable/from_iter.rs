@@ -1,6 +1,6 @@
 use crate::cancellable::*;
 use crate::core;
-use crate::observer;
+use crate::observable;
 use crate::util;
 
 #[doc(hidden)]
@@ -28,7 +28,7 @@ where
         Observer:
             core::Observer<BoolCancellable, IntoIter::Item, util::Infallible> + Send + 'static,
     {
-        let mut observer = observer::Emitter::from(observer);
+        let mut observer = observable::Emitter::from(observer);
         for v in self.iterable.into_iter() {
             if !observer.is_cancelled() {
                 observer.on_next(v);

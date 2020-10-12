@@ -7,10 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 #[derive(new)]
-pub struct OnBackpressureError<Flow, Subscription, Item, Error>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-{
+pub struct OnBackpressureError<Flow, Subscription, Item, Error> {
     flow: Flow,
     phantom: PhantomData<(Subscription, Item, Error)>,
 }
@@ -20,7 +17,7 @@ impl<Flow, Subscription, Item, Error>
     for OnBackpressureError<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription + Send + 'static,
+    Subscription: core::Subscription + Send + Sync + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {

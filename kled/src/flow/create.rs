@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::IntoFlowEmitter;
+use crate::flow;
 use crate::subscription::*;
 use std::marker::PhantomData;
 
@@ -12,7 +12,7 @@ pub struct FlowCreate<F, Item, Error> {
 
 impl<F, Item, Error> core::Flow<AccumulateSubscription, Item, Error> for FlowCreate<F, Item, Error>
 where
-    F: FnOnce(Box<dyn core::FlowEmitter<Item, Error> + Send>),
+    F: FnOnce(flow::BoxEmitter<Item, Error>),
     Item: Send + 'static,
     Error: Send + 'static,
 {
@@ -20,11 +20,15 @@ where
     where
         Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
     {
-        let emitter = subscriber.into_emitter();
-        (self.emitter_consumer)(Box::new(emitter));
+        (self.emitter_consumer)(flow::BoxEmitter::from(subscriber));
     }
 }
 
-pub fn create<F, Item, Error>(emitter_consumer: F) -> FlowCreate<F, Item, Error> {
+pub fn create<F, Item, Error>(emitter_consumer: F) -> FlowCreate<F, Item, Error>
+where
+    F: FnOnce(flow::BoxEmitter<Item, Error>),
+    Item: Send + 'static,
+    Error: Send + 'static,
+{
     FlowCreate::new(emitter_consumer)
 }
