@@ -17,17 +17,13 @@ impl Default for BoolCancellableStub {
     }
 }
 
-impl core::CancellableProvider for BoolCancellableStub {
-    type Cancellable = BoolCancellable;
-
-    fn cancellable(&self) -> BoolCancellable {
+impl BoolCancellableStub {
+    pub fn cancellable(&self) -> BoolCancellable {
         BoolCancellable {
             cancelled: self.cancelled.clone(),
         }
     }
-}
 
-impl BoolCancellableStub {
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Relaxed)
     }

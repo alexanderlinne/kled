@@ -1,6 +1,6 @@
 use crate::cancellable::*;
 use crate::core;
-use crate::core::IntoObservableEmitter;
+use crate::observer;
 #[chronobreak]
 use parking_lot::Mutex;
 #[chronobreak]
@@ -12,7 +12,7 @@ pub struct TestObservable<Item, Error> {
 }
 
 struct Data<Item, Error> {
-    emitter: Option<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
+    emitter: Option<observer::BoxEmitter<Item, Error>>,
 }
 
 impl<Item, Error> Default for TestObservable<Item, Error> {
@@ -88,6 +88,6 @@ where
         Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
     {
         assert!(!self.has_observer());
-        self.data.lock().emitter = Some(Box::new(observer.into_emitter()));
+        self.data.lock().emitter = Some(observer::BoxEmitter::from(observer));
     }
 }

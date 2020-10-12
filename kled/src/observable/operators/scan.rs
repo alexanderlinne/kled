@@ -2,12 +2,7 @@ use crate::core;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct ObservableScan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
-where
-    Observable: core::Observable<Cancellable, Item, Error>,
-    ItemOut: Clone,
-    BinaryOp: FnMut(ItemOut, Item) -> ItemOut,
-{
+pub struct Scan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp> {
     observable: Observable,
     initial_value: ItemOut,
     binary_op: BinaryOp,
@@ -16,10 +11,12 @@ where
 
 impl<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
     core::Observable<Cancellable, ItemOut, Error>
-    for ObservableScan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
+    for Scan<Observable, Cancellable, Item, Error, ItemOut, BinaryOp>
 where
     Observable: core::Observable<Cancellable, Item, Error>,
-    Cancellable: core::Cancellable,
+    Cancellable: core::Cancellable + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
     ItemOut: Clone + Send + 'static,
 {

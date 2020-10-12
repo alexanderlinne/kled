@@ -16,23 +16,16 @@ impl<Cancellable> Default for LazyCancellableStub<Cancellable> {
     }
 }
 
-impl<Cancellable> core::CancellableProvider for LazyCancellableStub<Cancellable>
-where
-    Cancellable: core::Cancellable,
-{
-    type Cancellable = LazyCancellable<Cancellable>;
-
-    fn cancellable(&self) -> LazyCancellable<Cancellable> {
-        LazyCancellable {
-            data: self.data.clone(),
-        }
-    }
-}
-
 impl<Cancellable> LazyCancellableStub<Cancellable>
 where
     Cancellable: core::Cancellable,
 {
+    pub fn cancellable(&self) -> LazyCancellable<Cancellable> {
+        LazyCancellable {
+            data: self.data.clone(),
+        }
+    }
+
     pub fn set_cancellable(&mut self, cancellable: Cancellable) {
         let mut data = self.data.lock();
         if data.cancelled {

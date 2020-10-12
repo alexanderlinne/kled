@@ -3,7 +3,7 @@ use crate::flow;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct FlowScan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
+pub struct Scan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     ItemOut: Clone,
@@ -16,7 +16,7 @@ where
 }
 
 impl<Flow, Subscription, Item, Error, ItemOut, BinaryOp> core::Flow<Subscription, ItemOut, Error>
-    for FlowScan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
+    for Scan<Flow, Subscription, Item, Error, ItemOut, BinaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Subscription: core::Subscription,

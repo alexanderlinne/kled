@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 #[derive(new)]
-pub struct FlowOnBackpressureLatest<Flow, Subscription, Item, Error>
+pub struct OnBackpressureLatest<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
 {
@@ -19,7 +19,7 @@ where
 
 impl<Flow, Subscription, Item, Error>
     core::Flow<OnBackpressureLatestSubscription<Subscription, Item, Error>, Item, Error>
-    for FlowOnBackpressureLatest<Flow, Subscription, Item, Error>
+    for OnBackpressureLatest<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Subscription: core::Subscription + Send + 'static,

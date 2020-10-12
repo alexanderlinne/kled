@@ -2,21 +2,21 @@ use crate::cancellable::*;
 use crate::core;
 use std::marker::PhantomData;
 
-pub struct FromObserver<Observer, Item, Error> {
-    observer: Observer,
+pub struct BoxEmitter<Item, Error> {
+    observer: Box<dyn core::Observer<BoolCancellable, Item, Error> + Send + 'static>,
     stub: BoolCancellableStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<Observer, Item, Error> FromObserver<Observer, Item, Error>
-where
-    Observer: core::Observer<BoolCancellable, Item, Error>,
-{
-    pub fn new(mut observer: Observer) -> Self {
+impl<Item, Error> BoxEmitter<Item, Error> {
+    pub fn from<Observer>(mut observer: Observer) -> Self
+    where
+        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
+    {
         let stub = BoolCancellableStub::default();
         observer.on_subscribe(stub.cancellable());
         Self {
-            observer,
+            observer: Box::new(observer),
             stub,
             phantom: PhantomData,
         }

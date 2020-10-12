@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 #[derive(new)]
-pub struct FlowOnBackpressureDrop<Flow, Subscription, Item, Error>
+pub struct OnBackpressureDrop<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
 {
@@ -17,7 +17,7 @@ where
 
 impl<Flow, Subscription, Item, Error>
     core::Flow<OnBackpressureDropSubscription<Subscription>, Item, Error>
-    for FlowOnBackpressureDrop<Flow, Subscription, Item, Error>
+    for OnBackpressureDrop<Flow, Subscription, Item, Error>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Subscription: core::Subscription + Send + 'static,

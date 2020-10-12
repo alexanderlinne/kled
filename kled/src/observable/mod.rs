@@ -5,3 +5,5 @@ mod test_observable;
 pub use create::*;
 pub use from_iter::*;
 pub use test_observable::*;
+
+pub mod operators;

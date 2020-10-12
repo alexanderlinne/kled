@@ -3,7 +3,7 @@ use crate::flow;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct FlowMap<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
+pub struct Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     UnaryOp: FnMut(Item) -> ItemOut,
@@ -14,7 +14,7 @@ where
 }
 
 impl<Flow, Subscription, Item, Error, ItemOut, UnaryOp> core::Flow<Subscription, ItemOut, Error>
-    for FlowMap<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
+    for Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Subscription: core::Subscription,

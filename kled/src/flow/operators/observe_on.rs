@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 #[derive(new)]
-pub struct FlowObserveOn<Flow, Subscription, Item, Error, Scheduler>
+pub struct ObserveOn<Flow, Subscription, Item, Error, Scheduler>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Scheduler: core::Scheduler + Send + 'static,
@@ -21,7 +21,7 @@ where
 }
 
 impl<Flow, Subscription, Item, Error, Scheduler> core::Flow<Subscription, Item, Error>
-    for FlowObserveOn<Flow, Subscription, Item, Error, Scheduler>
+    for ObserveOn<Flow, Subscription, Item, Error, Scheduler>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Subscription: core::Subscription + Send + 'static,

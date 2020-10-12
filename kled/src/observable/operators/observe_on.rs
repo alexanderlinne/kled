@@ -9,21 +9,17 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 #[derive(new)]
-pub struct ObservableObserveOn<Observable, Cancellable, Item, Error, Scheduler>
-where
-    Observable: core::Observable<Cancellable, Item, Error>,
-    Scheduler: core::Scheduler + Send + 'static,
-{
+pub struct ObserveOn<Observable, Cancellable, Item, Error, Scheduler> {
     observable: Observable,
     scheduler: Scheduler,
     phantom: PhantomData<(Cancellable, Item, Error)>,
 }
 
 impl<Observable, Cancellable, Item, Error, Scheduler> core::Observable<Cancellable, Item, Error>
-    for ObservableObserveOn<Observable, Cancellable, Item, Error, Scheduler>
+    for ObserveOn<Observable, Cancellable, Item, Error, Scheduler>
 where
     Observable: core::Observable<Cancellable, Item, Error>,
-    Cancellable: core::Cancellable + Send + 'static,
+    Cancellable: core::Cancellable + Send + Sync + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
     Scheduler: core::Scheduler + Send + 'static,

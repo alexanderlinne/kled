@@ -2,17 +2,17 @@ use crate::cancellable::*;
 use crate::core;
 use std::marker::PhantomData;
 
-pub struct FromObserver<Observer, Item, Error> {
+pub struct Emitter<Observer, Item, Error> {
     observer: Observer,
     stub: BoolCancellableStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<Observer, Item, Error> FromObserver<Observer, Item, Error>
+impl<Observer, Item, Error> Emitter<Observer, Item, Error>
 where
     Observer: core::Observer<BoolCancellable, Item, Error>,
 {
-    pub fn new(mut observer: Observer) -> Self {
+    fn new(mut observer: Observer) -> Self {
         let stub = BoolCancellableStub::default();
         observer.on_subscribe(stub.cancellable());
         Self {
@@ -36,5 +36,14 @@ where
 
     pub fn is_cancelled(&self) -> bool {
         self.stub.is_cancelled()
+    }
+}
+
+impl<Observer, Item, Error> From<Observer> for Emitter<Observer, Item, Error>
+where
+    Observer: core::Observer<BoolCancellable, Item, Error>,
+{
+    fn from(observer: Observer) -> Self {
+        Emitter::new(observer)
     }
 }

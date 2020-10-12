@@ -1,6 +1,7 @@
 use crate::cancellable::*;
 use crate::core;
-use crate::core::{IntoObservableEmitter, ObservableEmitter};
+use crate::observer;
+use crate::util::distribute_value;
 #[chronobreak]
 use parking_lot::Mutex;
 #[chronobreak]
@@ -12,7 +13,7 @@ pub struct PublishSubject<Cancellable, Item, Error> {
 
 struct Data<Cancellable, Item, Error> {
     cancellable: Option<Cancellable>,
-    emitters: Vec<Box<dyn core::ObservableEmitter<Item, Error> + Send + 'static>>,
+    emitters: Vec<observer::BoxEmitter<Item, Error>>,
 }
 
 impl<Cancellable, Item, Error> Default for PublishSubject<Cancellable, Item, Error> {
@@ -45,15 +46,19 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        self.data.lock().emitters.on_next(item);
+        distribute_value(&mut self.data.lock().emitters, |o, i| o.on_next(i), item);
     }
 
     fn on_error(&mut self, error: Error) {
-        self.data.lock().emitters.on_error(error);
+        distribute_value(&mut self.data.lock().emitters, |o, e| o.on_error(e), error);
     }
 
     fn on_completed(&mut self) {
-        self.data.lock().emitters.on_completed();
+        self.data
+            .lock()
+            .emitters
+            .iter_mut()
+            .for_each(|o| o.on_completed());
     }
 }
 
@@ -78,7 +83,7 @@ where
         self.data
             .lock()
             .emitters
-            .push(Box::new(observer.into_emitter()))
+            .push(observer::BoxEmitter::from(observer))
     }
 }
 

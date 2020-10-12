@@ -9,3 +9,5 @@ pub use create::*;
 pub use error::*;
 pub use from_iter::*;
 pub use test_flow::*;
+
+pub mod operators;

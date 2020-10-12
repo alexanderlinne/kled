@@ -2,7 +2,7 @@ use crate::core;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct FlowSubscribeOn<Flow, Subscription, Item, Error, Scheduler>
+pub struct SubscribeOn<Flow, Subscription, Item, Error, Scheduler>
 where
     Flow: core::Flow<Subscription, Item, Error>,
     Scheduler: core::Scheduler + Send + 'static,
@@ -13,7 +13,7 @@ where
 }
 
 impl<Flow, Subscription, Item, Error, Scheduler> core::Flow<Subscription, Item, Error>
-    for FlowSubscribeOn<Flow, Subscription, Item, Error, Scheduler>
+    for SubscribeOn<Flow, Subscription, Item, Error, Scheduler>
 where
     Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
     Subscription: core::Subscription,

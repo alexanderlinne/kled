@@ -1,11 +1,11 @@
 use crate::core;
+use crate::marker;
 use std::marker::PhantomData;
 
 #[derive(new)]
-pub struct ObservableMap<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
+pub struct Map<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
 where
-    Observable: core::Observable<Cancellable, Item, Error>,
-    UnaryOp: FnMut(Item) -> ItemOut,
+    Observable: marker::Observable<Cancellable, Item, Error>,
 {
     observable: Observable,
     unary_op: UnaryOp,
@@ -14,12 +14,14 @@ where
 
 impl<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
     core::Observable<Cancellable, ItemOut, Error>
-    for ObservableMap<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
+    for Map<Observable, Cancellable, Item, Error, ItemOut, UnaryOp>
 where
     Observable: core::Observable<Cancellable, Item, Error>,
-    Cancellable: core::Cancellable,
-    UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
+    Cancellable: core::Cancellable + Send + Sync + 'static,
+    Item: Send + 'static,
+    Error: Send + 'static,
     ItemOut: Send + 'static,
+    UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
 {
     fn subscribe<Downstream>(self, downstream: Downstream)
     where

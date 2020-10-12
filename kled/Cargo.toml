@@ -6,10 +6,12 @@ edition = "2018"
 
 [dependencies]
 async-std = "1.6"
+blanket = "0.1.2"
 chronobreak = { git = "https://github.com/alexanderlinne/chronobreak" }
 crossbeam = "0.7"
 derive-new = "0.5"
 futures-timer = "3.0"
+kled_derive = { path = "../kled_derive" }
 num_cpus = "1.13"
 parking_lot = "0.11"
 
