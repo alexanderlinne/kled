@@ -1,3 +1,3 @@
-mod publish_subject;
-
-pub use publish_subject::*;
+reexport_all! {
+    mod publish_subject;
+}
