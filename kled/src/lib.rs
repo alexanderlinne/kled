@@ -10,6 +10,8 @@ extern crate blanket;
 extern crate chronobreak;
 #[macro_use]
 extern crate derive_new;
+#[macro_use]
+extern crate kled_derive;
 
 #[macro_use]
 pub mod util;

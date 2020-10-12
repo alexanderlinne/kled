@@ -2,30 +2,12 @@ use crate::core;
 use crate::flow;
 use std::marker::PhantomData;
 
-#[derive(new)]
-pub struct Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp> {
-    flow: Flow,
-    unary_op: UnaryOp,
-    phantom: PhantomData<(Subscription, Item, Error, ItemOut)>,
-}
-
-impl<Flow, Subscription, Item, Error, ItemOut, UnaryOp> core::Flow<Subscription, ItemOut, Error>
-    for Map<Flow, Subscription, Item, Error, ItemOut, UnaryOp>
+#[operator(type = "flow", item = "ItemOut")]
+pub struct Map<ItemOut, UnaryOp>
 where
-    Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-    UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
-    ItemOut: Send + 'static,
+    UnaryOp: FnMut(Item) -> ItemOut
 {
-    fn subscribe<Downstream>(self, downstream: Downstream)
-    where
-        Downstream: core::Subscriber<Subscription, ItemOut, Error> + Send + 'static,
-    {
-        self.flow
-            .subscribe(MapSubscriber::new(downstream, self.unary_op));
-    }
+    unary_op: UnaryOp,
 }
 
 #[derive(new)]

@@ -1,12 +1,29 @@
+#![allow(dead_code, unused_variables)]
+
 extern crate proc_macro;
+extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
 
-mod reactive_operator;
-
+use darling::FromMeta;
 use proc_macro::TokenStream;
+use proc_macro_error::*;
+use syn::{parse_macro_input, AttributeArgs};
 
-#[proc_macro_derive(reactive_operator, attributes(upstream, reactive_operator))]
-pub fn derive_reactive_operator(item: TokenStream) -> TokenStream {
-    reactive_operator::derive(item)
+mod derive;
+use derive::Args;
+
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn operator(args: TokenStream, item: TokenStream) -> TokenStream {
+    let attr_args = parse_macro_input!(args as AttributeArgs);
+
+    let args = match Args::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => {
+            return e.write_errors().into();
+        }
+    };
+
+    derive::derive(&args, item)
 }

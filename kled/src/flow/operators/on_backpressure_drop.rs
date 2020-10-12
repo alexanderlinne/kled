@@ -6,31 +6,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-#[derive(new)]
-pub struct OnBackpressureDrop<Flow, Subscription, Item, Error> {
-    flow: Flow,
-    phantom: PhantomData<(Subscription, Item, Error)>,
-}
-
-impl<Flow, Subscription, Item, Error>
-    core::Flow<OnBackpressureDropSubscription<Subscription>, Item, Error>
-    for OnBackpressureDrop<Flow, Subscription, Item, Error>
-where
-    Flow: core::Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
-    fn subscribe<Downstream>(self, downstream: Downstream)
-    where
-        Downstream: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error>
-            + Send
-            + 'static,
-    {
-        self.flow
-            .subscribe(OnBackpressureDropSubscriber::new(downstream));
-    }
-}
+#[operator(type = "flow", subscription = "OnBackpressureDropSubscription<Subscription>")]
+pub struct OnBackpressureDrop {}
 
 pub struct OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error> {
     subscriber: Subscriber,
