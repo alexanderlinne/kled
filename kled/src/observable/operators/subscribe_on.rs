@@ -22,7 +22,7 @@ where
         Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
     {
         let observable = self.observable;
-        self.scheduler.schedule_fn(move || {
+        self.scheduler.schedule(async move {
             observable.subscribe(observer);
         });
     }

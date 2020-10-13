@@ -88,7 +88,7 @@ mod tests {
     use crate::subscriber::*;
 
     #[test]
-    fn drop() {
+    fn drop_completed() {
         let test_subscriber = TestSubscriber::new(1);
         let scheduler = scheduler::NewThreadScheduler::default();
         vec![0, 1, 2]

@@ -11,18 +11,12 @@ pub enum UpstreamTy {
     Flow,
 }
 
-impl UpstreamTy {
-    fn is_observable(&self) -> bool {
-        *self == UpstreamTy::Observable
-    }
-}
-
 #[derive(FromMeta)]
 pub struct Args {
     #[darling(rename = "type")]
     upstream: UpstreamTy,
     #[darling(default)]
-    subscriber: Option<String>,
+    subscriber: Option<syn::LitStr>,
     #[darling(default)]
     subscription: Option<syn::LitStr>,
     #[darling(default)]
@@ -32,12 +26,28 @@ pub struct Args {
 }
 
 impl Args {
+    fn subscriber(&self) -> Option<syn::Type> {
+        self.subscriber
+            .as_ref()
+            .map(|s| match parse_str(&s.value()) {
+                Ok(ty) => ty,
+                Err(_) => abort!(s, "`#[operator]` subscriber must be a valid type"),
+            })
+    }
+
+    fn subscriber_trait(&self) -> Ident {
+        match self.upstream {
+            UpstreamTy::Flow => format_ident!("Subscriber"),
+            UpstreamTy::Observable => format_ident!("Observer"),
+        }
+    }
+
     fn subscription(&self) -> syn::Type {
         self.subscription
             .as_ref()
             .map(|s| match parse_str(&s.value()) {
                 Ok(ty) => ty,
-                Err(err) => abort!(s, "`#[operator]` subscription must be a valid type"),
+                Err(_) => abort!(s, "`#[operator]` subscription must be a valid type"),
             })
             .unwrap_or(match self.upstream {
                 UpstreamTy::Flow => parse_quote! {Subscription},
@@ -84,9 +94,11 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
         ),
         fields => fields.iter(),
     };
-    let subscriber_ty = subscriber_ty_from(&args);
+    let subscriber_trait = args.subscriber_trait();
     let downstream_params = downstream_params(&args);
-    let subscriber_ident = subscriber_ident_from(&args, &ident);
+    let subscriber_ident = args
+        .subscriber()
+        .unwrap_or_else(|| subscriber_ident_from(&args, &ident));
     let field_idents = fields.clone().map(|f| &f.ident);
     quote! {
         #(#attrs)*
@@ -113,7 +125,7 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
         {
             fn subscribe<Downstream>(self, downstream: Downstream)
             where
-                Downstream: core::#subscriber_ty<#downstream_params> + Send + 'static,
+                Downstream: core::#subscriber_trait<#downstream_params> + Send + 'static,
             {
                 self.upstream.subscribe(#subscriber_ident::new(downstream, #(self.#field_idents),*));
             }
@@ -142,13 +154,7 @@ fn subscription_ty_from(args: &Args) -> Ident {
     }
 }
 
-fn subscriber_ident_from(args: &Args, ident: &Ident) -> Ident {
-    format_ident!("{}{}", ident, subscriber_ty_from(&args))
-}
-
-fn subscriber_ty_from(args: &Args) -> Ident {
-    match args.upstream {
-        UpstreamTy::Flow => format_ident!("Subscriber"),
-        UpstreamTy::Observable => format_ident!("Observer"),
-    }
+fn subscriber_ident_from(args: &Args, ident: &Ident) -> syn::Type {
+    let ident = format_ident!("{}{}", ident, args.subscriber_trait());
+    parse_quote! {#ident}
 }

@@ -54,8 +54,8 @@ where
         };
         if last_pending_count == 0 {
             let task = self.task.clone();
-            self.scheduler.schedule_fn(move || unsafe {
-                (*task.inner.get()).drain();
+            self.scheduler.schedule(async move {
+                unsafe { (*task.inner.get()).drain() };
             });
         }
     }

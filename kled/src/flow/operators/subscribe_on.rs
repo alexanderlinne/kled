@@ -22,7 +22,7 @@ where
         Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static,
     {
         let flow = self.flow;
-        self.scheduler.schedule_fn(move || {
+        self.scheduler.schedule(async move {
             flow.subscribe(subscriber);
         });
     }

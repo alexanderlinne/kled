@@ -58,25 +58,11 @@ impl core::Scheduler for NewThreadScheduler {
         self.schedule_impl(future, None)
     }
 
-    fn schedule_fn<F>(&self, task: F)
-    where
-        F: FnOnce() + Send + 'static,
-    {
-        self.schedule_impl(async move { task() }, None)
-    }
-
     fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
         self.schedule_impl(future, Some(delay))
-    }
-
-    fn schedule_fn_delayed<F>(&self, delay: time::Duration, task: F)
-    where
-        F: FnOnce() + Send + 'static,
-    {
-        self.schedule_impl(async move { task() }, Some(delay))
     }
 
     fn join(&self) {

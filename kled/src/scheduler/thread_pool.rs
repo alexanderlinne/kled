@@ -1,11 +1,11 @@
 use crate::core;
 use futures::executor::ThreadPool;
-use futures_timer::Delay;
 use std::cell::UnsafeCell;
 use std::future::Future;
 
 #[chronobreak]
 mod mock {
+    pub use futures_timer::Delay;
     pub use parking_lot::{Condvar, Mutex};
     pub use std::sync::atomic::{AtomicUsize, Ordering};
     pub use std::sync::Arc;
@@ -47,26 +47,6 @@ impl ThreadPoolScheduler {
             .create()
             .unwrap()
     }
-
-    fn schedule_impl<Fut>(&self, future: Fut, delay: Option<time::Duration>)
-    where
-        Fut: Future<Output = ()> + Send + 'static,
-    {
-        self.data.job_count.fetch_add(1, Ordering::SeqCst);
-        self.thread_pool.spawn_ok(async move {
-            if let Some(delay) = delay {
-                Delay::new(delay).await;
-            }
-            future.await;
-
-            let data = DATA.with(|data| unsafe { &*data.get() }.as_ref().unwrap());
-            data.job_count.fetch_sub(1, Ordering::SeqCst);
-            if !data.has_work() {
-                let _ = data.join_mutex.lock();
-                data.join_cond.notify_all();
-            }
-        })
-    }
 }
 
 impl Default for ThreadPoolScheduler {
@@ -80,28 +60,27 @@ impl core::Scheduler for ThreadPoolScheduler {
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
-        self.schedule_impl(future, None)
-    }
+        self.data.job_count.fetch_add(1, Ordering::SeqCst);
+        self.thread_pool.spawn_ok(async move {
+            future.await;
 
-    fn schedule_fn<F>(&self, task: F)
-    where
-        F: FnOnce() + Send + 'static,
-    {
-        self.schedule_impl(async move { task() }, None)
+            let data = DATA.with(|data| unsafe { &*data.get() }.as_ref().unwrap());
+            data.job_count.fetch_sub(1, Ordering::SeqCst);
+            if !data.has_work() {
+                let _ = data.join_mutex.lock();
+                data.join_cond.notify_all();
+            }
+        })
     }
 
     fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
-        self.schedule_impl(future, Some(delay))
-    }
-
-    fn schedule_fn_delayed<F>(&self, delay: time::Duration, task: F)
-    where
-        F: FnOnce() + Send + 'static,
-    {
-        self.schedule_impl(async move { task() }, Some(delay))
+        self.schedule(async move {
+            Delay::new(delay).await;
+            future.await;
+        })
     }
 
     fn join(&self) {
