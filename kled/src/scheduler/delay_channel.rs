@@ -305,7 +305,8 @@ mod tests {
 
     #[async_std::test]
     async fn direct_task() {
-        let _clock = clock::manual().unwrap();
+        let _clock = clock::mocked().unwrap();
+        clock::freeze();
 
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
@@ -315,7 +316,8 @@ mod tests {
 
     #[async_std::test]
     async fn non_delayed_task() {
-        let _clock = clock::manual().unwrap();
+        let _clock = clock::mocked().unwrap();
+        clock::freeze();
 
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
@@ -324,7 +326,8 @@ mod tests {
 
     #[async_std::test]
     async fn try_non_delayed_task() {
-        let _clock = clock::manual().unwrap();
+        let _clock = clock::mocked().unwrap();
+        clock::freeze();
 
         let (mut tx, rx) = unbounded();
         tx.send(0).await.unwrap();
@@ -333,7 +336,7 @@ mod tests {
 
     #[async_std::test]
     async fn delayed_task() {
-        let _clock = clock::auto_inc().unwrap();
+        let _clock = clock::mocked().unwrap();
 
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
@@ -343,26 +346,25 @@ mod tests {
 
     #[async_std::test]
     async fn try_delayed_task() {
-        let _clock = clock::manual().unwrap();
-
+        let _clock = clock::mocked().unwrap();
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
+        assert_clock_eq!(Duration::from_nanos(0));
         matches! {rx.try_next().await, Err(())};
-        clock::fetch_add(Duration::from_nanos(50));
+        clock::advance(Duration::from_nanos(50));
         rx.try_next().await.unwrap();
     }
 
     #[async_std::test]
     async fn add_direct_after_delayed_task() {
-        let _clock = clock::manual().unwrap();
-
+        let _clock = clock::mocked().unwrap();
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         tx.send_delayed(Duration::from_nanos(0), 0).await.unwrap();
         assert_clock_eq!(Duration::from_nanos(0));
         rx.next().await.unwrap();
         matches! {rx.try_next().await, Err(())};
-        clock::fetch_add(Duration::from_nanos(50));
+        clock::advance(Duration::from_nanos(50));
         rx.next().await.unwrap();
     }
 
