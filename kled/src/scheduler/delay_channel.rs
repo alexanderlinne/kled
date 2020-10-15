@@ -300,53 +300,40 @@ pub fn unbounded<T>() -> (DelaySender<T>, DelayReceiver<T>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chronobreak::clock;
     use futures::sink::SinkExt;
 
-    #[async_std::test]
+    #[chronobreak::test(async, frozen)]
     async fn direct_task() {
-        let _clock = clock::mocked().unwrap();
-        clock::freeze();
-
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
         tx.send_direct(1).await.unwrap();
         assert_eq!(rx.next().await.unwrap(), 1);
     }
 
-    #[async_std::test]
+    #[chronobreak::test(async, frozen)]
     async fn non_delayed_task() {
-        let _clock = clock::mocked().unwrap();
-        clock::freeze();
-
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
         rx.next().await.unwrap();
     }
 
-    #[async_std::test]
+    #[chronobreak::test(async, frozen)]
     async fn try_non_delayed_task() {
-        let _clock = clock::mocked().unwrap();
-        clock::freeze();
-
         let (mut tx, rx) = unbounded();
         tx.send(0).await.unwrap();
         rx.try_next().await.unwrap();
     }
 
-    #[async_std::test]
+    #[chronobreak::test(async)]
     async fn delayed_task() {
-        let _clock = clock::mocked().unwrap();
-
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         rx.next().await.unwrap();
         assert_clock_eq!(Duration::from_nanos(50));
     }
 
-    #[async_std::test]
+    #[chronobreak::test(async)]
     async fn try_delayed_task() {
-        let _clock = clock::mocked().unwrap();
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         assert_clock_eq!(Duration::from_nanos(0));
@@ -355,9 +342,8 @@ mod tests {
         rx.try_next().await.unwrap();
     }
 
-    #[async_std::test]
+    #[chronobreak::test(async)]
     async fn add_direct_after_delayed_task() {
-        let _clock = clock::mocked().unwrap();
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         tx.send_delayed(Duration::from_nanos(0), 0).await.unwrap();

@@ -1,10 +1,10 @@
 use crate::core;
-use futures::executor::ThreadPool;
 use std::cell::UnsafeCell;
 use std::future::Future;
 
 #[chronobreak]
 mod mock {
+    pub use futures::executor::ThreadPool;
     pub use futures_timer::Delay;
     pub use parking_lot::{Condvar, Mutex};
     pub use std::sync::atomic::{AtomicUsize, Ordering};
@@ -77,8 +77,9 @@ impl core::Scheduler for ThreadPoolScheduler {
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
+        let delay = Delay::new(delay);
         self.schedule(async move {
-            Delay::new(delay).await;
+            delay.await;
             future.await;
         })
     }
@@ -104,5 +105,20 @@ struct Data {
 impl Data {
     fn has_work(&self) -> bool {
         self.job_count.load(Ordering::SeqCst) > 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::Scheduler;
+
+    #[chronobreak::test]
+    fn delays_correctly() {
+        let thread_pool = ThreadPoolScheduler::new(1);
+        thread_pool.schedule_delayed(time::Duration::from_millis(1), async {});
+        thread_pool.schedule_delayed(time::Duration::from_millis(1), async {});
+        thread_pool.join();
+        assert_clock_eq!{time::Duration::from_millis(1)};
     }
 }

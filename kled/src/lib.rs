@@ -6,7 +6,8 @@
 
 #[macro_use]
 extern crate blanket;
-#[macro_use]
+#[allow(unused_imports)]
+#[macro_use(chronobreak, assert_clock_eq)]
 extern crate chronobreak;
 #[macro_use]
 extern crate derive_new;
