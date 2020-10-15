@@ -302,7 +302,7 @@ mod tests {
     use super::*;
     use futures::sink::SinkExt;
 
-    #[chronobreak::test(async, frozen)]
+    #[chronobreak::test(frozen)]
     async fn direct_task() {
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
@@ -310,21 +310,21 @@ mod tests {
         assert_eq!(rx.next().await.unwrap(), 1);
     }
 
-    #[chronobreak::test(async, frozen)]
+    #[chronobreak::test(frozen)]
     async fn non_delayed_task() {
         let (mut tx, mut rx) = unbounded();
         tx.send(0).await.unwrap();
         rx.next().await.unwrap();
     }
 
-    #[chronobreak::test(async, frozen)]
+    #[chronobreak::test(frozen)]
     async fn try_non_delayed_task() {
         let (mut tx, rx) = unbounded();
         tx.send(0).await.unwrap();
         rx.try_next().await.unwrap();
     }
 
-    #[chronobreak::test(async)]
+    #[chronobreak::test]
     async fn delayed_task() {
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
@@ -332,7 +332,7 @@ mod tests {
         assert_clock_eq!(Duration::from_nanos(50));
     }
 
-    #[chronobreak::test(async)]
+    #[chronobreak::test]
     async fn try_delayed_task() {
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
@@ -342,7 +342,7 @@ mod tests {
         rx.try_next().await.unwrap();
     }
 
-    #[chronobreak::test(async)]
+    #[chronobreak::test]
     async fn add_direct_after_delayed_task() {
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
