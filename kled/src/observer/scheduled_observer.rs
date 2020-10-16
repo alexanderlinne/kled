@@ -74,7 +74,6 @@ where
     }
 
     fn on_next(&mut self, item: Item) {
-        println!("next");
         if let Some(worker) = self.worker.as_mut() { 
             worker.schedule(move |state| {
                 if let Some(observer) = state {
@@ -85,7 +84,6 @@ where
     }
 
     fn on_error(&mut self, error: Error) {
-        println!("error");
         const MSG: &str = "Flow::observe_on: upstream called on_error after completion";
         self.worker.as_mut().expect(MSG).schedule_direct(|state| {
             state.as_mut().expect(MSG).on_error(error);
@@ -94,7 +92,6 @@ where
     }
 
     fn on_completed(&mut self) {
-        println!("completed");
         const MSG: &str = "Flow::observe_on: upstream called on_completed after completion";
         self.worker.as_mut().expect(MSG).schedule_direct(|state| {
             state.as_mut().expect(MSG).on_completed();
