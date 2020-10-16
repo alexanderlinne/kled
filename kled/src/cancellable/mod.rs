@@ -1,4 +1,4 @@
 reexport_all! {
-    mod bool_cancellable;
+    mod arc_cancellable;
     mod lazy_cancellable;
 }

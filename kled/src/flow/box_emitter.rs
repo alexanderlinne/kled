@@ -4,17 +4,17 @@ use crate::subscription::*;
 use std::marker::PhantomData;
 
 pub struct BoxEmitter<Item, Error> {
-    subscriber: Box<dyn core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static>,
-    stub: AccumulateSubscriptionStub,
+    subscriber: Box<dyn core::Subscriber<ArcSubscription, Item, Error> + Send + 'static>,
+    stub: ArcSubscriptionStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Item, Error> BoxEmitter<Item, Error> {
     pub fn from<Subscriber>(mut subscriber: Subscriber) -> Self
     where
-        Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
+        Subscriber: core::Subscriber<ArcSubscription, Item, Error> + Send + 'static,
     {
-        let stub = AccumulateSubscriptionStub::default();
+        let stub = ArcSubscriptionStub::default();
         subscriber.on_subscribe(stub.subscription());
         Self {
             subscriber: Box::new(subscriber),

@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<IntoIter> core::Flow<AccumulateSubscription, IntoIter::Item, util::Infallible>
+impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, util::Infallible>
     for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator,
@@ -25,7 +25,7 @@ where
 {
     fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<AccumulateSubscription, IntoIter::Item, util::Infallible>
+        Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, util::Infallible>
             + Send
             + 'static,
     {
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<IntoIter> core::IntoFlow<AccumulateSubscription, IntoIter::Item, util::Infallible> for IntoIter
+impl<IntoIter> core::IntoFlow<ArcSubscription, IntoIter::Item, util::Infallible> for IntoIter
 where
     IntoIter: IntoIterator + 'static,
     IntoIter::Item: Send,

@@ -4,11 +4,11 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-pub struct AccumulateSubscriptionStub {
+pub struct ArcSubscriptionStub {
     data: Arc<Data>,
 }
 
-impl Default for AccumulateSubscriptionStub {
+impl Default for ArcSubscriptionStub {
     fn default() -> Self {
         Self {
             data: Arc::new(Data {
@@ -19,9 +19,9 @@ impl Default for AccumulateSubscriptionStub {
     }
 }
 
-impl AccumulateSubscriptionStub {
-    pub fn subscription(&self) -> AccumulateSubscription {
-        AccumulateSubscription {
+impl ArcSubscriptionStub {
+    pub fn subscription(&self) -> ArcSubscription {
+        ArcSubscription {
             data: self.data.clone(),
         }
     }
@@ -36,11 +36,11 @@ impl AccumulateSubscriptionStub {
 }
 
 #[derive(Clone)]
-pub struct AccumulateSubscription {
+pub struct ArcSubscription {
     data: Arc<Data>,
 }
 
-impl core::Subscription for AccumulateSubscription {
+impl core::Subscription for ArcSubscription {
     fn cancel(&self) {
         self.data.cancelled.store(true, Ordering::Relaxed);
     }

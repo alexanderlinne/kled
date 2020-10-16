@@ -5,11 +5,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-pub struct BoolCancellableStub {
+pub struct ArcCancellableStub {
     cancelled: Arc<AtomicBool>,
 }
 
-impl Default for BoolCancellableStub {
+impl Default for ArcCancellableStub {
     fn default() -> Self {
         Self {
             cancelled: Arc::new(AtomicBool::new(false)),
@@ -17,9 +17,9 @@ impl Default for BoolCancellableStub {
     }
 }
 
-impl BoolCancellableStub {
-    pub fn cancellable(&self) -> BoolCancellable {
-        BoolCancellable {
+impl ArcCancellableStub {
+    pub fn cancellable(&self) -> ArcCancellable {
+        ArcCancellable {
             cancelled: self.cancelled.clone(),
         }
     }
@@ -30,11 +30,11 @@ impl BoolCancellableStub {
 }
 
 #[derive(Clone)]
-pub struct BoolCancellable {
+pub struct ArcCancellable {
     cancelled: Arc<AtomicBool>,
 }
 
-impl core::Cancellable for BoolCancellable {
+impl core::Cancellable for ArcCancellable {
     fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }

@@ -5,16 +5,16 @@ use std::marker::PhantomData;
 
 pub struct Emitter<Subscriber, Item, Error> {
     subscriber: Subscriber,
-    stub: AccumulateSubscriptionStub,
+    stub: ArcSubscriptionStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Subscriber, Item, Error> Emitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error>,
+    Subscriber: core::Subscriber<ArcSubscription, Item, Error>,
 {
     fn new(mut subscriber: Subscriber) -> Self {
-        let stub = AccumulateSubscriptionStub::default();
+        let stub = ArcSubscriptionStub::default();
         subscriber.on_subscribe(stub.subscription());
         Self {
             subscriber,
@@ -42,7 +42,7 @@ where
 
 impl<Subscriber, Item, Error> From<Subscriber> for Emitter<Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<AccumulateSubscription, Item, Error>,
+    Subscriber: core::Subscriber<ArcSubscription, Item, Error>,
 {
     fn from(subscriber: Subscriber) -> Self {
         Emitter::new(subscriber)

@@ -1,4 +1,4 @@
 reexport_all! {
-    mod accumulate_subscription;
+    mod arc_subscription;
     mod lazy_subscription;
 }

@@ -10,7 +10,7 @@ pub struct FlowCreate<F, Item, Error> {
     phantom: PhantomData<(Item, Error)>,
 }
 
-impl<F, Item, Error> core::Flow<AccumulateSubscription, Item, Error> for FlowCreate<F, Item, Error>
+impl<F, Item, Error> core::Flow<ArcSubscription, Item, Error> for FlowCreate<F, Item, Error>
 where
     F: FnOnce(flow::BoxEmitter<Item, Error>),
     Item: Send + 'static,
@@ -18,7 +18,7 @@ where
 {
     fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<AccumulateSubscription, Item, Error> + Send + 'static,
+        Subscriber: core::Subscriber<ArcSubscription, Item, Error> + Send + 'static,
     {
         (self.emitter_consumer)(flow::BoxEmitter::from(subscriber));
     }

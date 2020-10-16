@@ -62,7 +62,7 @@ where
     }
 }
 
-impl<Cancellable, Item, Error> core::Subject<Cancellable, BoolCancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Subject<Cancellable, ArcCancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
     Item: Clone + Send + 'static,
@@ -70,7 +70,7 @@ where
 {
 }
 
-impl<Cancellable, Item, Error> core::Observable<BoolCancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Observable<ArcCancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
     Item: Send + 'static,
@@ -78,7 +78,7 @@ where
 {
     fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
+        Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
         self.data
             .lock()

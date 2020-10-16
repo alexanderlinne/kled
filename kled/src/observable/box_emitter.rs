@@ -3,17 +3,17 @@ use crate::core;
 use std::marker::PhantomData;
 
 pub struct BoxEmitter<Item, Error> {
-    observer: Box<dyn core::Observer<BoolCancellable, Item, Error> + Send + 'static>,
-    stub: BoolCancellableStub,
+    observer: Box<dyn core::Observer<ArcCancellable, Item, Error> + Send + 'static>,
+    stub: ArcCancellableStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Item, Error> BoxEmitter<Item, Error> {
     pub fn from<Observer>(mut observer: Observer) -> Self
     where
-        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
+        Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
-        let stub = BoolCancellableStub::default();
+        let stub = ArcCancellableStub::default();
         observer.on_subscribe(stub.cancellable());
         Self {
             observer: Box::new(observer),

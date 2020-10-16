@@ -19,7 +19,7 @@ impl<F, Item, Error> ObservableCreate<F, Item, Error> {
     }
 }
 
-impl<F, Item, Error> core::Observable<BoolCancellable, Item, Error>
+impl<F, Item, Error> core::Observable<ArcCancellable, Item, Error>
     for ObservableCreate<F, Item, Error>
 where
     F: FnOnce(observable::BoxEmitter<Item, Error>),
@@ -28,7 +28,7 @@ where
 {
     fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
+        Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
         let emitter = observable::BoxEmitter::from(observer);
         (self.emitter_consumer)(emitter);

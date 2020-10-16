@@ -4,16 +4,16 @@ use std::marker::PhantomData;
 
 pub struct Emitter<Observer, Item, Error> {
     observer: Observer,
-    stub: BoolCancellableStub,
+    stub: ArcCancellableStub,
     phantom: PhantomData<(Item, Error)>,
 }
 
 impl<Observer, Item, Error> Emitter<Observer, Item, Error>
 where
-    Observer: core::Observer<BoolCancellable, Item, Error>,
+    Observer: core::Observer<ArcCancellable, Item, Error>,
 {
     fn new(mut observer: Observer) -> Self {
-        let stub = BoolCancellableStub::default();
+        let stub = ArcCancellableStub::default();
         observer.on_subscribe(stub.cancellable());
         Self {
             observer,
@@ -41,7 +41,7 @@ where
 
 impl<Observer, Item, Error> From<Observer> for Emitter<Observer, Item, Error>
 where
-    Observer: core::Observer<BoolCancellable, Item, Error>,
+    Observer: core::Observer<ArcCancellable, Item, Error>,
 {
     fn from(observer: Observer) -> Self {
         Emitter::new(observer)

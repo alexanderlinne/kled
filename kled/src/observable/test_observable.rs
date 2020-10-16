@@ -78,14 +78,14 @@ impl<Item, Error> TestObservable<Item, Error> {
     }
 }
 
-impl<Item, Error> core::Observable<BoolCancellable, Item, Error> for TestObservable<Item, Error>
+impl<Item, Error> core::Observable<ArcCancellable, Item, Error> for TestObservable<Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
     fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer: core::Observer<BoolCancellable, Item, Error> + Send + 'static,
+        Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
         assert!(!self.has_observer());
         self.data.lock().emitter = Some(observable::BoxEmitter::from(observer));
