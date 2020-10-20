@@ -63,18 +63,22 @@ impl<Item, Error> TestObservable<Item, Error> {
 
     pub fn emit_error(&self, error: Error) {
         assert!(self.has_observer());
-        match self.data.lock().emitter {
+        let emitter = &mut self.data.lock().emitter;
+        match emitter {
             Some(ref mut consumer) => consumer.on_error(error),
             None => panic!(),
         }
+        *emitter = None;
     }
 
     pub fn emit_on_completed(&self) {
         assert!(self.has_observer());
-        match self.data.lock().emitter {
+        let emitter = &mut self.data.lock().emitter;
+        match emitter {
             Some(ref mut consumer) => consumer.on_completed(),
             None => panic!(),
         }
+        *emitter = None;
     }
 }
 

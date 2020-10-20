@@ -71,7 +71,7 @@ impl core::Scheduler for NewThreadScheduler {
         }
 
         let mut lock = self.data.join_mutex.lock();
-        if self.data.has_work() {
+        while self.data.has_work() {
             self.data.join_cond.wait(&mut lock);
         }
     }

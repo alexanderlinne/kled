@@ -172,15 +172,13 @@ impl<T> DelayReceiver<T> {
     }
 }
 
-impl<T> Stream for DelayReceiver<T>
-where
-    T: Unpin,
-{
+impl<T> Stream for DelayReceiver<T> {
     type Item = T;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.data.lock().poll_unpin(cx) {
-            Poll::Ready(mut lock) => lock.poll_next_unpin(cx),
+        let mut lock = self.data.lock();
+        match Pin::new(&mut lock).poll(cx) {
+            Poll::Ready(mut lock) => lock.poll_next(cx),
             Poll::Pending => Poll::Pending,
         }
     }
