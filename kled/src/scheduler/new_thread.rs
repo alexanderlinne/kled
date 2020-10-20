@@ -29,17 +29,14 @@ impl Default for NewThreadScheduler {
     }
 }
 
-impl NewThreadScheduler {
-    fn schedule_impl<Fut>(&self, future: Fut, delay: Option<time::Duration>)
+impl core::Scheduler for NewThreadScheduler {
+    fn schedule<Fut>(&self, future: Fut)
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
         self.data.active_count.fetch_add(1, Ordering::SeqCst);
         let data = self.data.clone();
         thread::spawn(move || {
-            if let Some(delay) = delay {
-                thread::sleep(delay);
-            }
             task::block_on(future);
             data.active_count.fetch_sub(1, Ordering::SeqCst);
             if !data.has_work() {
@@ -47,22 +44,6 @@ impl NewThreadScheduler {
                 data.join_cond.notify_all();
             }
         });
-    }
-}
-
-impl core::Scheduler for NewThreadScheduler {
-    fn schedule<Fut>(&self, future: Fut)
-    where
-        Fut: Future<Output = ()> + Send + 'static,
-    {
-        self.schedule_impl(future, None)
-    }
-
-    fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
-    where
-        Fut: Future<Output = ()> + Send + 'static,
-    {
-        self.schedule_impl(future, Some(delay))
     }
 
     fn join(&self) {

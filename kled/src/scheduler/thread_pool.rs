@@ -73,17 +73,6 @@ impl core::Scheduler for ThreadPoolScheduler {
         })
     }
 
-    fn schedule_delayed<Fut>(&self, delay: time::Duration, future: Fut)
-    where
-        Fut: Future<Output = ()> + Send + 'static,
-    {
-        let delay = Delay::new(delay);
-        self.schedule(async move {
-            delay.await;
-            future.await;
-        })
-    }
-
     fn join(&self) {
         if !self.data.has_work() {
             return;
@@ -105,20 +94,5 @@ struct Data {
 impl Data {
     fn has_work(&self) -> bool {
         self.job_count.load(Ordering::SeqCst) > 0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::Scheduler;
-
-    #[chronobreak::test]
-    fn delays_correctly() {
-        let thread_pool = ThreadPoolScheduler::new(1);
-        thread_pool.schedule_delayed(time::Duration::from_millis(1), async {});
-        thread_pool.schedule_delayed(time::Duration::from_millis(1), async {});
-        thread_pool.join();
-        assert_clock_eq!{time::Duration::from_millis(1)};
     }
 }
