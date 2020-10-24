@@ -193,29 +193,34 @@ struct Data<T> {
 impl<T> Data<T> {
     pub fn try_next(&mut self) -> Result<Option<T>, ()> {
         self.drain_channel();
-        self.try_pop().map_err(|_| ())
+        match self.try_pop() {
+            Ok(result) => Ok(result),
+            Err(err) => match err {
+                Some(_) => Ok(None),
+                None => Err(()),
+            },
+        }
     }
 
     fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<Option<T>> {
+        self.drain_channel();
+        if let Ok(task) = self.try_pop() {
+            return Poll::Ready(task);
+        }
         if self.delay.is_some() {
             match self.delay.as_mut().unwrap().poll_unpin(cx) {
                 Poll::Pending => return Poll::Pending,
                 Poll::Ready(()) => self.delay = None,
             }
-        } else {
-            self.drain_channel();
-            if let Ok(task) = self.try_pop() {
-                return Poll::Ready(task);
-            }
-            if self.queue.is_empty() {
-                if self.receiver.is_some() {
-                    match self.receiver.as_mut().unwrap().poll_next_unpin(cx) {
-                        Poll::Ready(task) => self.push(task),
-                        Poll::Pending => return Poll::Pending,
-                    }
-                } else {
-                    panic! {"DelayReceiver<T>::poll_next called after Poll::Ready(None) was returned"}
+        }
+        if self.queue.is_empty() {
+            if self.receiver.is_some() {
+                match self.receiver.as_mut().unwrap().poll_next_unpin(cx) {
+                    Poll::Ready(task) => self.push(task),
+                    Poll::Pending => return Poll::Pending,
                 }
+            } else {
+                panic! {"DelayReceiver<T>::poll_next called after Poll::Ready(None) was returned"}
             }
         }
         debug_assert! {!self.queue.is_empty()}
@@ -335,7 +340,7 @@ mod tests {
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         assert_clock_eq!(Duration::from_nanos(0));
-        matches! {rx.try_next().await, Err(())};
+        assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
         rx.try_next().await.unwrap();
     }
@@ -347,7 +352,7 @@ mod tests {
         tx.send_delayed(Duration::from_nanos(0), 0).await.unwrap();
         assert_clock_eq!(Duration::from_nanos(0));
         rx.next().await.unwrap();
-        matches! {rx.try_next().await, Err(())};
+        assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
         rx.next().await.unwrap();
     }
@@ -359,5 +364,29 @@ mod tests {
         tx.send(0).await.unwrap();
         drop(tx);
         while rx.next().await.is_some() {}
+    }
+
+    #[chronobreak::test]
+    async fn test_fix_non_delayed_after_delay_creation() {
+        let (mut tx, mut rx) = unbounded();
+        tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
+        let thread = thread::spawn(move || {
+            clock::freeze();
+            futures::executor::block_on(async {
+                assert_eq! {rx.try_next().await.unwrap(), None};
+                assert_clock_eq! {Duration::default()};
+
+                assert_eq! { rx.next().await, Some(1) };
+                assert_clock_eq! {Duration::default()};
+                assert_eq! { rx.next().await, Some(0) };
+                assert_clock_eq! {Duration::from_nanos(50)};
+            })
+        });
+        thread.expect_timed_wait();
+        tx.send(1).await.unwrap();
+        clock::advance(Duration::from_nanos(25));
+        thread.expect_timed_wait();
+        clock::advance(Duration::from_nanos(25));
+        thread.join().unwrap();
     }
 }

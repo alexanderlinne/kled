@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 blanket = "0.1.2"
-chronobreak = { git = "https://github.com/alexanderlinne/chronobreak" }
+chronobreak = { git = "https://github.com/alexanderlinne/chronobreak", features = ["extended-apis"] }
 crossbeam = "0.8"
 derive-new = "0.5"
 futures-timer = "3.0"
