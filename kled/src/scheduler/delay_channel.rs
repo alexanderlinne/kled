@@ -329,17 +329,19 @@ mod tests {
 
     #[chronobreak::test]
     async fn delayed_task() {
+        let start_time = Instant::now();
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         rx.next().await.unwrap();
-        assert_clock_eq!(Duration::from_nanos(50));
+        assert_clock_eq!(start_time + Duration::from_nanos(50));
     }
 
     #[chronobreak::test]
     async fn try_delayed_task() {
+        let start_time = Instant::now();
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
-        assert_clock_eq!(Duration::from_nanos(0));
+        assert_clock_eq!(start_time + Duration::from_nanos(0));
         assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
         rx.try_next().await.unwrap();
@@ -347,10 +349,11 @@ mod tests {
 
     #[chronobreak::test]
     async fn add_direct_after_delayed_task() {
+        let start_time = Instant::now();
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         tx.send_delayed(Duration::from_nanos(0), 0).await.unwrap();
-        assert_clock_eq!(Duration::from_nanos(0));
+        assert_clock_eq!(start_time + Duration::from_nanos(0));
         rx.next().await.unwrap();
         assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
@@ -368,22 +371,21 @@ mod tests {
 
     #[chronobreak::test(frozen)]
     async fn test_fix_non_delayed_after_delay_creation() {
+        let start_time = Instant::now();
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         let main_thread = thread::current();
         let thread = thread::spawn(move || {
             main_thread.expect_timed_wait();
             futures::executor::block_on(async {tx.send(1).await.unwrap()});
-            clock::advance(Duration::from_nanos(25));
-            main_thread.expect_timed_wait();
-            clock::advance(Duration::from_nanos(25));
+            clock::advance(Duration::from_nanos(50));
         });
         assert_eq! {rx.try_next().await.unwrap(), None};
-        assert_clock_eq! {Duration::default()};
+        assert_clock_eq! {start_time + Duration::default()};
         assert_eq! { rx.next().await, Some(1) };
-        assert_clock_eq! {Duration::default()};
+        assert_clock_eq! {start_time + Duration::default()};
         assert_eq! { rx.next().await, Some(0) };
-        assert_clock_eq! {Duration::from_nanos(50)};
+        assert_clock_eq! {start_time + Duration::from_nanos(50)};
         thread.join().unwrap();
     }
 }
