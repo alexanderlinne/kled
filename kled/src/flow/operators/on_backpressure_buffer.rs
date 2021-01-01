@@ -108,10 +108,12 @@ impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
     for OnBackpressureBufferSubscriber<Subscription, Item, Error>
 where
     Item: Send + 'static,
+    Subscription: core::Subscription,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let data = Arc::downgrade(&self.data);
         if let Some(subscriber) = self.data.subscriber.lock().as_mut() {
+            subscription.request(usize::MAX);
             subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
         };
     }

@@ -33,9 +33,11 @@ impl<Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item,
     for OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error>
 where
     Subscriber: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error>,
+    Subscription: core::Subscription,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let requested = self.requested.clone();
+        subscription.request(usize::MAX);
         self.subscriber
             .on_subscribe(OnBackpressureDropSubscription::new(subscription, requested));
     }
@@ -61,8 +63,6 @@ pub struct OnBackpressureDropSubscription<Upstream> {
     upstream: Upstream,
     requested: Arc<AtomicUsize>,
 }
-
-unsafe impl<Upstream> Sync for OnBackpressureDropSubscription<Upstream> {}
 
 impl<'o, Upstream> core::Subscription for OnBackpressureDropSubscription<Upstream>
 where

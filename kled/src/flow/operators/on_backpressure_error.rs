@@ -37,10 +37,12 @@ where
     Subscriber: core::Subscriber<OnBackpressureErrorSubscription<Subscription>, Item, Error>
         + Send
         + 'static,
+    Subscription: core::Subscription,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
         let requested = self.requested.clone();
         if let Some(subscriber) = self.subscriber.as_mut() {
+            subscription.request(usize::MAX);
             subscriber.on_subscribe(OnBackpressureErrorSubscription::new(
                 subscription,
                 requested,
@@ -78,8 +80,6 @@ pub struct OnBackpressureErrorSubscription<Upstream> {
     upstream: Upstream,
     requested: Arc<AtomicUsize>,
 }
-
-unsafe impl<Upstream> Sync for OnBackpressureErrorSubscription<Upstream> {}
 
 impl<'o, Upstream> core::Subscription for OnBackpressureErrorSubscription<Upstream>
 where

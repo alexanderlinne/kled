@@ -54,8 +54,11 @@ where
 
 impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
     for OnBackpressureLatestSubscriber<Subscription, Item, Error>
+where
+    Subscription: core::Subscription,
 {
     fn on_subscribe(&mut self, subscription: Subscription) {
+        subscription.request(usize::MAX);
         let subscription = OnBackpressureLatestSubscription::new(
             subscription,
             Arc::downgrade(&self.subscriber),
@@ -69,7 +72,7 @@ impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
             let mut subscriber = self.subscriber.lock();
             *self.data.latest.lock() = None;
             subscriber.on_next(item);
-            self.data.requested.fetch_sub(1, Ordering::Relaxed);
+            self.data.requested.fetch_sub(1, Ordering::SeqCst);
         } else {
             *self.data.latest.lock() = Some(item);
         }
@@ -120,14 +123,14 @@ where
             Some(data) => data,
         };
 
-        let requested = data.requested.fetch_add(count, Ordering::Relaxed) + count;
+        let requested = data.requested.fetch_add(count, Ordering::SeqCst) + count;
         if requested > 0 {
             if let Some(subscriber) = self.subscriber.upgrade() {
                 if let Some(mut subscriber) = subscriber.try_lock() {
                     let item = data.latest.lock().take();
                     if let Some(item) = item {
                         subscriber.on_next(item);
-                        data.requested.fetch_sub(1, Ordering::Relaxed);
+                        data.requested.fetch_sub(1, Ordering::SeqCst);
                     }
                 }
             };
