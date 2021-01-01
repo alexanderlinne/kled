@@ -20,7 +20,6 @@ pub mod util;
 pub mod cancellable;
 pub mod core;
 pub mod flow;
-pub mod marker;
 pub mod observable;
 pub mod observer;
 pub mod scheduler;
