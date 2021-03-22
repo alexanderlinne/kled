@@ -27,6 +27,7 @@ where
 {
     fn on_subscribe(&mut self, cancellable: Subscription) {
         self.subscriber.on_subscribe(cancellable);
+        self.subscriber.on_next(self.previous_value.clone());
     }
     fn on_next(&mut self, item: ItemIn) {
         self.previous_value = (self.binary_op)(self.previous_value.clone(), item);
@@ -54,6 +55,6 @@ mod tests {
             .subscribe(test_subscriber.clone());
 
         assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![0, 1, 3, 6]);
+        assert_eq!(test_subscriber.items(), vec![0, 0, 1, 3, 6]);
     }
 }
