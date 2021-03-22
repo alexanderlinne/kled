@@ -333,7 +333,7 @@ mod tests {
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         rx.next().await.unwrap();
-        assert_clock_eq!(start_time + Duration::from_nanos(50));
+        assert_eq!(Instant::now(), start_time + Duration::from_nanos(50));
     }
 
     #[chronobreak::test]
@@ -341,7 +341,7 @@ mod tests {
         let start_time = Instant::now();
         let (mut tx, rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
-        assert_clock_eq!(start_time + Duration::from_nanos(0));
+        assert_eq!(Instant::now(), start_time + Duration::from_nanos(0));
         assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
         rx.try_next().await.unwrap();
@@ -353,7 +353,7 @@ mod tests {
         let (mut tx, mut rx) = unbounded();
         tx.send_delayed(Duration::from_nanos(50), 0).await.unwrap();
         tx.send_delayed(Duration::from_nanos(0), 0).await.unwrap();
-        assert_clock_eq!(start_time + Duration::from_nanos(0));
+        assert_eq!(Instant::now(), start_time + Duration::from_nanos(0));
         rx.next().await.unwrap();
         assert_eq! {rx.try_next().await, Ok(None)};
         clock::advance(Duration::from_nanos(50));
@@ -381,11 +381,11 @@ mod tests {
             clock::advance(Duration::from_nanos(50));
         });
         assert_eq! {rx.try_next().await.unwrap(), None};
-        assert_clock_eq! {start_time + Duration::default()};
+        assert_eq! {Instant::now(), start_time + Duration::default()};
         assert_eq! { rx.next().await, Some(1) };
-        assert_clock_eq! {start_time + Duration::default()};
+        assert_eq! {Instant::now(), start_time + Duration::default()};
         assert_eq! { rx.next().await, Some(0) };
-        assert_clock_eq! {start_time + Duration::from_nanos(50)};
+        assert_eq! {Instant::now(), start_time + Duration::from_nanos(50)};
         thread.join().unwrap();
     }
 }

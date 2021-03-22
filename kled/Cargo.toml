@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 blanket = "0.1.2"
-chronobreak = { git = "https://github.com/alexanderlinne/chronobreak", features = ["extended-apis"] }
+chronobreak = { git = "https://github.com/alexanderlinne/chronobreak" }
 crossbeam = "0.8"
 derive-new = "0.5"
 futures-timer = "3.0"
@@ -19,9 +19,15 @@ parking_lot = "0.11"
 pin-project = "1.0"
 
 [dependencies.async-std]
-version = "1.6"
+version = "1.8"
 features = ["attributes"]
 
 [dependencies.futures]
 version = "0.3"
 features = ["thread-pool"]
+
+[dev-dependencies]
+chronobreak_futures = { git = "https://github.com/alexanderlinne/chronobreak" }
+chronobreak_futures_timer = { git = "https://github.com/alexanderlinne/chronobreak" }
+chronobreak_parking_lot = { git = "https://github.com/alexanderlinne/chronobreak" }
+chronobreak_std = { git = "https://github.com/alexanderlinne/chronobreak", features = ["extended-apis"] }
