@@ -12,9 +12,9 @@ impl<Observer, Item, Error> Emitter<Observer, Item, Error>
 where
     Observer: core::Observer<ArcCancellable, Item, Error>,
 {
-    fn new(mut observer: Observer) -> Self {
+    pub async fn from(mut observer: Observer) -> Self {
         let stub = ArcCancellableStub::default();
-        observer.on_subscribe(stub.cancellable());
+        observer.on_subscribe(stub.cancellable()).await;
         Self {
             observer,
             stub,
@@ -22,28 +22,19 @@ where
         }
     }
 
-    pub fn on_next(&mut self, item: Item) {
-        self.observer.on_next(item);
+    pub async fn on_next(&mut self, item: Item) {
+        self.observer.on_next(item).await;
     }
 
-    pub fn on_error(&mut self, error: Error) {
-        self.observer.on_error(error);
+    pub async fn on_error(&mut self, error: Error) {
+        self.observer.on_error(error).await;
     }
 
-    pub fn on_completed(&mut self) {
-        self.observer.on_completed();
+    pub async fn on_completed(&mut self) {
+        self.observer.on_completed().await;
     }
 
     pub fn is_cancelled(&self) -> bool {
         self.stub.is_cancelled()
-    }
-}
-
-impl<Observer, Item, Error> From<Observer> for Emitter<Observer, Item, Error>
-where
-    Observer: core::Observer<ArcCancellable, Item, Error>,
-{
-    fn from(observer: Observer) -> Self {
-        Emitter::new(observer)
     }
 }

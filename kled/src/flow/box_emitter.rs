@@ -10,12 +10,12 @@ pub struct BoxEmitter<Item, Error> {
 }
 
 impl<Item, Error> BoxEmitter<Item, Error> {
-    pub fn from<Subscriber>(mut subscriber: Subscriber) -> Self
+    pub async fn from<Subscriber>(mut subscriber: Subscriber) -> Self
     where
         Subscriber: core::Subscriber<ArcSubscription, Item, Error> + Send + 'static,
     {
         let stub = ArcSubscriptionStub::default();
-        subscriber.on_subscribe(stub.subscription());
+        subscriber.on_subscribe(stub.subscription()).await;
         Self {
             subscriber: Box::new(subscriber),
             stub,
@@ -23,16 +23,16 @@ impl<Item, Error> BoxEmitter<Item, Error> {
         }
     }
 
-    pub fn on_next(&mut self, item: Item) {
-        self.subscriber.on_next(item);
+    pub async fn on_next(&mut self, item: Item) {
+        self.subscriber.on_next(item).await;
     }
 
-    pub fn on_error(&mut self, error: Error) {
-        self.subscriber.on_error(flow::Error::Upstream(error));
+    pub async fn on_error(&mut self, error: Error) {
+        self.subscriber.on_error(flow::Error::Upstream(error)).await;
     }
 
-    pub fn on_completed(&mut self) {
-        self.subscriber.on_completed();
+    pub async fn on_completed(&mut self) {
+        self.subscriber.on_completed().await;
     }
 
     pub fn is_cancelled(&self) -> bool {

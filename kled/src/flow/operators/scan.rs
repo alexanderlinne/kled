@@ -1,5 +1,6 @@
 use crate::core;
 use crate::flow;
+use async_trait::async_trait;
 
 #[operator(type = "flow", item = "ItemOut")]
 pub struct Scan<ItemOut, BinaryOp>
@@ -18,26 +19,35 @@ struct ScanSubscriber<Subscriber, ItemOut, BinaryOp> {
     binary_op: BinaryOp,
 }
 
+#[async_trait]
 impl<Subscription, ItemIn, Subscriber, ItemOut, Error, BinaryOp>
     core::Subscriber<Subscription, ItemIn, Error> for ScanSubscriber<Subscriber, ItemOut, BinaryOp>
 where
-    Subscriber: core::Subscriber<Subscription, ItemOut, Error>,
-    BinaryOp: FnMut(ItemOut, ItemIn) -> ItemOut,
-    ItemOut: Clone,
+    Subscriber: core::Subscriber<Subscription, ItemOut, Error> + Send,
+    Subscription: Send + 'static,
+    BinaryOp: FnMut(ItemOut, ItemIn) -> ItemOut + Send,
+    ItemIn: Send + 'static,
+    ItemOut: Clone + Send,
+    Error: Send + 'static,
 {
-    fn on_subscribe(&mut self, cancellable: Subscription) {
-        self.subscriber.on_subscribe(cancellable);
-        self.subscriber.on_next(self.previous_value.clone());
+    async fn on_subscribe(&mut self, cancellable: Subscription) {
+        self.subscriber.on_subscribe(cancellable).await;
+        let value = self.previous_value.clone();
+        self.subscriber.on_next(value).await;
     }
-    fn on_next(&mut self, item: ItemIn) {
+
+    async fn on_next(&mut self, item: ItemIn) {
         self.previous_value = (self.binary_op)(self.previous_value.clone(), item);
-        self.subscriber.on_next(self.previous_value.clone());
+        let value = self.previous_value.clone();
+        self.subscriber.on_next(value).await;
     }
-    fn on_error(&mut self, error: flow::Error<Error>) {
-        self.subscriber.on_error(error);
+
+    async fn on_error(&mut self, error: flow::Error<Error>) {
+        self.subscriber.on_error(error).await;
     }
-    fn on_completed(&mut self) {
-        self.subscriber.on_completed();
+
+    async fn on_completed(&mut self) {
+        self.subscriber.on_completed().await;
     }
 }
 
@@ -46,15 +56,15 @@ mod tests {
     use crate::prelude::*;
     use crate::subscriber::*;
 
-    #[test]
-    fn local_scan() {
+    #[async_std::test]
+    async fn local_scan() {
         let test_subscriber = TestSubscriber::default();
         vec![0, 1, 2, 3]
             .into_flow()
             .scan(0, |a, b| a + b)
-            .subscribe(test_subscriber.clone());
+            .subscribe(test_subscriber.clone()).await;
 
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![0, 0, 1, 3, 6]);
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
+        assert_eq!(test_subscriber.items().await, vec![0, 0, 1, 3, 6]);
     }
 }

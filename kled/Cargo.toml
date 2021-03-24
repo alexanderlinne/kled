@@ -8,19 +8,18 @@ repository = "https://github.com/alexanderlinne/kled"
 edition = "2018"
 
 [dependencies]
-blanket = "0.1.2"
+async-trait = "0.1.48"
 chronobreak = { git = "https://github.com/alexanderlinne/chronobreak" }
-crossbeam = "0.8"
 derive-new = "0.5"
 futures-timer = "3.0"
 kled_derive = { path = "../kled_derive" }
 num_cpus = "1.13"
 parking_lot = "0.11"
-pin-project = "1.0"
+thread_local = "1.1.3"
 
 [dependencies.async-std]
 version = "1.8"
-features = ["attributes"]
+features = ["attributes", "unstable"]
 
 [dependencies.futures]
 version = "0.3"

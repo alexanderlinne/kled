@@ -1,4 +1,5 @@
 use crate::core;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 #[chronobreak]
@@ -40,16 +41,17 @@ pub struct ArcSubscription {
     data: Arc<Data>,
 }
 
+#[async_trait]
 impl core::Subscription for ArcSubscription {
-    fn cancel(&self) {
+    async fn cancel(&self) {
         self.data.cancelled.store(true, Ordering::Relaxed);
     }
 
-    fn is_cancelled(&self) -> bool {
+    async fn is_cancelled(&self) -> bool {
         self.data.cancelled.load(Ordering::Relaxed)
     }
 
-    fn request(&self, count: usize) {
+    async fn request(&self, count: usize) {
         self.data.requested.fetch_add(count, Ordering::Relaxed);
     }
 }

@@ -1,7 +1,7 @@
 use crate::core;
 use crate::flow;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 use std::marker::PhantomData;
 #[chronobreak]
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -52,42 +52,45 @@ where
     }
 }
 
+#[async_trait]
 impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
     for OnBackpressureLatestSubscriber<Subscription, Item, Error>
 where
-    Subscription: core::Subscription,
+    Item: Send,
+    Error: Send,
+    Subscription: core::Subscription + Send + Sync,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        subscription.request(usize::MAX);
+    async fn on_subscribe(&mut self, subscription: Subscription) {
+        subscription.request(usize::MAX).await;
         let subscription = OnBackpressureLatestSubscription::new(
             subscription,
             Arc::downgrade(&self.subscriber),
             Arc::downgrade(&self.data),
         );
-        self.subscriber.lock().on_subscribe(subscription);
+        self.subscriber.lock().await.on_subscribe(subscription).await;
     }
 
-    fn on_next(&mut self, item: Item) {
+    async fn on_next(&mut self, item: Item) {
         if self.data.requested.load(Ordering::Relaxed) > 0 {
-            let mut subscriber = self.subscriber.lock();
-            *self.data.latest.lock() = None;
-            subscriber.on_next(item);
+            let mut subscriber = self.subscriber.lock().await;
+            *self.data.latest.lock().await = None;
+            subscriber.on_next(item).await;
             self.data.requested.fetch_sub(1, Ordering::SeqCst);
         } else {
-            *self.data.latest.lock() = Some(item);
+            *self.data.latest.lock().await = Some(item);
         }
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
-        let mut subscriber = self.subscriber.lock();
-        *self.data.latest.lock() = None;
-        subscriber.on_error(error);
+    async fn on_error(&mut self, error: flow::Error<Error>) {
+        let mut subscriber = self.subscriber.lock().await;
+        *self.data.latest.lock().await = None;
+        subscriber.on_error(error).await;
     }
 
-    fn on_completed(&mut self) {
-        let mut subscriber = self.subscriber.lock();
-        *self.data.latest.lock() = None;
-        subscriber.on_completed();
+    async fn on_completed(&mut self) {
+        let mut subscriber = self.subscriber.lock().await;
+        *self.data.latest.lock().await = None;
+        subscriber.on_completed().await;
     }
 }
 
@@ -104,20 +107,23 @@ unsafe impl<Upstream, Item, Error> Sync
 {
 }
 
+#[async_trait]
 impl<'o, Upstream, Item, Error> core::Subscription
     for OnBackpressureLatestSubscription<Upstream, Item, Error>
 where
     Upstream: core::Subscription + Send + Sync + 'static,
+    Item: Send,
+    Error: Send,
 {
-    fn cancel(&self) {
-        self.upstream.cancel()
+    async fn cancel(&self) {
+        self.upstream.cancel().await
     }
 
-    fn is_cancelled(&self) -> bool {
-        self.upstream.is_cancelled()
+    async fn is_cancelled(&self) -> bool {
+        self.upstream.is_cancelled().await
     }
 
-    fn request(&self, count: usize) {
+    async fn request(&self, count: usize) {
         let data = match self.data.upgrade() {
             None => return,
             Some(data) => data,
@@ -127,9 +133,9 @@ where
         if requested > 0 {
             if let Some(subscriber) = self.subscriber.upgrade() {
                 if let Some(mut subscriber) = subscriber.try_lock() {
-                    let item = data.latest.lock().take();
+                    let item = data.latest.lock().await.take();
                     if let Some(item) = item {
-                        subscriber.on_next(item);
+                        subscriber.on_next(item).await;
                         data.requested.fetch_sub(1, Ordering::SeqCst);
                     }
                 }
@@ -144,38 +150,38 @@ mod tests {
     use crate::prelude::*;
     use crate::subscriber::*;
 
-    #[test]
-    fn basic() {
+    #[async_std::test]
+    async fn basic() {
         let mut test_subscriber = TestSubscriber::default();
         let test_flow = TestFlow::default().annotate_error_type(());
         test_flow
             .clone()
             .on_backpressure_latest()
-            .subscribe(test_subscriber.clone());
-        test_flow.emit(0);
-        test_flow.emit(1);
-        test_subscriber.request_direct(1);
-        test_flow.emit(2);
-        test_subscriber.request_on_next(1);
-        test_flow.emit(3);
-        test_subscriber.request_direct(1);
-        test_flow.emit(4);
-        test_flow.emit_completed();
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![1, 3, 4]);
+            .subscribe(test_subscriber.clone()).await;
+        test_flow.emit(0).await;
+        test_flow.emit(1).await;
+        test_subscriber.request_direct(1).await;
+        test_flow.emit(2).await;
+        test_subscriber.request_on_next(1).await;
+        test_flow.emit(3).await;
+        test_subscriber.request_direct(1).await;
+        test_flow.emit(4).await;
+        test_flow.emit_completed().await;
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
+        assert_eq!(test_subscriber.items().await, vec![1, 3, 4]);
     }
 
-    #[test]
-    fn error_case() {
+    #[async_std::test]
+    async fn error_case() {
         let test_subscriber = TestSubscriber::default();
         let test_flow = TestFlow::default();
         test_flow
             .clone()
             .on_backpressure_latest()
-            .subscribe(test_subscriber.clone());
-        test_flow.emit(0);
-        test_flow.emit_error(());
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
-        assert_eq!(test_subscriber.items(), vec![]);
+            .subscribe(test_subscriber.clone()).await;
+        test_flow.emit(0).await;
+        test_flow.emit_error(()).await;
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
+        assert_eq!(test_subscriber.items().await, vec![]);
     }
 }

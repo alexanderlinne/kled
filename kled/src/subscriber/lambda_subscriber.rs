@@ -2,7 +2,9 @@ use crate::core;
 use crate::flow;
 use crate::subscription::*;
 use crate::util;
+use async_trait::async_trait;
 
+#[async_trait]
 impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscription, Item>
     for Flow
 where
@@ -14,7 +16,7 @@ where
 {
     type Subscription = LazySubscription<Subscription>;
 
-    fn subscribe_next(self, next_fn: NextFn) -> Self::Subscription {
+    async fn subscribe_next(self, next_fn: NextFn) -> Self::Subscription {
         let subscriber = LambdaSubscriber::new(
             next_fn,
             |_| {
@@ -23,11 +25,12 @@ where
             || {},
         );
         let subscription = subscriber.stub.subscription();
-        self.subscribe(subscriber);
+        self.subscribe(subscriber).await;
         subscription
     }
 }
 
+#[async_trait]
 impl<Flow, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
     core::FlowSubsribeAll<NextFn, ErrorFn, CompletedFn, Subscription, Item, Error> for Flow
 where
@@ -41,7 +44,7 @@ where
 {
     type Subscription = LazySubscription<Subscription>;
 
-    fn subscribe_all(
+    async fn subscribe_all(
         self,
         next_fn: NextFn,
         error_fn: ErrorFn,
@@ -49,7 +52,7 @@ where
     ) -> Self::Subscription {
         let subscriber = LambdaSubscriber::new(next_fn, error_fn, complete_fn);
         let subscription = subscriber.stub.subscription();
-        self.subscribe(subscriber);
+        self.subscribe(subscriber).await;
         subscription
     }
 }
@@ -83,28 +86,31 @@ where
     }
 }
 
+#[async_trait]
 impl<Subscription, NextFn, ErrorFn, CompletedFn, Item, Error>
     core::Subscriber<Subscription, Item, Error>
     for LambdaSubscriber<Subscription, NextFn, ErrorFn, CompletedFn>
 where
-    Subscription: core::Subscription,
-    NextFn: FnMut(Item),
-    ErrorFn: FnMut(flow::Error<Error>),
-    CompletedFn: FnMut(),
+    Subscription: core::Subscription + Send + Sync,
+    Item: Send + 'static,
+    Error: Send + 'static,
+    NextFn: FnMut(Item) + Send,
+    ErrorFn: FnMut(flow::Error<Error>) + Send,
+    CompletedFn: FnMut() + Send,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
-        self.stub.set_subscription(subscription);
+    async fn on_subscribe(&mut self, subscription: Subscription) {
+        self.stub.set_subscription(subscription).await;
     }
 
-    fn on_next(&mut self, item: Item) {
+    async fn on_next(&mut self, item: Item) {
         (self.item_consumer)(item)
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
+    async fn on_error(&mut self, error: flow::Error<Error>) {
         (self.error_consumer)(error)
     }
 
-    fn on_completed(&mut self) {
+    async fn on_completed(&mut self) {
         (self.completed_consumer)()
     }
 }
@@ -113,12 +119,13 @@ where
 mod tests {
     use crate::prelude::*;
 
-    #[test]
-    fn subscribe_next() {
+    #[async_std::test]
+    async fn subscribe_next() {
         let mut expected = 0;
         vec![0, 1, 2, 3].into_flow().subscribe_next(move |item| {
             assert_eq!(item, expected);
             expected += 1;
-        });
+        })
+        .await;
     }
 }

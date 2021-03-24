@@ -4,8 +4,6 @@
 //!
 #![deny(broken_intra_doc_links)]
 
-#[macro_use]
-extern crate blanket;
 #[allow(unused_imports)]
 #[macro_use(chronobreak)]
 extern crate chronobreak;

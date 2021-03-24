@@ -1,6 +1,6 @@
 use crate::core;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::Arc;
 
@@ -26,12 +26,12 @@ where
         }
     }
 
-    pub fn set_subscription(&mut self, subscription: Subscription) {
-        let mut data = self.data.lock();
+    pub async fn set_subscription(&mut self, subscription: Subscription) {
+        let mut data = self.data.lock().await;
         if data.cancelled {
-            subscription.cancel();
+            subscription.cancel().await;
         } else {
-            subscription.request(data.requested);
+            subscription.request(data.requested).await;
         }
         data.subscription = Some(subscription);
     }
@@ -42,32 +42,33 @@ pub struct LazySubscription<Subscription> {
     data: Arc<Mutex<Data<Subscription>>>,
 }
 
+#[async_trait]
 impl<Subscription> core::Subscription for LazySubscription<Subscription>
 where
-    Subscription: core::Subscription,
+    Subscription: core::Subscription + Send + Sync,
 {
-    fn cancel(&self) {
-        let mut data = self.data.lock();
+    async fn cancel(&self) {
+        let mut data = self.data.lock().await;
         if let Some(subscription) = &data.subscription {
-            subscription.cancel();
+            subscription.cancel().await;
         } else {
             data.cancelled = true;
         }
     }
 
-    fn is_cancelled(&self) -> bool {
-        let data = self.data.lock();
+    async fn is_cancelled(&self) -> bool {
+        let data = self.data.lock().await;
         if let Some(subscription) = &data.subscription {
-            subscription.is_cancelled()
+            subscription.is_cancelled().await
         } else {
             data.cancelled
         }
     }
 
-    fn request(&self, count: usize) {
-        let mut data = self.data.lock();
+    async fn request(&self, count: usize) {
+        let mut data = self.data.lock().await;
         if let Some(subscription) = &data.subscription {
-            subscription.request(count);
+            subscription.request(count).await;
         } else {
             data.requested += count;
         }

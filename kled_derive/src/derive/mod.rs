@@ -112,22 +112,23 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
         }
 
         #[automatically_derived]
+        #[async_trait::async_trait]
         impl<#upstream_ty, #subscription_ty, Item, Error, #generic_params>
             core::#upstream_ty<#downstream_params>
         for #ident<#upstream_ty, #subscription_ty, Item, Error, #generic_params>
         where
-            #upstream_ty: core::#upstream_ty<#subscription_ty, Item, Error>,
+            #upstream_ty: core::#upstream_ty<#subscription_ty, Item, Error> + Send,
             #subscription_ty: core::#subscription_ty + Send + Sync + 'static,
             Item: Send + 'static,
             Error: Send + 'static,
             #(#generic_params_iter: Send + 'static,)*
             #predicates
         {
-            fn subscribe<Downstream>(self, downstream: Downstream)
+            async fn subscribe<Downstream>(self, downstream: Downstream)
             where
                 Downstream: core::#subscriber_trait<#downstream_params> + Send + 'static,
             {
-                self.upstream.subscribe(#subscriber_ident::new(downstream, #(self.#field_idents),*));
+                self.upstream.subscribe(#subscriber_ident::new(downstream, #(self.#field_idents),*)).await
             }
         }
     }

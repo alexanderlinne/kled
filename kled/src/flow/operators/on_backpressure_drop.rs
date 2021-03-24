@@ -1,5 +1,6 @@
 use crate::core;
 use crate::flow;
+use async_trait::async_trait;
 use std::marker::PhantomData;
 #[chronobreak]
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -29,32 +30,35 @@ where
     }
 }
 
+#[async_trait]
 impl<Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
     for OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error>
 where
-    Subscriber: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error>,
-    Subscription: core::Subscription,
+    Subscriber: core::Subscriber<OnBackpressureDropSubscription<Subscription>, Item, Error> + Send,
+    Item: Send,
+    Error: Send,
+    Subscription: core::Subscription + Send + Sync,
 {
-    fn on_subscribe(&mut self, subscription: Subscription) {
+    async fn on_subscribe(&mut self, subscription: Subscription) {
         let requested = self.requested.clone();
-        subscription.request(usize::MAX);
+        subscription.request(usize::MAX).await;
         self.subscriber
-            .on_subscribe(OnBackpressureDropSubscription::new(subscription, requested));
+            .on_subscribe(OnBackpressureDropSubscription::new(subscription, requested)).await;
     }
 
-    fn on_next(&mut self, item: Item) {
+    async fn on_next(&mut self, item: Item) {
         if self.requested.load(Ordering::Relaxed) > 0 {
-            self.subscriber.on_next(item);
+            self.subscriber.on_next(item).await;
             self.requested.fetch_sub(1, Ordering::Relaxed);
         }
     }
 
-    fn on_error(&mut self, error: flow::Error<Error>) {
-        self.subscriber.on_error(error);
+    async fn on_error(&mut self, error: flow::Error<Error>) {
+        self.subscriber.on_error(error).await;
     }
 
-    fn on_completed(&mut self) {
-        self.subscriber.on_completed();
+    async fn on_completed(&mut self) {
+        self.subscriber.on_completed().await;
     }
 }
 
@@ -64,19 +68,20 @@ pub struct OnBackpressureDropSubscription<Upstream> {
     requested: Arc<AtomicUsize>,
 }
 
+#[async_trait]
 impl<'o, Upstream> core::Subscription for OnBackpressureDropSubscription<Upstream>
 where
     Upstream: core::Subscription + Send + Sync + 'static,
 {
-    fn cancel(&self) {
-        self.upstream.cancel()
+    async fn cancel(&self) {
+        self.upstream.cancel().await
     }
 
-    fn is_cancelled(&self) -> bool {
-        self.upstream.is_cancelled()
+    async fn is_cancelled(&self) -> bool {
+        self.upstream.is_cancelled().await
     }
 
-    fn request(&self, count: usize) {
+    async fn request(&self, count: usize) {
         self.requested.fetch_add(count, Ordering::Relaxed);
     }
 }
@@ -87,19 +92,19 @@ mod tests {
     use crate::prelude::*;
     use crate::subscriber::*;
 
-    #[test]
-    fn drop_completed() {
+    #[async_std::test]
+    async fn drop_completed() {
         let test_subscriber = TestSubscriber::new(1);
         vec![0, 1, 2]
             .into_flow()
             .on_backpressure_drop()
-            .subscribe(test_subscriber.clone());
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![0]);
+            .subscribe(test_subscriber.clone()).await;
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
+        assert_eq!(test_subscriber.items().await, vec![0]);
     }
 
-    #[test]
-    fn drop_error() {
+    #[async_std::test]
+    async fn drop_error() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::default();
         let test_flow = TestFlow::default();
@@ -107,11 +112,11 @@ mod tests {
             .clone()
             .on_backpressure_drop()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone());
-        test_flow.emit(0);
-        test_flow.emit_error(());
+            .subscribe(test_subscriber.clone()).await;
+        test_flow.emit(0).await;
+        test_flow.emit_error(()).await;
         scheduler.join();
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
-        assert_eq!(test_subscriber.error(), Some(flow::Error::Upstream(())));
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
+        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
     }
 }

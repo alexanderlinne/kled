@@ -1,9 +1,8 @@
 use crate::cancellable::*;
 use crate::core;
 use crate::observable;
-use crate::util::distribute_value;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::Arc;
 
@@ -35,55 +34,87 @@ impl<Cancellable, Item, Error> Clone for PublishSubject<Cancellable, Item, Error
     }
 }
 
+#[async_trait]
 impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
-    Item: Clone,
-    Error: Clone,
+    Cancellable: Send,
+    Item: Clone + Send,
+    Error: Clone + Send,
 {
-    fn on_subscribe(&mut self, cancellable: Cancellable) {
-        self.data.lock().cancellable = Some(cancellable);
+    async fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.data.lock().await.cancellable = Some(cancellable);
     }
 
-    fn on_next(&mut self, item: Item) {
-        distribute_value(&mut self.data.lock().emitters, |o, i| o.on_next(i), item);
+    async fn on_next(&mut self, item: Item) {
+        let mut data = self.data.lock().await;
+        let count = data.emitters.len();
+        match count {
+            0 => (),
+            1 => data.emitters[0].on_next(item).await,
+            len => {
+                for e in data.emitters.iter_mut().take(len - 1) {
+                    let item = item.clone();
+                    e.on_next(item).await
+                }
+                data.emitters[len - 1].on_next(item).await;
+            }
+        }
     }
 
-    fn on_error(&mut self, error: Error) {
-        distribute_value(&mut self.data.lock().emitters, |o, e| o.on_error(e), error);
+    async fn on_error(&mut self, error: Error) {
+        let mut data = self.data.lock().await;
+        let count = data.emitters.len();
+        match count {
+            0 => (),
+            1 => data.emitters[0].on_error(error).await,
+            len => {
+                for e in data.emitters.iter_mut().take(len - 1) {
+                    let error = error.clone();
+                    e.on_error(error).await
+                }
+                data.emitters[len - 1].on_error(error).await;
+            }
+        }
     }
 
-    fn on_completed(&mut self) {
-        self.data
+    async fn on_completed(&mut self) {
+        for o in self.data
             .lock()
+            .await
             .emitters
-            .iter_mut()
-            .for_each(|o| o.on_completed());
+            .iter_mut() {
+            o.on_completed().await;
+        }
     }
 }
 
 impl<Cancellable, Item, Error> core::Subject<Cancellable, ArcCancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
+    Cancellable: Send,
     Item: Clone + Send + 'static,
     Error: Clone + Send + 'static,
 {
 }
 
+#[async_trait]
 impl<Cancellable, Item, Error> core::Observable<ArcCancellable, Item, Error>
     for PublishSubject<Cancellable, Item, Error>
 where
+    Cancellable: Send,
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn subscribe<Observer>(self, observer: Observer)
+    async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
-        self.data
+        let mut lock = self.data
             .lock()
-            .emitters
-            .push(observable::BoxEmitter::from(observer))
+            .await;
+        lock.emitters
+            .push(observable::BoxEmitter::from(observer).await)
     }
 }
 
@@ -93,78 +124,78 @@ mod tests {
     use crate::observable::*;
     use crate::observer::*;
     use crate::prelude::*;
+    use async_std::sync::Barrier;
+    use async_std::task;
     #[chronobreak]
-    use std::sync::{Arc, Barrier};
-    #[chronobreak]
-    use std::thread;
+    use std::sync::Arc;
 
-    #[test]
-    fn simple() {
+    #[async_std::test]
+    async fn simple() {
         let subject = PublishSubject::default();
 
         let subject2 = subject.clone();
         let barrier = Arc::new(Barrier::new(2));
         let barrier2 = barrier.clone();
-        let handle = thread::spawn(move || {
-            barrier2.wait();
-            vec![0, 1, 2, 3].into_observable().subscribe(subject2)
+        let handle = task::spawn(async move {
+            barrier2.wait().await;
+            vec![0, 1, 2, 3].into_observable().subscribe(subject2).await
         });
 
         let test_observer1 = TestObserver::default();
-        subject.clone().subscribe(test_observer1.clone());
+        subject.clone().subscribe(test_observer1.clone()).await;
 
-        barrier.wait();
-        handle.join().unwrap();
+        barrier.wait().await;
+        handle.await;
 
         let test_observer2 = TestObserver::default();
-        subject.subscribe(test_observer2.clone());
+        subject.subscribe(test_observer2.clone()).await;
 
-        assert_eq!(test_observer1.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
-        assert_eq!(test_observer2.status(), ObserverStatus::Subscribed);
-        assert_eq!(test_observer2.items(), vec![]);
+        assert_eq!(test_observer1.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer1.items().await, vec![0, 1, 2, 3]);
+        assert_eq!(test_observer2.status().await, ObserverStatus::Subscribed);
+        assert_eq!(test_observer2.items().await, vec![]);
     }
 
-    #[test]
-    fn interleaved() {
+    #[async_std::test]
+    async fn interleaved() {
         let subject = PublishSubject::default();
         let test_observable = TestObservable::default().annotate_error_type(());
-        test_observable.clone().subscribe(subject.clone());
+        test_observable.clone().subscribe(subject.clone()).await;
 
         let test_observer1 = TestObserver::default();
-        subject.clone().subscribe(test_observer1.clone());
+        subject.clone().subscribe(test_observer1.clone()).await;
 
-        test_observable.emit(0);
+        test_observable.emit(0).await;
 
         let test_observer2 = TestObserver::default();
-        subject.subscribe(test_observer2.clone());
+        subject.subscribe(test_observer2.clone()).await;
 
-        test_observable.emit_all(vec![1, 2, 3]);
-        test_observable.emit_on_completed();
+        test_observable.emit_all(vec![1, 2, 3]).await;
+        test_observable.emit_on_completed().await;
 
-        assert_eq!(test_observer1.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer1.items(), vec![0, 1, 2, 3]);
-        assert_eq!(test_observer2.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer2.items(), vec![1, 2, 3]);
+        assert_eq!(test_observer1.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer1.items().await, vec![0, 1, 2, 3]);
+        assert_eq!(test_observer2.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer2.items().await, vec![1, 2, 3]);
     }
 
-    #[test]
-    fn error() {
+    #[async_std::test]
+    async fn error() {
         let subject = PublishSubject::default();
         let test_observable = TestObservable::default().annotate_item_type(());
-        test_observable.clone().subscribe(subject.clone());
+        test_observable.clone().subscribe(subject.clone()).await;
 
         let test_observer1 = TestObserver::default();
-        subject.clone().subscribe(test_observer1.clone());
+        subject.clone().subscribe(test_observer1.clone()).await;
 
-        test_observable.emit_error(0);
+        test_observable.emit_error(0).await;
 
         let test_observer2 = TestObserver::default();
-        subject.subscribe(test_observer2.clone());
+        subject.subscribe(test_observer2.clone()).await;
 
-        assert_eq!(test_observer1.status(), ObserverStatus::Error);
-        assert_eq!(test_observer1.error(), Some(0));
-        assert_eq!(test_observer2.status(), ObserverStatus::Subscribed);
-        assert_eq!(test_observer2.error(), None);
+        assert_eq!(test_observer1.status().await, ObserverStatus::Error);
+        assert_eq!(test_observer1.error().await, Some(0));
+        assert_eq!(test_observer2.status().await, ObserverStatus::Subscribed);
+        assert_eq!(test_observer2.error().await, None);
     }
 }

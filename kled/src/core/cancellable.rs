@@ -1,10 +1,12 @@
+use async_trait::async_trait;
+
 /// Base trait for every [`LocalObservable::Cancellable`] and
 /// [`SharedObservable::Cancellable`].
 ///
 /// [`LocalObservable::Cancellable`]: trait.LocalObservable.html#associatedtype.Cancellable
 /// [`SharedObservable::Cancellable`]: trait.SharedObservable.html#associatedtype.Cancellable
-#[blanket(derive(Ref, Box, Rc))]
+#[async_trait]
 pub trait Cancellable: Clone {
     /// Cancels the observable the given suscription was provided by.
-    fn cancel(&self);
+    async fn cancel(&self);
 }

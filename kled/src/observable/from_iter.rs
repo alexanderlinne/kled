@@ -2,6 +2,7 @@ use crate::cancellable::*;
 use crate::core;
 use crate::observable;
 use crate::util;
+use async_trait::async_trait;
 
 #[doc(hidden)]
 pub struct IntoIterObservable<IntoIter> {
@@ -17,35 +18,38 @@ where
     }
 }
 
+#[async_trait]
 impl<IntoIter> core::Observable<ArcCancellable, IntoIter::Item, util::Infallible>
     for IntoIterObservable<IntoIter>
 where
-    IntoIter: IntoIterator,
+    IntoIter: IntoIterator + Send,
     IntoIter::Item: Send + 'static,
+    IntoIter::IntoIter: Send,
 {
-    fn subscribe<Observer>(self, observer: Observer)
+    async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer:
             core::Observer<ArcCancellable, IntoIter::Item, util::Infallible> + Send + 'static,
     {
-        let mut observer = observable::Emitter::from(observer);
+        let mut observer = observable::Emitter::from(observer).await;
         for v in self.iterable.into_iter() {
             if !observer.is_cancelled() {
-                observer.on_next(v);
+                observer.on_next(v).await;
             } else {
                 break;
             }
         }
         if !observer.is_cancelled() {
-            observer.on_completed();
+            observer.on_completed().await;
         }
     }
 }
 
 impl<IntoIter> core::IntoObservable<ArcCancellable, IntoIter::Item, util::Infallible> for IntoIter
 where
-    IntoIter: IntoIterator,
+    IntoIter: IntoIterator + Send,
     IntoIter::Item: Send + 'static,
+    IntoIter::IntoIter: Send,
 {
     type Observable = IntoIterObservable<IntoIter>;
 

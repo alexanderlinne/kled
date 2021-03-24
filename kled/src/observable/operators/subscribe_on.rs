@@ -1,4 +1,5 @@
 use crate::core;
+use async_trait::async_trait;
 use std::marker::PhantomData;
 
 #[derive(new)]
@@ -8,6 +9,7 @@ pub struct SubscribeOn<Observable, Cancellable, Item, Error, Scheduler> {
     phantom: PhantomData<(Cancellable, Item, Error)>,
 }
 
+#[async_trait]
 impl<Observable, Cancellable, Item, Error, Scheduler> core::Observable<Cancellable, Item, Error>
     for SubscribeOn<Observable, Cancellable, Item, Error, Scheduler>
 where
@@ -17,13 +19,13 @@ where
     Error: Send + 'static,
     Scheduler: core::Scheduler + Send + 'static,
 {
-    fn subscribe<Observer>(self, observer: Observer)
+    async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
     {
         let observable = self.observable;
         self.scheduler.schedule(async move {
-            observable.subscribe(observer);
+            observable.subscribe(observer).await;
         });
     }
 }
@@ -34,29 +36,29 @@ mod tests {
     use crate::prelude::*;
     use crate::scheduler;
 
-    #[test]
-    fn subscribe_on() {
+    #[async_std::test]
+    async fn subscribe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
             .subscribe_on(scheduler.clone())
-            .subscribe(test_observer.clone());
+            .subscribe(test_observer.clone()).await;
         scheduler.join();
-        assert_eq!(test_observer.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_observer.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);
     }
 
-    #[test]
-    fn subscribe_on_shared() {
+    #[async_std::test]
+    async fn subscribe_on_shared() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
             .subscribe_on(scheduler.clone())
-            .subscribe(test_observer.clone());
+            .subscribe(test_observer.clone()).await;
         scheduler.join();
-        assert_eq!(test_observer.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_observer.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);
     }
 }

@@ -1,6 +1,6 @@
 use crate::core;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::Arc;
 
@@ -26,10 +26,10 @@ where
         }
     }
 
-    pub fn set_cancellable(&mut self, cancellable: Cancellable) {
-        let mut data = self.data.lock();
+    pub async fn set_cancellable(&mut self, cancellable: Cancellable) {
+        let mut data = self.data.lock().await;
         if data.cancelled {
-            cancellable.cancel();
+            cancellable.cancel().await;
         }
         data.subscription = Some(cancellable);
     }
@@ -40,14 +40,15 @@ pub struct LazyCancellable<Cancellable> {
     data: Arc<Mutex<Data<Cancellable>>>,
 }
 
+#[async_trait]
 impl<Cancellable> core::Cancellable for LazyCancellable<Cancellable>
 where
-    Cancellable: core::Cancellable,
+    Cancellable: core::Cancellable + Send + Sync,
 {
-    fn cancel(&self) {
-        let mut data = self.data.lock();
+    async fn cancel(&self) {
+        let mut data = self.data.lock().await;
         if let Some(subscription) = &data.subscription {
-            subscription.cancel();
+            subscription.cancel().await;
         } else {
             data.cancelled = true;
         }

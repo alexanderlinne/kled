@@ -1,6 +1,8 @@
 use crate::cancellable::*;
 use crate::core;
 use crate::observable;
+use async_trait::async_trait;
+use std::future::Future;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -19,25 +21,28 @@ impl<F, Item, Error> ObservableCreate<F, Item, Error> {
     }
 }
 
-impl<F, Item, Error> core::Observable<ArcCancellable, Item, Error>
-    for ObservableCreate<F, Item, Error>
+#[async_trait]
+impl<Fn, F, Item, Error> core::Observable<ArcCancellable, Item, Error>
+    for ObservableCreate<Fn, Item, Error>
 where
-    F: FnOnce(observable::BoxEmitter<Item, Error>),
+    Fn: FnOnce(observable::BoxEmitter<Item, Error>) -> F + Send,
+    F: Future + Send,
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn subscribe<Observer>(self, observer: Observer)
+    async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
-        let emitter = observable::BoxEmitter::from(observer);
-        (self.emitter_consumer)(emitter);
+        let emitter = observable::BoxEmitter::from(observer).await;
+        (self.emitter_consumer)(emitter).await;
     }
 }
 
-pub fn create<F, Item, Error>(emitter_consumer: F) -> ObservableCreate<F, Item, Error>
+pub fn create<Fn, F, Item, Error>(emitter_consumer: Fn) -> ObservableCreate<Fn, Item, Error>
 where
-    F: FnOnce(observable::BoxEmitter<Item, Error>),
+    Fn: FnOnce(observable::BoxEmitter<Item, Error>) -> F + Send,
+    F: Future + Send,
     Item: Send + 'static,
     Error: Send + 'static,
 {
@@ -49,18 +54,18 @@ mod tests {
     use crate::observer::*;
     use crate::prelude::*;
 
-    #[test]
-    fn create() {
+    #[async_std::test]
+    async fn create() {
         let test_observer = TestObserver::default();
-        observable::create(|mut emitter| {
+        observable::create(|mut emitter| async move {
             if false {
-                emitter.on_error(())
+                emitter.on_error(()).await
             };
-            emitter.on_next(0);
-            emitter.on_completed();
+            emitter.on_next(0).await;
+            emitter.on_completed().await;
         })
-        .subscribe(test_observer.clone());
-        assert_eq!(test_observer.status(), ObserverStatus::Completed);
-        assert_eq!(test_observer.items(), vec![0]);
+        .subscribe(test_observer.clone()).await;
+        assert_eq!(test_observer.status().await, ObserverStatus::Completed);
+        assert_eq!(test_observer.items().await, vec![0]);
     }
 }

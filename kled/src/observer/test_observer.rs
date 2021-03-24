@@ -1,6 +1,6 @@
 use crate::core;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::Arc;
 
@@ -37,37 +37,37 @@ impl<Cancellable, Item, Error> TestObserver<Cancellable, Item, Error>
 where
     Cancellable: core::Cancellable,
 {
-    pub fn status(&self) -> ObserverStatus {
-        if self.data.lock().is_cancelled {
+    pub async fn status(&self) -> ObserverStatus {
+        if self.data.lock().await.is_cancelled {
             ObserverStatus::Cancelled
-        } else if !self.is_subscribed() {
+        } else if !self.is_subscribed().await {
             ObserverStatus::Unsubscribed
-        } else if self.has_error() {
+        } else if self.has_error().await {
             ObserverStatus::Error
-        } else if self.is_completed() {
+        } else if self.is_completed().await {
             ObserverStatus::Completed
         } else {
             ObserverStatus::Subscribed
         }
     }
 
-    pub fn is_subscribed(&self) -> bool {
-        self.data.lock().cancellable.is_some()
+    pub async fn is_subscribed(&self) -> bool {
+        self.data.lock().await.cancellable.is_some()
     }
 
-    pub fn cancel(&mut self) {
-        assert!(self.is_subscribed());
-        let mut data = self.data.lock();
-        data.cancellable.take().unwrap().cancel();
+    pub async fn cancel(&mut self) {
+        assert!(self.is_subscribed().await);
+        let mut data = self.data.lock().await;
+        data.cancellable.take().unwrap().cancel().await;
         data.is_cancelled = true;
     }
 
-    pub fn has_error(&self) -> bool {
-        self.data.lock().error.is_some()
+    pub async fn has_error(&self) -> bool {
+        self.data.lock().await.error.is_some()
     }
 
-    pub fn is_completed(&self) -> bool {
-        self.data.lock().is_completed
+    pub async fn is_completed(&self) -> bool {
+        self.data.lock().await.is_completed
     }
 }
 
@@ -76,34 +76,40 @@ where
     Item: Clone,
     Error: Clone,
 {
-    pub fn items(&self) -> Vec<Item> {
-        self.data.lock().items.clone()
+    pub async fn items(&self) -> Vec<Item> {
+        self.data.lock().await.items.clone()
     }
 
-    pub fn error(&self) -> Option<Error> {
-        self.data.lock().error.clone()
+    pub async fn error(&self) -> Option<Error> {
+        self.data.lock().await.error.clone()
     }
 }
 
+#[async_trait]
 impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
     for TestObserver<Cancellable, Item, Error>
 where
-    Cancellable: core::Cancellable,
+    Cancellable: core::Cancellable + Send,
+    Item: Send,
+    Error: Send,
 {
-    fn on_subscribe(&mut self, cancellable: Cancellable) {
-        assert_eq!(self.status(), ObserverStatus::Unsubscribed);
-        self.data.lock().cancellable = Some(cancellable);
+    async fn on_subscribe(&mut self, cancellable: Cancellable) {
+        assert_eq!(self.status().await, ObserverStatus::Unsubscribed);
+        self.data.lock().await.cancellable = Some(cancellable);
     }
-    fn on_next(&mut self, item: Item) {
-        assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().items.push(item);
+
+    async fn on_next(&mut self, item: Item) {
+        assert_eq!(self.status().await, ObserverStatus::Subscribed);
+        self.data.lock().await.items.push(item);
     }
-    fn on_error(&mut self, error: Error) {
-        assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().error = Some(error)
+
+    async fn on_error(&mut self, error: Error) {
+        assert_eq!(self.status().await, ObserverStatus::Subscribed);
+        self.data.lock().await.error = Some(error)
     }
-    fn on_completed(&mut self) {
-        assert_eq!(self.status(), ObserverStatus::Subscribed);
-        self.data.lock().is_completed = true;
+
+    async fn on_completed(&mut self) {
+        assert_eq!(self.status().await, ObserverStatus::Subscribed);
+        self.data.lock().await.is_completed = true;
     }
 }

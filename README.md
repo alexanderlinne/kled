@@ -1,4 +1,4 @@
-# kled: Reactive Extensions for Rust
+# kled: Reactive Extensions for async Rust
 [![Build Status]][GitHub Actions] [![Coverage Status]][Codecov]
 
 [Build Status]: https://img.shields.io/github/workflow/status/alexanderlinne/kled/CI?style=flat-square&logo=github

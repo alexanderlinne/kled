@@ -1,8 +1,8 @@
 use crate::cancellable::*;
 use crate::core;
 use crate::observable;
-#[chronobreak]
-use parking_lot::Mutex;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::Arc;
 
@@ -24,8 +24,8 @@ impl<Item, Error> Default for TestObservable<Item, Error> {
 }
 
 impl<Item, Error> TestObservable<Item, Error> {
-    pub fn has_observer(&self) -> bool {
-        self.data.lock().emitter.is_some()
+    pub async fn has_observer(&self) -> bool {
+        self.data.lock().await.emitter.is_some()
     }
 
     pub fn annotate_item_type(self, _: Item) -> Self {
@@ -36,62 +36,64 @@ impl<Item, Error> TestObservable<Item, Error> {
         self
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        assert!(self.has_observer());
-        match self.data.lock().emitter {
+    pub async fn is_cancelled(&self) -> bool {
+        assert!(self.has_observer().await);
+        match self.data.lock().await.emitter {
             Some(ref consumer) => consumer.is_cancelled(),
             None => panic!(),
         }
     }
 
-    pub fn emit(&self, item: Item) {
-        assert!(self.has_observer());
-        match self.data.lock().emitter {
-            Some(ref mut consumer) => consumer.on_next(item),
+    pub async fn emit(&self, item: Item) {
+        assert!(self.has_observer().await);
+        match self.data.lock().await.emitter {
+            Some(ref mut consumer) => consumer.on_next(item).await,
             None => panic!(),
         }
     }
 
-    pub fn emit_all<IntoIter>(&self, into_iter: IntoIter)
+    pub async fn emit_all<IntoIter>(&self, into_iter: IntoIter)
     where
         IntoIter: IntoIterator<Item = Item>,
     {
         for value in into_iter.into_iter() {
-            self.emit(value);
+            self.emit(value).await;
         }
     }
 
-    pub fn emit_error(&self, error: Error) {
-        assert!(self.has_observer());
-        let emitter = &mut self.data.lock().emitter;
+    pub async fn emit_error(&self, error: Error) {
+        assert!(self.has_observer().await);
+        let emitter = &mut self.data.lock().await.emitter;
         match emitter {
-            Some(ref mut consumer) => consumer.on_error(error),
+            Some(ref mut consumer) => consumer.on_error(error).await,
             None => panic!(),
         }
         *emitter = None;
     }
 
-    pub fn emit_on_completed(&self) {
-        assert!(self.has_observer());
-        let emitter = &mut self.data.lock().emitter;
+    pub async fn emit_on_completed(&self) {
+        assert!(self.has_observer().await);
+        let emitter = &mut self.data.lock().await.emitter;
         match emitter {
-            Some(ref mut consumer) => consumer.on_completed(),
+            Some(ref mut consumer) => consumer.on_completed().await,
             None => panic!(),
         }
         *emitter = None;
     }
 }
 
+#[async_trait]
 impl<Item, Error> core::Observable<ArcCancellable, Item, Error> for TestObservable<Item, Error>
 where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn subscribe<Observer>(self, observer: Observer)
+    async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
-        assert!(!self.has_observer());
-        self.data.lock().emitter = Some(observable::BoxEmitter::from(observer));
+        assert!(!self.has_observer().await);
+        let mut lock = self.data.lock().await;
+        lock.emitter = Some(observable::BoxEmitter::from(observer).await);
     }
 }

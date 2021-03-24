@@ -2,6 +2,7 @@ use crate::core;
 use crate::flow;
 use crate::subscription::*;
 use crate::util;
+use async_trait::async_trait;
 
 #[doc(hidden)]
 pub struct IntoIterFlow<IntoIter> {
@@ -17,36 +18,39 @@ where
     }
 }
 
+#[async_trait]
 impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, util::Infallible>
     for IntoIterFlow<IntoIter>
 where
-    IntoIter: IntoIterator,
+    IntoIter: IntoIterator + Send + 'static,
     IntoIter::Item: Send + 'static,
+    IntoIter::IntoIter: Send,
 {
-    fn subscribe<Subscriber>(self, subscriber: Subscriber)
+    async fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
         Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, util::Infallible>
             + Send
             + 'static,
     {
-        let mut subscriber = flow::Emitter::from(subscriber);
+        let mut subscriber = flow::Emitter::from(subscriber).await;
         for v in self.iterable.into_iter() {
             if !subscriber.is_cancelled() {
-                subscriber.on_next(v);
+                subscriber.on_next(v).await;
             } else {
                 break;
             }
         }
         if !subscriber.is_cancelled() {
-            subscriber.on_completed();
+            subscriber.on_completed().await;
         }
     }
 }
 
 impl<IntoIter> core::IntoFlow<ArcSubscription, IntoIter::Item, util::Infallible> for IntoIter
 where
-    IntoIter: IntoIterator + 'static,
+    IntoIter: IntoIterator + Send + 'static,
     IntoIter::Item: Send,
+    IntoIter::IntoIter: Send,
 {
     type Flow = IntoIterFlow<IntoIter>;
 

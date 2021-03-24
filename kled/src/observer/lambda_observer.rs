@@ -1,7 +1,9 @@
 use crate::cancellable::*;
 use crate::core;
 use crate::util;
+use async_trait::async_trait;
 
+#[async_trait]
 impl<'o, Observable, NextFn, Cancellable, Item>
     core::ObservableSubsribeNext<NextFn, Cancellable, Item> for Observable
 where
@@ -12,7 +14,7 @@ where
 {
     type Cancellable = LazyCancellable<Cancellable>;
 
-    fn subscribe_next(self, next_fn: NextFn) -> Self::Cancellable {
+    async fn subscribe_next(self, next_fn: NextFn) -> Self::Cancellable {
         let observer = LambdaObserver::new(
             next_fn,
             |_| {
@@ -21,11 +23,12 @@ where
             || {},
         );
         let cancellable = observer.stub.cancellable();
-        self.subscribe(observer);
+        self.subscribe(observer).await;
         cancellable
     }
 }
 
+#[async_trait]
 impl<Observable, NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
     core::ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
     for Observable
@@ -40,7 +43,7 @@ where
 {
     type Cancellable = LazyCancellable<Cancellable>;
 
-    fn subscribe_all(
+    async fn subscribe_all(
         self,
         next_fn: NextFn,
         error_fn: ErrorFn,
@@ -48,7 +51,7 @@ where
     ) -> Self::Cancellable {
         let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
         let cancellable = observer.stub.cancellable();
-        self.subscribe(observer);
+        self.subscribe(observer).await;
         cancellable
     }
 }
@@ -82,28 +85,31 @@ where
     }
 }
 
+#[async_trait]
 impl<Cancellable, NextFn, ErrorFn, CompletedFn, Item, Error>
     core::Observer<Cancellable, Item, Error>
     for LambdaObserver<Cancellable, NextFn, ErrorFn, CompletedFn>
 where
-    Cancellable: core::Cancellable,
-    NextFn: FnMut(Item),
-    ErrorFn: FnMut(Error),
-    CompletedFn: FnMut(),
+    Cancellable: core::Cancellable + Send + Sync,
+    Item: Send + 'static,
+    Error: Send + 'static,
+    NextFn: FnMut(Item) + Send,
+    ErrorFn: FnMut(Error) + Send,
+    CompletedFn: FnMut() + Send,
 {
-    fn on_subscribe(&mut self, cancellable: Cancellable) {
-        self.stub.set_cancellable(cancellable);
+    async fn on_subscribe(&mut self, cancellable: Cancellable) {
+        self.stub.set_cancellable(cancellable).await;
     }
 
-    fn on_next(&mut self, item: Item) {
+    async fn on_next(&mut self, item: Item) {
         (self.item_consumer)(item)
     }
 
-    fn on_error(&mut self, error: Error) {
+    async fn on_error(&mut self, error: Error) {
         (self.error_consumer)(error)
     }
 
-    fn on_completed(&mut self) {
+    async fn on_completed(&mut self) {
         (self.completed_consumer)()
     }
 }
@@ -112,14 +118,15 @@ where
 mod tests {
     use crate::prelude::*;
 
-    #[test]
-    fn subscribe_next() {
+    #[async_std::test]
+    async fn subscribe_next() {
         let mut expected = 0;
         vec![0, 1, 2, 3]
             .into_observable()
             .subscribe_next(move |item| {
                 assert_eq!(item, expected);
                 expected += 1;
-            });
+            })
+            .await;
     }
 }

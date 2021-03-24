@@ -16,44 +16,44 @@ mod tests {
     use crate::scheduler;
     use crate::subscriber::*;
 
-    #[test]
-    fn observe_on() {
+    #[async_std::test]
+    async fn observe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
             .into_flow()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone());
+            .subscribe(test_subscriber.clone()).await;
         scheduler.join();
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
+        assert_eq!(test_subscriber.items().await, vec![0, 1, 2, 3]);
     }
 
-    #[test]
-    fn observe_on_shared() {
+    #[async_std::test]
+    async fn observe_on_shared() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::new(4);
         vec![0, 1, 2, 3]
             .into_flow()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone());
+            .subscribe(test_subscriber.clone()).await;
         scheduler.join();
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items(), vec![0, 1, 2, 3]);
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
+        assert_eq!(test_subscriber.items().await, vec![0, 1, 2, 3]);
     }
 
-    #[test]
-    fn observe_on_error() {
+    #[async_std::test]
+    async fn observe_on_error() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
         let test_subscriber = TestSubscriber::default();
         let test_flow = TestFlow::default().annotate_item_type(());
         test_flow
             .clone()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone());
-        test_flow.emit_error(());
+            .subscribe(test_subscriber.clone()).await;
+        test_flow.emit_error(()).await;
         scheduler.join();
-        assert_eq!(test_subscriber.status(), SubscriberStatus::Error);
-        assert_eq!(test_subscriber.error(), Some(flow::Error::Upstream(())));
+        assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
+        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
     }
 }

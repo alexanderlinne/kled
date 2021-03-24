@@ -1,5 +1,6 @@
 use crate::core;
 
+use async_trait::async_trait;
 #[chronobreak]
 use std::sync::atomic::{AtomicBool, Ordering};
 #[chronobreak]
@@ -34,8 +35,9 @@ pub struct ArcCancellable {
     cancelled: Arc<AtomicBool>,
 }
 
+#[async_trait]
 impl core::Cancellable for ArcCancellable {
-    fn cancel(&self) {
+    async fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
 }

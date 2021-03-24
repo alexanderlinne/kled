@@ -1,14 +1,27 @@
 use crate::core;
 use crate::flow;
 use crate::flow::operators::*;
+use async_trait::async_trait;
 
+/// A backpressured source of `Item`s to which an [`Subscriber`] may subscribe.
+///
+/// [`Flow`] is the base trait which any flow type must implement. It defines the
+/// type of `Item`s and `Error`s it may emit and the `Subscription` type the flow passes
+/// to the [`Subscriber`] via [`Subscriber::on_subscribe`].
+///
+/// The core operators for [`Flow`]s are provided via the [`FlowExt`] trait.
+///
+/// [`Subscriber`]: trait.Subscriber.html
+/// [`FlowExt`]: trait.FlowExt.html
+/// [`Subscriber::on_subscribe`]: trait.Subscriber.html#tymethod.on_subscribe
+#[async_trait]
 pub trait Flow<Subscription, Item, Error>
 where
     Subscription: core::Subscription + Send + Sync + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn subscribe<Subscriber>(self, subscriber: Subscriber)
+    async fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
         Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static;
 }
@@ -33,6 +46,10 @@ where
 {
 }
 
+
+/// An extension trait for [`Flow`] that provides core operators.
+///
+/// [`Flow`]: trait.Flow.html
 pub trait FlowExt<Subscription, Item, Error>: Flow<Subscription, Item, Error>
 where
     Subscription: core::Subscription + Send + Sync + 'static,
