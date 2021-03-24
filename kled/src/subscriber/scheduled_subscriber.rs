@@ -35,7 +35,7 @@ impl<Subscription, Item, Error>
                             subscriber.on_next(item).await;
                         }
                     },
-                    Signal::Err(err) => {
+                    Signal::Error(err) => {
                         const MSG: &str = "Subscriber::observe_on: upstream called on_error after completion";
                         subscriber.as_mut().expect(MSG).on_error(err).await;
                         subscriber = None;
@@ -59,7 +59,7 @@ impl<Subscription, Item, Error>
     }
 
     pub async fn on_error_delayed(&mut self, delay: Duration, error: flow::Error<Error>) {
-        self.sender.send_delayed(delay, Signal::Err(error)).await.unwrap();
+        self.sender.send_delayed(delay, Signal::Error(error)).await.unwrap();
     }
 
     pub async fn on_completed_delayed(&mut self, delay: Duration) {
@@ -84,7 +84,7 @@ where
     }
 
     async fn on_error(&mut self, error: flow::Error<Error>) {
-        self.sender.send_direct(Signal::Err(error)).await.unwrap();
+        self.sender.send_direct(Signal::Error(error)).await.unwrap();
     }
 
     async fn on_completed(&mut self) {
