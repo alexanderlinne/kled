@@ -18,11 +18,17 @@ pub struct Args {
     #[darling(default)]
     subscriber: Option<syn::LitStr>,
     #[darling(default)]
+    upstream_subscription: Option<syn::LitStr>,
+    #[darling(default)]
+    upstream_item: Option<syn::LitStr>,
+    #[darling(default)]
+    upstream_error: Option<syn::LitStr>,
+    #[darling(default)]
     subscription: Option<syn::LitStr>,
     #[darling(default)]
-    item: Option<syn::Ident>,
+    item: Option<syn::LitStr>,
     #[darling(default)]
-    error: Option<syn::Ident>,
+    error: Option<syn::LitStr>,
 }
 
 impl Args {
@@ -42,31 +48,51 @@ impl Args {
         }
     }
 
-    fn subscription(&self) -> syn::Type {
-        self.subscription
+    fn as_type_or_else<F>(lit_str: &Option<syn::LitStr>, f: F) -> syn::Type
+    where
+        F: Fn() -> syn::Type,
+    {
+        lit_str
             .as_ref()
             .map(|s| match parse_str(&s.value()) {
                 Ok(ty) => ty,
-                Err(_) => abort!(s, "`#[operator]` subscription must be a valid type"),
+                Err(_) => abort!(s, "`#[operator]` expected a valid type"),
             })
-            .unwrap_or(match self.upstream {
-                UpstreamTy::Flow => parse_quote! {Subscription},
-                UpstreamTy::Observable => parse_quote! {Cancellable},
-            })
+            .unwrap_or_else(f)
     }
 
-    fn item(&self) -> syn::Ident {
-        self.item
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| parse_quote! {Item})
+    fn upstream_params(&self) -> proc_macro2::TokenStream {
+        let subscription =
+            Self::as_type_or_else(&self.upstream_subscription, || self.subscription_ty());
+        let item = Self::as_type_or_else(&self.upstream_item, || parse_quote! {Item});
+        let error = Self::as_type_or_else(&self.upstream_error, || parse_quote! {Error});
+        quote! {#subscription, #item, #error}
     }
 
-    fn error(&self) -> syn::Ident {
-        self.error
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| parse_quote! {Error})
+    fn downstream_params(&self) -> proc_macro2::TokenStream {
+        let subscription = Self::as_type_or_else(&self.subscription, || self.subscription_ty());
+        let item = Self::as_type_or_else(&self.item, || parse_quote! {Item});
+        let error = Self::as_type_or_else(&self.error, || parse_quote! {Error});
+        quote! {#subscription, #item, #error}
+    }
+
+    fn upstream_ty(&self) -> syn::Type {
+        match self.upstream {
+            UpstreamTy::Flow => parse_quote! { Flow },
+            UpstreamTy::Observable => parse_quote! { Observable },
+        }
+    }
+
+    fn subscription_ty(&self) -> syn::Type {
+        match self.upstream {
+            UpstreamTy::Flow => parse_quote! { Subscription },
+            UpstreamTy::Observable => parse_quote! { Cancellable },
+        }
+    }
+
+    fn subscriber_ident(&self, ident: &Ident) -> syn::Type {
+        let ident = format_ident!("{}{}", ident, self.subscriber_trait());
+        parse_quote! {#ident}
     }
 }
 
@@ -81,8 +107,8 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
     let attrs = &item.attrs;
     let vis = &item.vis;
     let ident = &item.ident;
-    let upstream_ty = upstream_ty_from(&args);
-    let subscription_ty = subscription_ty_from(&args);
+    let upstream_ty = args.upstream_ty();
+    let subscription_ty = args.subscription_ty();
     let generic_params = &item.generics.params;
     let generic_params_iter = item.generics.params.iter();
     let (_, _, where_clause) = item.generics.split_for_impl();
@@ -95,10 +121,11 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
         fields => fields.iter(),
     };
     let subscriber_trait = args.subscriber_trait();
-    let downstream_params = downstream_params(&args);
+    let upstream_params = args.upstream_params();
+    let downstream_params = args.downstream_params();
     let subscriber_ident = args
         .subscriber()
-        .unwrap_or_else(|| subscriber_ident_from(&args, &ident));
+        .unwrap_or_else(|| args.subscriber_ident(&ident));
     let field_idents = fields.clone().map(|f| &f.ident);
     quote! {
         #(#attrs)*
@@ -117,7 +144,7 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
             core::#upstream_ty<#downstream_params>
         for #ident<#upstream_ty, #subscription_ty, Item, Error, #generic_params>
         where
-            #upstream_ty: core::#upstream_ty<#subscription_ty, Item, Error> + Send,
+            #upstream_ty: core::#upstream_ty<#upstream_params> + Send,
             #subscription_ty: core::#subscription_ty + Send + Sync + 'static,
             Item: Send + 'static,
             Error: Send + 'static,
@@ -132,30 +159,4 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
             }
         }
     }
-}
-
-fn downstream_params(args: &Args) -> proc_macro2::TokenStream {
-    let subscription = args.subscription();
-    let item = args.item();
-    let error = args.error();
-    quote! {#subscription, #item, #error}
-}
-
-fn upstream_ty_from(args: &Args) -> Ident {
-    match args.upstream {
-        UpstreamTy::Flow => format_ident!("Flow"),
-        UpstreamTy::Observable => format_ident!("Observable"),
-    }
-}
-
-fn subscription_ty_from(args: &Args) -> Ident {
-    match args.upstream {
-        UpstreamTy::Flow => format_ident!("Subscription"),
-        UpstreamTy::Observable => format_ident!("Cancellable"),
-    }
-}
-
-fn subscriber_ident_from(args: &Args, ident: &Ident) -> syn::Type {
-    let ident = format_ident!("{}{}", ident, args.subscriber_trait());
-    parse_quote! {#ident}
 }

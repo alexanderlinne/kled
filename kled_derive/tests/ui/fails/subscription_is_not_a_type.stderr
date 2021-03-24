@@ -1,4 +1,4 @@
-error: `#[operator]` subscription must be a valid type
+error: `#[operator]` expected a valid type
  --> $DIR/subscription_is_not_a_type.rs:4:42
   |
 4 | #[operator(type = "flow", subscription = "struct Foo {}")]
