@@ -7,7 +7,7 @@ use async_trait::async_trait;
 impl<'o, Observable, NextFn, Cancellable, Item>
     core::ObservableSubsribeNext<NextFn, Cancellable, Item> for Observable
 where
-    Observable: core::Observable<Cancellable, Item, util::Infallible> + Send + 'static,
+    Observable: core::Observable<Cancellable, Item, util::Never> + Send + 'static,
     Cancellable: core::Cancellable + Send + Sync + 'static,
     Item: Send + 'static,
     NextFn: FnMut(Item) + Send + 'static,

@@ -1,5 +1,5 @@
 #[derive(Copy, Clone)]
-pub enum Infallible {}
+pub enum Never {}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DownstreamStatus {

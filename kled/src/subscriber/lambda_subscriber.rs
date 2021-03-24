@@ -8,7 +8,7 @@ use async_trait::async_trait;
 impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscription, Item>
     for Flow
 where
-    Flow: core::Flow<Subscription, Item, util::Infallible> + Send + 'static,
+    Flow: core::Flow<Subscription, Item, util::Never> + Send + 'static,
     Subscription: core::Subscription + Send + Sync + 'static,
     Item: Send + 'static,
     Subscription: core::Subscription + Send + 'static,

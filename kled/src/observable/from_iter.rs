@@ -19,7 +19,7 @@ where
 }
 
 #[async_trait]
-impl<IntoIter> core::Observable<ArcCancellable, IntoIter::Item, util::Infallible>
+impl<IntoIter> core::Observable<ArcCancellable, IntoIter::Item, util::Never>
     for IntoIterObservable<IntoIter>
 where
     IntoIter: IntoIterator + Send,
@@ -29,7 +29,7 @@ where
     async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer:
-            core::Observer<ArcCancellable, IntoIter::Item, util::Infallible> + Send + 'static,
+            core::Observer<ArcCancellable, IntoIter::Item, util::Never> + Send + 'static,
     {
         let mut observer = observable::Emitter::from(observer).await;
         for v in self.iterable.into_iter() {
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<IntoIter> core::IntoObservable<ArcCancellable, IntoIter::Item, util::Infallible> for IntoIter
+impl<IntoIter> core::IntoObservable<ArcCancellable, IntoIter::Item, util::Never> for IntoIter
 where
     IntoIter: IntoIterator + Send,
     IntoIter::Item: Send + 'static,

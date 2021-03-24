@@ -19,7 +19,7 @@ where
 }
 
 #[async_trait]
-impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, util::Infallible>
+impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, util::Never>
     for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator + Send + 'static,
@@ -28,7 +28,7 @@ where
 {
     async fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, util::Infallible>
+        Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, util::Never>
             + Send
             + 'static,
     {
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<IntoIter> core::IntoFlow<ArcSubscription, IntoIter::Item, util::Infallible> for IntoIter
+impl<IntoIter> core::IntoFlow<ArcSubscription, IntoIter::Item, util::Never> for IntoIter
 where
     IntoIter: IntoIterator + Send + 'static,
     IntoIter::Item: Send,
