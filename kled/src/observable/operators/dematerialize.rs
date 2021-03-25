@@ -1,12 +1,12 @@
-use crate::{core, util};
+use crate::{core, Never};
 use crate::observable::Signal;
 use async_trait::async_trait;
 
 #[operator(
     type = "observable",
-    upstream_subscription = "util::Never",
+    upstream_subscription = "Never",
     upstream_item = "Signal<Cancellable, Item, Error>",
-    upstream_error = "util::Never"
+    upstream_error = "Never"
 )]
 pub struct Dematerialize {}
 
@@ -17,14 +17,14 @@ struct DematerializeObserver<Observer> {
 
 #[async_trait]
 impl<Cancellable, Observer, Item, Error>
-    core::Observer<util::Never, Signal<Cancellable, Item, Error>, util::Never> for DematerializeObserver<Observer>
+    core::Observer<Never, Signal<Cancellable, Item, Error>, Never> for DematerializeObserver<Observer>
 where
     Observer: core::Observer<Cancellable, Item, Error> + Send,
     Cancellable: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    async fn on_subscribe(&mut self, _: util::Never) {
+    async fn on_subscribe(&mut self, _: Never) {
         unreachable! {}
     }
     async fn on_next(&mut self, signal: Signal<Cancellable, Item, Error>) {
@@ -41,7 +41,7 @@ where
             Signal::Completed => {}
         }
     }
-    async fn on_error(&mut self, _: util::Never) {
+    async fn on_error(&mut self, _: Never) {
         unreachable! {}
     }
     async fn on_completed(&mut self) {

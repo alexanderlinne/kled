@@ -1,12 +1,12 @@
-use crate::{core, flow, util};
+use crate::{core, flow, Never};
 use crate::flow::Signal;
 use async_trait::async_trait;
 
 #[operator(
     type = "flow",
-    subscription = "util::Never",
+    subscription = "Never",
     item = "Signal<Subscription, Item, Error>",
-    error = "util::Never"
+    error = "Never"
 )]
 pub struct Materialize {}
 
@@ -19,7 +19,7 @@ struct MaterializeSubscriber<Subscriber> {
 impl<Subscription, Subscriber, Item, Error>
     core::Subscriber<Subscription, Item, Error> for MaterializeSubscriber<Subscriber>
 where
-    Subscriber: core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never> + Send,
+    Subscriber: core::Subscriber<Never, Signal<Subscription, Item, Error>, Never> + Send,
     Subscription: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,

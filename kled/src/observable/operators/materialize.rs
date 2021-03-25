@@ -1,12 +1,12 @@
-use crate::{core, util};
+use crate::{core, Never};
 use crate::observable::Signal;
 use async_trait::async_trait;
 
 #[operator(
     type = "observable",
-    subscription = "util::Never",
+    subscription = "Never",
     item = "Signal<Cancellable, Item, Error>",
-    error = "util::Never"
+    error = "Never"
 )]
 pub struct Materialize {}
 
@@ -19,7 +19,7 @@ struct MaterializeObserver<Observer> {
 impl<Cancellable, Observer, Item, Error>
     core::Observer<Cancellable, Item, Error> for MaterializeObserver<Observer>
 where
-    Observer: core::Observer<util::Never, Signal<Cancellable, Item, Error>, util::Never> + Send,
+    Observer: core::Observer<Never, Signal<Cancellable, Item, Error>, Never> + Send,
     Cancellable: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,

@@ -1,5 +1,4 @@
-use crate::core;
-use crate::flow;
+use crate::{core, flow};
 use async_std::sync::{Mutex, MutexGuardArc};
 use async_trait::async_trait;
 use std::cell::UnsafeCell;
@@ -125,7 +124,14 @@ where
     }
 }
 
-pub type SubscriberStatus = crate::util::DownstreamStatus;
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum SubscriberStatus {
+    Unsubscribed,
+    Subscribed,
+    Error,
+    Completed,
+    Cancelled,
+}
 
 impl<Subscription, Item, Error> TestSubscriber<Subscription, Item, Error>
 where

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 #[chronobreak]
 use std::time::*;
 use futures::prelude::*;
-use crate::{core, util, flow};
+use crate::{core, flow, Never};
 use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
 use crate::flow::Signal;
 
@@ -18,7 +18,7 @@ impl<Subscription, Item, Error>
         Subscription: Send + 'static,
         Item: Send + 'static,
         Error: Send + 'static,
-        Subscriber: core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never> + Send + 'static,
+        Subscriber: core::Subscriber<Never, Signal<Subscription, Item, Error>, Never> + Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         let (sender, receiver) = unbounded();
@@ -50,14 +50,14 @@ impl<Subscription, Item, Error>
 }
 
 #[async_trait]
-impl<Subscription, Item, Error> core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never>
+impl<Subscription, Item, Error> core::Subscriber<Never, Signal<Subscription, Item, Error>, Never>
     for ScheduledSubscriber<Subscription, Item, Error>
 where
     Subscription: Send,
     Item: Send,
     Error: Send,
 {
-    async fn on_subscribe(&mut self, _: util::Never) {
+    async fn on_subscribe(&mut self, _: Never) {
         unreachable! {};
     }
 
@@ -70,7 +70,7 @@ where
         }
     }
 
-    async fn on_error(&mut self, _: flow::Error<util::Never>) {
+    async fn on_error(&mut self, _: flow::Error<Never>) {
         unreachable! {};
     }
 

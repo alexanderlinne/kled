@@ -31,7 +31,14 @@ impl<Cancellable, Item, Error> Default for TestObserver<Cancellable, Item, Error
     }
 }
 
-pub type ObserverStatus = crate::util::DownstreamStatus;
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum ObserverStatus {
+    Unsubscribed,
+    Subscribed,
+    Error,
+    Completed,
+    Cancelled,
+}
 
 impl<Cancellable, Item, Error> TestObserver<Cancellable, Item, Error>
 where

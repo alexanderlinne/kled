@@ -1,4 +1,4 @@
-use crate::{core, util};
+use crate::{core, Never};
 use crate::observable::operators::{Materialize, Dematerialize};
 use crate::observer::ScheduledObserver;
 use crate::observable::Signal;
@@ -6,12 +6,12 @@ use crate::observable::Signal;
 #[operator(
     type = "observable",
     subscriber = "ScheduledObserver",
-    upstream_subscription = "util::Never",
+    upstream_subscription = "Never",
     upstream_item = "Signal<Cancellable, Item, Error>",
-    upstream_error = "util::Never",
-    subscription = "util::Never",
+    upstream_error = "Never",
+    subscription = "Never",
     item = "Signal<Cancellable, Item, Error>",
-    error = "util::Never",
+    error = "Never",
 )]
 pub struct ObserveOnRaw<Scheduler>
 where

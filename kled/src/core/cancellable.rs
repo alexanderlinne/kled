@@ -1,4 +1,4 @@
-use crate::util;
+use crate::Never;
 use async_trait::async_trait;
 
 /// Base trait for every [`LocalObservable::Cancellable`] and
@@ -13,7 +13,7 @@ pub trait Cancellable: Clone {
 }
 
 #[async_trait]
-impl Cancellable for util::Never {
+impl Cancellable for Never {
     async fn cancel(&self) {
         unreachable!{};
     }

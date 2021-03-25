@@ -1,4 +1,4 @@
-use crate::util;
+use crate::Never;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -9,7 +9,7 @@ pub trait Subscription {
 }
 
 #[async_trait]
-impl Subscription for util::Never {
+impl Subscription for Never {
     async fn cancel(&self) {
         unreachable!{};
     }

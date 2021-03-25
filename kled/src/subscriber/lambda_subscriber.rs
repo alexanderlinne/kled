@@ -1,14 +1,12 @@
-use crate::core;
-use crate::flow;
+use crate::{core, flow, Never};
 use crate::subscription::*;
-use crate::util;
 use async_trait::async_trait;
 
 #[async_trait]
 impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscription, Item>
     for Flow
 where
-    Flow: core::Flow<Subscription, Item, util::Never> + Send + 'static,
+    Flow: core::Flow<Subscription, Item, Never> + Send + 'static,
     Subscription: core::Subscription + Send + Sync + 'static,
     Item: Send + 'static,
     Subscription: core::Subscription + Send + 'static,

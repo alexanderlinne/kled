@@ -12,8 +12,17 @@ extern crate derive_new;
 #[macro_use]
 extern crate kled_derive;
 
-#[macro_use]
-pub mod util;
+#[derive(Copy, Clone)]
+pub enum Never {}
+
+macro_rules! reexport_all {
+    ($(mod $idents:ident;)*) => {
+        $(
+            mod $idents;
+            pub use $idents::*;
+        )*
+    };
+}
 
 pub mod cancellable;
 pub mod core;

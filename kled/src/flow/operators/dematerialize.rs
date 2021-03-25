@@ -1,12 +1,12 @@
-use crate::{core, flow, util};
+use crate::{core, flow, Never};
 use crate::flow::Signal;
 use async_trait::async_trait;
 
 #[operator(
     type = "flow",
-    upstream_subscription = "util::Never",
+    upstream_subscription = "Never",
     upstream_item = "Signal<Subscription, Item, Error>",
-    upstream_error = "util::Never"
+    upstream_error = "Never"
 )]
 pub struct Dematerialize {}
 
@@ -17,14 +17,14 @@ struct DematerializeSubscriber<Subscriber> {
 
 #[async_trait]
 impl<Subscription, Subscriber, Item, Error>
-    core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never> for DematerializeSubscriber<Subscriber>
+    core::Subscriber<Never, Signal<Subscription, Item, Error>, Never> for DematerializeSubscriber<Subscriber>
 where
     Subscriber: core::Subscriber<Subscription, Item, Error> + Send,
     Subscription: Send + 'static,
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    async fn on_subscribe(&mut self, _: util::Never) {
+    async fn on_subscribe(&mut self, _: Never) {
         unreachable! {}
     }
     async fn on_next(&mut self, signal: Signal<Subscription, Item, Error>) {
@@ -41,7 +41,7 @@ where
             Signal::Completed => {}
         }
     }
-    async fn on_error(&mut self, _: flow::Error<util::Never>) {
+    async fn on_error(&mut self, _: flow::Error<Never>) {
         unreachable! {}
     }
     async fn on_completed(&mut self) {
