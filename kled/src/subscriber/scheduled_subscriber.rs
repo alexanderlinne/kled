@@ -4,10 +4,10 @@ use std::time::*;
 use futures::prelude::*;
 use crate::{core, util, flow};
 use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
-use crate::signal::Signal;
+use crate::flow::Signal;
 
 pub struct ScheduledSubscriber<Subscription, Item, Error> {
-    sender: Option<DelaySender<Signal<Subscription, Item, flow::Error<Error>>>>,
+    sender: Option<DelaySender<Signal<Subscription, Item, Error>>>,
 }
 
 impl<Subscription, Item, Error>
@@ -18,13 +18,13 @@ impl<Subscription, Item, Error>
         Subscription: Send + 'static,
         Item: Send + 'static,
         Error: Send + 'static,
-        Subscriber: core::Subscriber<util::Never, Signal<Subscription, Item, flow::Error<Error>>, util::Never> + Send + 'static,
+        Subscriber: core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never> + Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
         let (sender, receiver) = unbounded();
         scheduler.schedule(async move {
             let mut subscriber = subscriber;
-            let mut receiver: DelayReceiver<Signal<Subscription, Item, flow::Error<Error>>> = receiver;
+            let mut receiver: DelayReceiver<Signal<Subscription, Item, Error>> = receiver;
             let mut is_error = false;
             while let Some(signal) = receiver.next().await {
                 is_error = signal.is_error();
@@ -39,7 +39,7 @@ impl<Subscription, Item, Error>
         }
     }
 
-    pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Subscription, Item, flow::Error<Error>>) {
+    pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Subscription, Item, Error>) {
         const MSG: &str = "ScheduledSubscriberRaw::on_next_delayed: upstream called on_next after completion";
         let is_error = signal.is_error();
         self.sender.as_mut().expect(MSG).send_delayed(delay, signal).await.unwrap();
@@ -50,7 +50,7 @@ impl<Subscription, Item, Error>
 }
 
 #[async_trait]
-impl<Subscription, Item, Error> core::Subscriber<util::Never, Signal<Subscription, Item, flow::Error<Error>>, util::Never>
+impl<Subscription, Item, Error> core::Subscriber<util::Never, Signal<Subscription, Item, Error>, util::Never>
     for ScheduledSubscriber<Subscription, Item, Error>
 where
     Subscription: Send,
@@ -61,7 +61,7 @@ where
         unreachable! {};
     }
 
-    async fn on_next(&mut self, signal: Signal<Subscription, Item, flow::Error<Error>>) {
+    async fn on_next(&mut self, signal: Signal<Subscription, Item, Error>) {
         const MSG: &str = "ScheduledSubscriberRaw::on_next: upstream called on_next after completion";
         let is_error = signal.is_error();
         self.sender.as_mut().expect(MSG).send(signal).await.unwrap();

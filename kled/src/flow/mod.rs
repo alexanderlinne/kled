@@ -5,6 +5,7 @@ reexport_all! {
     mod emitter;
     mod error;
     mod from_iter;
+    mod signal;
     mod test_flow;
 }
 

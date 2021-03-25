@@ -1,5 +1,5 @@
 use crate::{core, util};
-use crate::signal::Signal;
+use crate::observable::Signal;
 use async_trait::async_trait;
 
 #[operator(

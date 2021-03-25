@@ -3,6 +3,7 @@ reexport_all! {
     mod create;
     mod emitter;
     mod from_iter;
+    mod signal;
     mod test_observable;
 }
 

@@ -1,7 +1,7 @@
 use crate::{core, util};
 use crate::observable::operators::{Materialize, Dematerialize};
 use crate::observer::ScheduledObserver;
-use crate::signal::Signal;
+use crate::observable::Signal;
 
 #[operator(
     type = "observable",

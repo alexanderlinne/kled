@@ -4,7 +4,7 @@ use std::time::*;
 use futures::prelude::*;
 use crate::{core, util};
 use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
-use crate::signal::Signal;
+use crate::observable::Signal;
 
 pub struct ScheduledObserver<Cancellable, Item, Error> {
     sender: Option<DelaySender<Signal<Cancellable, Item, Error>>>,

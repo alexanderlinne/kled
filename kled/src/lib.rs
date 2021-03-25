@@ -21,7 +21,6 @@ pub mod flow;
 pub mod observable;
 pub mod observer;
 pub mod scheduler;
-pub mod signal;
 pub mod subject;
 pub mod subscriber;
 pub mod subscription;
