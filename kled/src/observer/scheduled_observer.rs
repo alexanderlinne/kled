@@ -2,12 +2,12 @@ use async_trait::async_trait;
 #[chronobreak]
 use std::time::*;
 use futures::prelude::*;
-use std::marker::PhantomData;
-use crate::{core, scheduler::{DelaySender, unbounded}, signal::Signal};
+use crate::{core, util};
+use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
+use crate::signal::Signal;
 
 pub struct ScheduledObserver<Cancellable, Item, Error> {
-    sender: DelaySender<Signal<Cancellable, Item, Error>>,
-    phantom: PhantomData<(Cancellable, Item, Error)>,
+    sender: Option<DelaySender<Signal<Cancellable, Item, Error>>>,
 }
 
 impl<Cancellable, Item, Error>
@@ -18,76 +18,63 @@ impl<Cancellable, Item, Error>
         Cancellable: Send + 'static,
         Item: Send + 'static,
         Error: Send + 'static,
-        Observer: core::Observer<Cancellable, Item, Error> + Send + 'static,
+        Observer: core::Observer<util::Never, Signal<Cancellable, Item, Error>, util::Never> + Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
-        let (sender, mut receiver) = unbounded();
+        let (sender, receiver) = unbounded();
         scheduler.schedule(async move {
-            let mut observer = Some(observer);
+            let mut observer = observer;
+            let mut receiver: DelayReceiver<Signal<Cancellable, Item, Error>> = receiver;
+            let mut is_error = false;
             while let Some(signal) = receiver.next().await {
-                match signal {
-                    Signal::Subscribe(cancellable) => {
-                        const MSG: &str = "Observer::observe_on: upstream completed before on_subscribe";
-                        observer.as_mut().expect(MSG).on_subscribe(cancellable).await;
-                    }
-                    Signal::Item(item) => {
-                        if let Some(observer) = observer.as_mut() {
-                            observer.on_next(item).await;
-                        }
-                    },
-                    Signal::Error(err) => {
-                        const MSG: &str = "Observer::observe_on: upstream called on_error after completion";
-                        observer.as_mut().expect(MSG).on_error(err).await;
-                        observer = None;
-                    },
-                    Signal::Completed => {
-                        const MSG: &str = "Observer::observe_on: upstream called on_completed after completion";
-                        observer.as_mut().expect(MSG).on_completed().await;
-                        observer = None;
-                    }
-                }
+                is_error = signal.is_error();
+                observer.on_next(signal).await;
+            }
+            if !is_error {
+                observer.on_completed().await;
             }
         });
         Self {
-            sender,
-            phantom: PhantomData,
+            sender: Some(sender),
         }
     }
 
-    pub async fn on_next_delayed(&mut self, delay: Duration, item: Item) {
-        self.sender.send_delayed(delay, Signal::Item(item)).await.unwrap();
-    }
-
-    pub async fn on_error_delayed(&mut self, delay: Duration, error: Error) {
-        self.sender.send_delayed(delay, Signal::Error(error)).await.unwrap();
-    }
-
-    pub async fn on_completed_delayed(&mut self, delay: Duration) {
-        self.sender.send_delayed(delay, Signal::Completed).await.unwrap();
+    pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Cancellable, Item, Error>) {
+        const MSG: &str = "ScheduledObserverRaw::on_next_delayed: upstream called on_next after completion";
+        let is_error = signal.is_error();
+        self.sender.as_mut().expect(MSG).send_delayed(delay, signal).await.unwrap();
+        if is_error {
+            self.sender = None;
+        }
     }
 }
 
 #[async_trait]
-impl<Cancellable, Item, Error> core::Observer<Cancellable, Item, Error>
+impl<Cancellable, Item, Error> core::Observer<util::Never, Signal<Cancellable, Item, Error>, util::Never>
     for ScheduledObserver<Cancellable, Item, Error>
 where
     Cancellable: Send,
     Item: Send,
     Error: Send,
 {
-    async fn on_subscribe(&mut self, cancellable: Cancellable) {
-        self.sender.send_direct(Signal::Subscribe(cancellable)).await.unwrap();
+    async fn on_subscribe(&mut self, _: util::Never) {
+        unreachable! {};
     }
 
-    async fn on_next(&mut self, item: Item) {
-        self.sender.send(Signal::Item(item)).await.unwrap();
+    async fn on_next(&mut self, signal: Signal<Cancellable, Item, Error>) {
+        const MSG: &str = "ScheduledObserverRaw::on_next: upstream called on_next after completion";
+        let is_error = signal.is_error();
+        self.sender.as_mut().expect(MSG).send(signal).await.unwrap();
+        if is_error {
+            self.sender = None;
+        }
     }
 
-    async fn on_error(&mut self, error: Error) {
-        self.sender.send_direct(Signal::Error(error)).await.unwrap();
+    async fn on_error(&mut self, _: util::Never) {
+        unreachable! {};
     }
 
     async fn on_completed(&mut self) {
-        self.sender.send_direct(Signal::Completed).await.unwrap();
+        self.sender = None;
     }
 }

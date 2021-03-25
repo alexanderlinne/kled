@@ -54,6 +54,15 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
+    fn dematerialize(
+        self,
+    ) -> Dematerialize<Self, Cancellable, Item, Error>
+    where
+        Self: Sized,
+    {
+        Dematerialize::new(self)
+    }
+
     /// Returns an [`Observable`] that applies the function `unary_op` to each element of the
     /// current `Observable` and emits the results of those function calls.
     ///
@@ -67,6 +76,15 @@ where
         UnaryOp: FnMut(Item) -> ItemOut + Send + 'static,
     {
         Map::new(self, unary_op)
+    }
+
+    fn materialize(
+        self,
+    ) -> Materialize<Self, Cancellable, Item, Error>
+    where
+        Self: Sized,
+    {
+        Materialize::new(self)
     }
 
     /// Returns an [`Observable`] that performs the current `Observable`'s emissions on the
@@ -83,7 +101,7 @@ where
         Self: Sized,
         Scheduler: core::Scheduler + Send + 'static,
     {
-        ObserveOn::new(self, scheduler)
+        Dematerialize::new(ObserveOnRaw::new(Materialize::new(self), scheduler))
     }
 
     /// Returns an [`Observable`] that first emits the provided `initial_value` as an item and the

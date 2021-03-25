@@ -41,7 +41,11 @@ impl<Subscription, Item, Error>
 
     pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Subscription, Item, flow::Error<Error>>) {
         const MSG: &str = "ScheduledSubscriberRaw::on_next_delayed: upstream called on_next after completion";
+        let is_error = signal.is_error();
         self.sender.as_mut().expect(MSG).send_delayed(delay, signal).await.unwrap();
+        if is_error {
+            self.sender = None;
+        }
     }
 }
 
