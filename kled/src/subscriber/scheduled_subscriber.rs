@@ -2,12 +2,12 @@ use async_trait::async_trait;
 #[chronobreak]
 use std::time::*;
 use futures::prelude::*;
-use std::marker::PhantomData;
-use crate::{core, scheduler::{DelaySender, unbounded}, signal::Signal, flow};
+use crate::{core, util, flow};
+use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
+use crate::signal::Signal;
 
 pub struct ScheduledSubscriber<Subscription, Item, Error> {
-    sender: DelaySender<Signal<Subscription, Item, flow::Error<Error>>>,
-    phantom: PhantomData<(Subscription, Item, Error)>,
+    sender: Option<DelaySender<Signal<Subscription, Item, flow::Error<Error>>>>,
 }
 
 impl<Subscription, Item, Error>
@@ -18,76 +18,59 @@ impl<Subscription, Item, Error>
         Subscription: Send + 'static,
         Item: Send + 'static,
         Error: Send + 'static,
-        Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static,
+        Subscriber: core::Subscriber<util::Never, Signal<Subscription, Item, flow::Error<Error>>, util::Never> + Send + 'static,
         Scheduler: core::Scheduler + Send + 'static,
     {
-        let (sender, mut receiver) = unbounded();
+        let (sender, receiver) = unbounded();
         scheduler.schedule(async move {
-            let mut subscriber = Some(subscriber);
+            let mut subscriber = subscriber;
+            let mut receiver: DelayReceiver<Signal<Subscription, Item, flow::Error<Error>>> = receiver;
+            let mut is_error = false;
             while let Some(signal) = receiver.next().await {
-                match signal {
-                    Signal::Subscribe(subscription) => {
-                        const MSG: &str = "Subscriber::observe_on: upstream completed before on_subscribe";
-                        subscriber.as_mut().expect(MSG).on_subscribe(subscription).await;
-                    }
-                    Signal::Item(item) => {
-                        if let Some(subscriber) = subscriber.as_mut() {
-                            subscriber.on_next(item).await;
-                        }
-                    },
-                    Signal::Error(err) => {
-                        const MSG: &str = "Subscriber::observe_on: upstream called on_error after completion";
-                        subscriber.as_mut().expect(MSG).on_error(err).await;
-                        subscriber = None;
-                    },
-                    Signal::Completed => {
-                        const MSG: &str = "Subscriber::observe_on: upstream called on_completed after completion";
-                        subscriber.as_mut().expect(MSG).on_completed().await;
-                        subscriber = None;
-                    }
-                }
+                is_error = signal.is_error();
+                subscriber.on_next(signal).await;
+            }
+            if !is_error {
+                subscriber.on_completed().await;
             }
         });
         Self {
-            sender,
-            phantom: PhantomData,
+            sender: Some(sender),
         }
     }
 
-    pub async fn on_next_delayed(&mut self, delay: Duration, item: Item) {
-        self.sender.send_delayed(delay, Signal::Item(item)).await.unwrap();
-    }
-
-    pub async fn on_error_delayed(&mut self, delay: Duration, error: flow::Error<Error>) {
-        self.sender.send_delayed(delay, Signal::Error(error)).await.unwrap();
-    }
-
-    pub async fn on_completed_delayed(&mut self, delay: Duration) {
-        self.sender.send_delayed(delay, Signal::Completed).await.unwrap();
+    pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Subscription, Item, flow::Error<Error>>) {
+        const MSG: &str = "ScheduledSubscriberRaw::on_next_delayed: upstream called on_next after completion";
+        self.sender.as_mut().expect(MSG).send_delayed(delay, signal).await.unwrap();
     }
 }
 
 #[async_trait]
-impl<Subscription, Item, Error> core::Subscriber<Subscription, Item, Error>
+impl<Subscription, Item, Error> core::Subscriber<util::Never, Signal<Subscription, Item, flow::Error<Error>>, util::Never>
     for ScheduledSubscriber<Subscription, Item, Error>
 where
     Subscription: Send,
     Item: Send,
     Error: Send,
 {
-    async fn on_subscribe(&mut self, subscription: Subscription) {
-        self.sender.send_direct(Signal::Subscribe(subscription)).await.unwrap();
+    async fn on_subscribe(&mut self, _: util::Never) {
+        unreachable! {};
     }
 
-    async fn on_next(&mut self, item: Item) {
-        self.sender.send(Signal::Item(item)).await.unwrap();
+    async fn on_next(&mut self, signal: Signal<Subscription, Item, flow::Error<Error>>) {
+        const MSG: &str = "ScheduledSubscriberRaw::on_next: upstream called on_next after completion";
+        let is_error = signal.is_error();
+        self.sender.as_mut().expect(MSG).send(signal).await.unwrap();
+        if is_error {
+            self.sender = None;
+        }
     }
 
-    async fn on_error(&mut self, error: flow::Error<Error>) {
-        self.sender.send_direct(Signal::Error(error)).await.unwrap();
+    async fn on_error(&mut self, _: flow::Error<util::Never>) {
+        unreachable! {};
     }
 
     async fn on_completed(&mut self) {
-        self.sender.send_direct(Signal::Completed).await.unwrap();
+        self.sender = None;
     }
 }

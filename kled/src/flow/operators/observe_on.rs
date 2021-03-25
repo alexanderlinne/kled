@@ -1,13 +1,33 @@
-use crate::core;
+use crate::{core, flow, util};
+use crate::flow::operators::{Materialize, Dematerialize};
+use crate::signal::Signal;
 use crate::subscriber::ScheduledSubscriber;
 
-#[operator(type = "flow", subscriber = "ScheduledSubscriber")]
-pub struct ObserveOn<Scheduler>
+#[operator(
+    type = "flow",
+    subscriber = "ScheduledSubscriber",
+    upstream_subscription = "util::Never",
+    upstream_item = "Signal<Subscription, Item, flow::Error<Error>>",
+    upstream_error = "util::Never",
+    subscription = "util::Never",
+    item = "Signal<Subscription, Item, flow::Error<Error>>",
+    error = "util::Never",
+)]
+pub struct ObserveOnRaw<Scheduler>
 where
     Scheduler: core::Scheduler
 {
     scheduler: Scheduler,
 }
+
+pub type ObserveOn<Upstream, Subscription, Item, Error, Scheduler> =
+    Dematerialize<
+        ObserveOnRaw<
+            Materialize<Upstream, Subscription, Item, Error>,
+            Subscription, Item, Error, Scheduler
+        >,
+        Subscription, Item, Error
+    >;
 
 #[cfg(test)]
 mod tests {

@@ -15,7 +15,7 @@ impl<Subscription, Item, Error> Signal<Subscription, Item, Error> {
         matches! {self, Self::Item(_)}
     }
 
-    pub fn is_err(&self) -> bool {
+    pub fn is_error(&self) -> bool {
         matches! {self, Self::Error(_)}
     }
 

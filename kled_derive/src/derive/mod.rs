@@ -48,7 +48,7 @@ impl Args {
         }
     }
 
-    fn as_type_or_else<F>(lit_str: &Option<syn::LitStr>, f: F) -> syn::Type
+    fn type_or_else<F>(lit_str: &Option<syn::LitStr>, f: F) -> syn::Type
     where
         F: Fn() -> syn::Type,
     {
@@ -63,16 +63,16 @@ impl Args {
 
     fn upstream_params(&self) -> proc_macro2::TokenStream {
         let subscription =
-            Self::as_type_or_else(&self.upstream_subscription, || self.subscription_ty());
-        let item = Self::as_type_or_else(&self.upstream_item, || parse_quote! {Item});
-        let error = Self::as_type_or_else(&self.upstream_error, || parse_quote! {Error});
+            Self::type_or_else(&self.upstream_subscription, || self.subscription_ty());
+        let item = Self::type_or_else(&self.upstream_item, || parse_quote! {Item});
+        let error = Self::type_or_else(&self.upstream_error, || parse_quote! {Error});
         quote! {#subscription, #item, #error}
     }
 
     fn downstream_params(&self) -> proc_macro2::TokenStream {
-        let subscription = Self::as_type_or_else(&self.subscription, || self.subscription_ty());
-        let item = Self::as_type_or_else(&self.item, || parse_quote! {Item});
-        let error = Self::as_type_or_else(&self.error, || parse_quote! {Error});
+        let subscription = Self::type_or_else(&self.subscription, || self.subscription_ty());
+        let item = Self::type_or_else(&self.item, || parse_quote! {Item});
+        let error = Self::type_or_else(&self.error, || parse_quote! {Error});
         quote! {#subscription, #item, #error}
     }
 

@@ -56,6 +56,15 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
+    fn dematerialize(
+        self,
+    ) -> Dematerialize<Self, Subscription, Item, Error>
+    where
+        Self: Sized,
+    {
+        Dematerialize::new(self)
+    }
+
     fn map<ItemOut, UnaryOp>(
         self,
         unary_op: UnaryOp,
@@ -67,6 +76,15 @@ where
         Map::new(self, unary_op)
     }
 
+    fn materialize(
+        self,
+    ) -> Materialize<Self, Subscription, Item, Error>
+    where
+        Self: Sized,
+    {
+        Materialize::new(self)
+    }
+
     fn observe_on<Scheduler>(
         self,
         scheduler: Scheduler,
@@ -75,7 +93,7 @@ where
         Self: Sized,
         Scheduler: core::Scheduler + Send + 'static,
     {
-        ObserveOn::new(self, scheduler)
+        Dematerialize::new(ObserveOnRaw::new(Materialize::new(self), scheduler))
     }
 
     fn on_backpressure_buffer(
