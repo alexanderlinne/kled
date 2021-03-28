@@ -46,17 +46,16 @@ where
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::subscriber::*;
 
     #[async_std::test]
     async fn local_scan() {
-        let test_subscriber = TestSubscriber::default();
         vec![0, 1, 2, 3]
             .into_flow()
             .map(|a| a + 1)
-            .subscribe(test_subscriber.clone()).await;
-
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items().await, vec![1, 2, 3, 4]);
+            .into_step_verifier()
+            .expect_subscription()
+            .expect_all_of(vec![1, 2, 3, 4])
+            .expect_completed()
+            .verify().await
     }
 }

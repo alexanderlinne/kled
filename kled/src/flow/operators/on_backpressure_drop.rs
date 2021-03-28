@@ -94,13 +94,15 @@ mod tests {
 
     #[async_std::test]
     async fn drop_completed() {
-        let test_subscriber = TestSubscriber::new(1);
         vec![0, 1, 2]
             .into_flow()
             .on_backpressure_drop()
-            .subscribe(test_subscriber.clone()).await;
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items().await, vec![0]);
+            .into_step_verifier()
+            .expect_subscription()
+            .and_request(1)
+            .expect_next(0)
+            .expect_completed()
+            .verify().await;
     }
 
     #[async_std::test]

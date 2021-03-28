@@ -12,7 +12,7 @@ extern crate derive_new;
 #[macro_use]
 extern crate kled_derive;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Never {}
 
 macro_rules! reexport_all {

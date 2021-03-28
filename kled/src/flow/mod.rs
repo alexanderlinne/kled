@@ -10,3 +10,6 @@ reexport_all! {
 }
 
 pub mod operators;
+pub mod step_verifier;
+#[doc(inline)]
+pub use step_verifier::StepVerifier;

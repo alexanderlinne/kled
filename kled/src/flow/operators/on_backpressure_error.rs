@@ -111,17 +111,13 @@ mod tests {
 
     #[async_std::test]
     async fn missing_backpressure() {
-        let test_subscriber = TestSubscriber::default();
         vec![0, 1, 2]
             .into_flow()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
-        assert_eq!(test_subscriber.items().await, vec![]);
-        matches!(
-            test_subscriber.error().await,
-            Some(flow::Error::MissingBackpressure)
-        );
+            .into_step_verifier()
+            .expect_subscription()
+            .expect_error(flow::Error::MissingBackpressure)
+            .verify().await;
     }
 
     #[async_std::test]
@@ -141,16 +137,14 @@ mod tests {
 
     #[async_std::test]
     async fn basic() {
-        let test_subscriber = TestSubscriber::new(1);
-        let test_flow = TestFlow::default().annotate_error_type(());
-        test_flow
-            .clone()
+        vec![0]
+            .into_flow()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
-        test_flow.emit(0).await;
-        test_flow.emit_completed().await;
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items().await, vec![0]);
-        assert_eq!(test_subscriber.error().await, None);
+            .into_step_verifier()
+            .expect_subscription()
+            .and_request(1)
+            .expect_next(0)
+            .expect_completed()
+            .verify().await;
     }
 }

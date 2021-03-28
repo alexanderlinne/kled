@@ -32,33 +32,18 @@ where
 mod tests {
     use crate::prelude::*;
     use crate::scheduler;
-    use crate::subscriber::*;
 
     #[async_std::test]
     async fn subscribe_on() {
         let scheduler = scheduler::ThreadPoolScheduler::default();
-        let test_subscriber = TestSubscriber::default();
         vec![0, 1, 2, 3]
             .into_flow()
             .subscribe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone())
-            .await;
+            .into_step_verifier()
+            .expect_subscription()
+            .expect_all_of(vec![0, 1, 2, 3])
+            .expect_completed()
+            .verify().await;
         scheduler.join();
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items().await, vec![0, 1, 2, 3]);
-    }
-
-    #[async_std::test]
-    async fn subscribe_on_shared() {
-        let scheduler = scheduler::ThreadPoolScheduler::default();
-        let test_subscriber = TestSubscriber::default();
-        vec![0, 1, 2, 3]
-            .into_flow()
-            .subscribe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone())
-            .await;
-        scheduler.join();
-        assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
-        assert_eq!(test_subscriber.items().await, vec![0, 1, 2, 3]);
     }
 }

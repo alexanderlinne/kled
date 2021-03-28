@@ -2,6 +2,7 @@ use crate::core;
 use crate::flow;
 use crate::flow::operators::*;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
 /// A backpressured source of `Item`s to which an [`Subscriber`] may subscribe.
 ///
@@ -149,6 +150,17 @@ where
         BinaryOp: FnMut(ItemOut, Item) -> ItemOut + Send + 'static,
     {
         Scan::new(self, initial_value, binary_op)
+    }
+
+    fn into_step_verifier(
+        self,
+    ) -> flow::step_verifier::FirstStepBuilder<Self, Subscription, Item, Error>
+    where
+        Self: Sized,
+        Item: Debug + PartialEq,
+        Error: Debug + PartialEq,
+    {
+        flow::StepVerifier::create(self)
     }
 
     fn subscribe_on<Scheduler>(
