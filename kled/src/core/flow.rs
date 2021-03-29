@@ -1,17 +1,16 @@
-use crate::core;
-use crate::flow;
+use crate::{core, flow, subscriber};
 use crate::flow::operators::*;
+use crate::subscription::LazySubscription;
 use async_trait::async_trait;
 
-/// A backpressured source of `Item`s to which an [`Subscriber`] may subscribe.
+/// A backpressured source of `Item`s to which a [`Subscriber`] may subscribe.
 ///
-/// [`Flow`] is the base trait which any flow type must implement. It defines the
-/// type of `Item`s and `Error`s it may emit and the `Subscription` type the flow passes
-/// to the [`Subscriber`] via [`Subscriber::on_subscribe`].
-///
-/// The core operators for [`Flow`]s are provided via the [`FlowExt`] trait.
+/// `Flow` is the base trait which any flow type must implement. It defines the
+/// type of `Item`s and `Error`s it may emit and the [`Subscription`] type the
+/// flow passes to the subscriber.
 ///
 /// [`Subscriber`]: trait.Subscriber.html
+/// [`Subscription`]: trait.Subscription.html
 /// [`FlowExt`]: trait.FlowExt.html
 /// [`Subscriber::on_subscribe`]: trait.Subscriber.html#tymethod.on_subscribe
 #[async_trait]
@@ -24,38 +23,42 @@ where
     async fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
         Subscriber: core::Subscriber<Subscription, Item, Error> + Send + 'static;
-}
 
-pub trait IntoFlow<Subscription, Item, Error>
-where
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
-    type Flow: core::Flow<Subscription, Item, Error>;
+    async fn subscribe_next<NextFn>(self, next_fn: NextFn) -> LazySubscription<Subscription>
+    where
+        Self: Sized,
+        NextFn: FnMut(Item) + Send + 'static,
+    {
+        let subscriber = subscriber::LambdaSubscriber::new(
+            next_fn,
+            |_| {
+                panic! {}
+            },
+            || {},
+        );
+        let subscription = subscriber.subscription();
+        self.subscribe(subscriber).await;
+        subscription
+    }
 
-    fn into_flow(self) -> Self::Flow;
-}
+    async fn subscribe_all<NextFn, ErrorFn, CompletedFn>(
+        self,
+        next_fn: NextFn,
+        error_fn: ErrorFn,
+        complete_fn: CompletedFn,
+    ) -> LazySubscription<Subscription>
+    where
+        Self: Sized,
+        NextFn: FnMut(Item) + Send + 'static,
+        ErrorFn: FnMut(flow::Error<Error>) + Send + 'static,
+        CompletedFn: FnMut() + Send + 'static,
+    {
+        let subscriber = subscriber::LambdaSubscriber::new(next_fn, error_fn, complete_fn);
+        let subscription = subscriber.subscription();
+        self.subscribe(subscriber).await;
+        subscription
+    }
 
-impl<T: ?Sized, Subscription, Item, Error> FlowExt<Subscription, Item, Error> for T
-where
-    T: Flow<Subscription, Item, Error>,
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
-}
-
-
-/// An extension trait for [`Flow`] that provides core operators.
-///
-/// [`Flow`]: trait.Flow.html
-pub trait FlowExt<Subscription, Item, Error>: Flow<Subscription, Item, Error>
-where
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
     fn dematerialize(
         self,
     ) -> Dematerialize<Self, Subscription, Item, Error>

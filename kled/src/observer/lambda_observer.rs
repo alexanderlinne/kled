@@ -1,59 +1,6 @@
 use crate::cancellable::*;
-use crate::{core, Never};
+use crate::core;
 use async_trait::async_trait;
-
-#[async_trait]
-impl<'o, Observable, NextFn, Cancellable, Item>
-    core::ObservableSubsribeNext<NextFn, Cancellable, Item> for Observable
-where
-    Observable: core::Observable<Cancellable, Item, Never> + Send + 'static,
-    Cancellable: core::Cancellable + Send + Sync + 'static,
-    Item: Send + 'static,
-    NextFn: FnMut(Item) + Send + 'static,
-{
-    type Cancellable = LazyCancellable<Cancellable>;
-
-    async fn subscribe_next(self, next_fn: NextFn) -> Self::Cancellable {
-        let observer = LambdaObserver::new(
-            next_fn,
-            |_| {
-                panic! {}
-            },
-            || {},
-        );
-        let cancellable = observer.stub.cancellable();
-        self.subscribe(observer).await;
-        cancellable
-    }
-}
-
-#[async_trait]
-impl<Observable, NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
-    core::ObservableSubsribeAll<NextFn, ErrorFn, CompletedFn, Cancellable, Item, Error>
-    for Observable
-where
-    Observable: core::Observable<Cancellable, Item, Error> + Send + 'static,
-    Cancellable: core::Cancellable + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-    NextFn: FnMut(Item) + Send + 'static,
-    ErrorFn: FnMut(Error) + Send + 'static,
-    CompletedFn: FnMut() + Send + 'static,
-{
-    type Cancellable = LazyCancellable<Cancellable>;
-
-    async fn subscribe_all(
-        self,
-        next_fn: NextFn,
-        error_fn: ErrorFn,
-        complete_fn: CompletedFn,
-    ) -> Self::Cancellable {
-        let observer = LambdaObserver::new(next_fn, error_fn, complete_fn);
-        let cancellable = observer.stub.cancellable();
-        self.subscribe(observer).await;
-        cancellable
-    }
-}
 
 pub struct LambdaObserver<Cancellable, NextFn, ErrorFn, CompletedFn>
 where
@@ -81,6 +28,10 @@ where
             error_consumer,
             completed_consumer,
         }
+    }
+
+    pub fn cancellable(&self) -> LazyCancellable<Cancellable> {
+        self.stub.cancellable()
     }
 }
 

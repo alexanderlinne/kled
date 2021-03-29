@@ -1,4 +1,5 @@
-use crate::core;
+use crate::{core, observer};
+use crate::cancellable::LazyCancellable;
 use crate::observable::operators::*;
 use async_trait::async_trait;
 
@@ -7,8 +8,6 @@ use async_trait::async_trait;
 /// [`Observable`] is the base trait which any observable type must implement. It defines the
 /// type of `Item`s and `Error`s it may emit and the `Cancellable` type the observable passes
 /// to the [`Observer`] via [`Observer::on_subscribe`].
-///
-/// The core operators for [`Observable`]s are provided via the [`ObservableExt`] trait.
 ///
 /// [`Observer`]: trait.Observer.html
 /// [`ObservableExt`]: trait.ObservableExt.html
@@ -23,37 +22,42 @@ where
     async fn subscribe<Observer>(self, observer: Observer)
     where
         Observer: core::Observer<Cancellable, Item, Error> + Send + 'static;
-}
 
-pub trait IntoObservable<Cancellable, Item, Error>
-where
-    Cancellable: core::Cancellable + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
-    type Observable: core::Observable<Cancellable, Item, Error>;
+    async fn subscribe_next<NextFn>(self, next_fn: NextFn) -> LazyCancellable<Cancellable>
+    where
+        Self: Sized,
+        NextFn: FnMut(Item) + Send + 'static,
+    {
+        let observer = observer::LambdaObserver::new(
+            next_fn,
+            |_| {
+                panic! {}
+            },
+            || {},
+        );
+        let cancellable = observer.cancellable();
+        self.subscribe(observer).await;
+        cancellable
+    }
 
-    fn into_observable(self) -> Self::Observable;
-}
+    async fn subscribe_all<NextFn, ErrorFn, CompletedFn>(
+        self,
+        next_fn: NextFn,
+        error_fn: ErrorFn,
+        complete_fn: CompletedFn,
+    ) -> LazyCancellable<Cancellable>
+    where
+        Self: Sized,
+        NextFn: FnMut(Item) + Send + 'static,
+        ErrorFn: FnMut(Error) + Send + 'static,
+        CompletedFn: FnMut() + Send + 'static,
+    {
+        let observer = observer::LambdaObserver::new(next_fn, error_fn, complete_fn);
+        let cancellable = observer.cancellable();
+        self.subscribe(observer).await;
+        cancellable
+    }
 
-impl<T: ?Sized, Cancellable, Item, Error> ObservableExt<Cancellable, Item, Error> for T
-where
-    T: Observable<Cancellable, Item, Error>,
-    Cancellable: core::Cancellable + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
-}
-
-/// An extension trait for [`Observable`] that provides core operators.
-///
-/// [`Observable`]: trait.Observable.html
-pub trait ObservableExt<Cancellable, Item, Error>: Observable<Cancellable, Item, Error>
-where
-    Cancellable: core::Cancellable + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-{
     fn dematerialize(
         self,
     ) -> Dematerialize<Self, Cancellable, Item, Error>

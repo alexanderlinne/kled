@@ -1,59 +1,6 @@
-use crate::{core, flow, Never};
+use crate::{core, flow};
 use crate::subscription::*;
 use async_trait::async_trait;
-
-#[async_trait]
-impl<'o, Flow, Subscription, Item, NextFn> core::FlowSubsribeNext<NextFn, Subscription, Item>
-    for Flow
-where
-    Flow: core::Flow<Subscription, Item, Never> + Send + 'static,
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Subscription: core::Subscription + Send + 'static,
-    NextFn: FnMut(Item) + Send + 'static,
-{
-    type Subscription = LazySubscription<Subscription>;
-
-    async fn subscribe_next(self, next_fn: NextFn) -> Self::Subscription {
-        let subscriber = LambdaSubscriber::new(
-            next_fn,
-            |_| {
-                panic! {}
-            },
-            || {},
-        );
-        let subscription = subscriber.stub.subscription();
-        self.subscribe(subscriber).await;
-        subscription
-    }
-}
-
-#[async_trait]
-impl<Flow, NextFn, ErrorFn, CompletedFn, Subscription, Item, Error>
-    core::FlowSubsribeAll<NextFn, ErrorFn, CompletedFn, Subscription, Item, Error> for Flow
-where
-    Flow: core::Flow<Subscription, Item, Error> + Send + 'static,
-    Subscription: core::Subscription + Send + Sync + 'static,
-    Item: Send + 'static,
-    Error: Send + 'static,
-    NextFn: FnMut(Item) + Send + 'static,
-    ErrorFn: FnMut(flow::Error<Error>) + Send + 'static,
-    CompletedFn: FnMut() + Send + 'static,
-{
-    type Subscription = LazySubscription<Subscription>;
-
-    async fn subscribe_all(
-        self,
-        next_fn: NextFn,
-        error_fn: ErrorFn,
-        complete_fn: CompletedFn,
-    ) -> Self::Subscription {
-        let subscriber = LambdaSubscriber::new(next_fn, error_fn, complete_fn);
-        let subscription = subscriber.stub.subscription();
-        self.subscribe(subscriber).await;
-        subscription
-    }
-}
 
 pub struct LambdaSubscriber<Subscription, NextFn, ErrorFn, CompletedFn>
 where
@@ -81,6 +28,10 @@ where
             error_consumer,
             completed_consumer,
         }
+    }
+
+    pub fn subscription(&self) -> LazySubscription<Subscription> {
+        self.stub.subscription()
     }
 }
 
