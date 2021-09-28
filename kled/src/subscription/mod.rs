@@ -1,4 +1,5 @@
-reexport_all! {
-    mod arc_subscription;
-    mod lazy_subscription;
-}
+mod arc_subscription;
+mod lazy_subscription;
+
+pub use arc_subscription::*;
+pub use lazy_subscription::*;

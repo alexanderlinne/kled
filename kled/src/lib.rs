@@ -15,15 +15,6 @@ extern crate kled_derive;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Never {}
 
-macro_rules! reexport_all {
-    ($(mod $idents:ident;)*) => {
-        $(
-            mod $idents;
-            pub use $idents::*;
-        )*
-    };
-}
-
 pub mod cancellable;
 pub mod core;
 pub mod flow;
