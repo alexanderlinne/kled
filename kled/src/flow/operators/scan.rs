@@ -56,7 +56,7 @@ mod tests {
     use crate::prelude::*;
 
     #[async_std::test]
-    async fn local_scan() {
+    async fn scan() {
         vec![0, 1, 2, 3]
             .into_flow()
             .scan(0, |a, b| a + b)

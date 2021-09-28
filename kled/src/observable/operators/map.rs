@@ -51,7 +51,7 @@ mod tests {
     use crate::prelude::*;
 
     #[async_std::test]
-    async fn local() {
+    async fn map() {
         let test_observer = TestObserver::default();
         vec![0, 1, 2, 3]
             .into_observable()
