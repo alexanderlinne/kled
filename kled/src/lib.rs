@@ -2,7 +2,7 @@
 //!
 //! [github]: https://img.shields.io/github/workflow/status/alexanderlinne/kled/CI?style=for-the-badge&logo=github
 //!
-#![deny(broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 #[allow(unused_imports)]
 #[macro_use(chronobreak)]
