@@ -8,7 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::{Arc, Weak};
 
-#[operator(type = "flow", subscription = "OnBackpressureLatestSubscription<Subscription, Item, Error>")]
+#[operator(
+    type = "flow",
+    subscription = "OnBackpressureLatestSubscription<Subscription, Item, Error>"
+)]
 pub struct OnBackpressureLatest {}
 
 type BoxedSubscriber<Subscription, Item, Error> = Box<
@@ -67,7 +70,11 @@ where
             Arc::downgrade(&self.subscriber),
             Arc::downgrade(&self.data),
         );
-        self.subscriber.lock().await.on_subscribe(subscription).await;
+        self.subscriber
+            .lock()
+            .await
+            .on_subscribe(subscription)
+            .await;
     }
 
     async fn on_next(&mut self, item: Item) {
@@ -157,7 +164,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_latest()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit(1).await;
         test_subscriber.request_direct(1).await;
@@ -178,7 +186,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_latest()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_error(()).await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);

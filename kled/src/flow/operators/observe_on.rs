@@ -1,7 +1,7 @@
-use crate::{core, Never};
-use crate::flow::operators::{Materialize, Dematerialize};
+use crate::flow::operators::{Dematerialize, Materialize};
 use crate::flow::Signal;
 use crate::subscriber::ScheduledSubscriber;
+use crate::{core, Never};
 
 #[operator(
     type = "flow",
@@ -11,23 +11,27 @@ use crate::subscriber::ScheduledSubscriber;
     upstream_error = "Never",
     subscription = "Never",
     item = "Signal<Subscription, Item, Error>",
-    error = "Never",
+    error = "Never"
 )]
 pub struct ObserveOnRaw<Scheduler>
 where
-    Scheduler: core::Scheduler
+    Scheduler: core::Scheduler,
 {
     scheduler: Scheduler,
 }
 
-pub type ObserveOn<Upstream, Subscription, Item, Error, Scheduler> =
-    Dematerialize<
-        ObserveOnRaw<
-            Materialize<Upstream, Subscription, Item, Error>,
-            Subscription, Item, Error, Scheduler
-        >,
-        Subscription, Item, Error
-    >;
+pub type ObserveOn<Upstream, Subscription, Item, Error, Scheduler> = Dematerialize<
+    ObserveOnRaw<
+        Materialize<Upstream, Subscription, Item, Error>,
+        Subscription,
+        Item,
+        Error,
+        Scheduler,
+    >,
+    Subscription,
+    Item,
+    Error,
+>;
 
 #[cfg(test)]
 mod tests {
@@ -46,7 +50,8 @@ mod tests {
             .expect_subscription()
             .expect_all_of(vec![0, 1, 2, 3])
             .expect_completed()
-            .verify().await;
+            .verify()
+            .await;
         scheduler.join();
     }
 
@@ -58,10 +63,14 @@ mod tests {
         test_flow
             .clone()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit_error(()).await;
         scheduler.join();
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
-        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
+        assert_eq!(
+            test_subscriber.error().await,
+            Some(flow::Error::Upstream(()))
+        );
     }
 }

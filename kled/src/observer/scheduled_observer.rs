@@ -1,18 +1,16 @@
+use crate::observable::Signal;
+use crate::scheduler::{unbounded, DelayReceiver, DelaySender};
+use crate::{core, Never};
 use async_trait::async_trait;
+use futures::prelude::*;
 #[chronobreak]
 use std::time::*;
-use futures::prelude::*;
-use crate::{core, Never};
-use crate::scheduler::{DelaySender, DelayReceiver, unbounded};
-use crate::observable::Signal;
 
 pub struct ScheduledObserver<Cancellable, Item, Error> {
     sender: Option<DelaySender<Signal<Cancellable, Item, Error>>>,
 }
 
-impl<Cancellable, Item, Error>
-    ScheduledObserver<Cancellable, Item, Error>
-{
+impl<Cancellable, Item, Error> ScheduledObserver<Cancellable, Item, Error> {
     pub fn new<Observer, Scheduler>(observer: Observer, scheduler: Scheduler) -> Self
     where
         Cancellable: Send + 'static,
@@ -39,10 +37,20 @@ impl<Cancellable, Item, Error>
         }
     }
 
-    pub async fn on_next_delayed(&mut self, delay: Duration, signal: Signal<Cancellable, Item, Error>) {
-        const MSG: &str = "ScheduledObserverRaw::on_next_delayed: upstream called on_next after completion";
+    pub async fn on_next_delayed(
+        &mut self,
+        delay: Duration,
+        signal: Signal<Cancellable, Item, Error>,
+    ) {
+        const MSG: &str =
+            "ScheduledObserverRaw::on_next_delayed: upstream called on_next after completion";
         let is_error = signal.is_error();
-        self.sender.as_mut().expect(MSG).send_delayed(delay, signal).await.unwrap();
+        self.sender
+            .as_mut()
+            .expect(MSG)
+            .send_delayed(delay, signal)
+            .await
+            .unwrap();
         if is_error {
             self.sender = None;
         }

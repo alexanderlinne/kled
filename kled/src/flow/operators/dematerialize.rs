@@ -1,5 +1,5 @@
-use crate::{core, flow, Never};
 use crate::flow::Signal;
+use crate::{core, flow, Never};
 use async_trait::async_trait;
 
 #[operator(
@@ -17,7 +17,8 @@ struct DematerializeSubscriber<Subscriber> {
 
 #[async_trait]
 impl<Subscription, Subscriber, Item, Error>
-    core::Subscriber<Never, Signal<Subscription, Item, Error>, Never> for DematerializeSubscriber<Subscriber>
+    core::Subscriber<Never, Signal<Subscription, Item, Error>, Never>
+    for DematerializeSubscriber<Subscriber>
 where
     Subscriber: core::Subscriber<Subscription, Item, Error> + Send,
     Subscription: Send + 'static,
@@ -34,10 +35,10 @@ where
             }
             Signal::Item(item) => {
                 self.subscriber.on_next(item).await;
-            },
+            }
             Signal::Error(err) => {
                 self.subscriber.on_error(err).await;
-            },
+            }
             Signal::Completed => {}
         }
     }

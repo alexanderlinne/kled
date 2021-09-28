@@ -377,7 +377,7 @@ mod tests {
         let main_thread = thread::current();
         let thread = thread::spawn(move || {
             main_thread.expect_timed_wait();
-            futures::executor::block_on(async {tx.send(1).await.unwrap()});
+            futures::executor::block_on(async { tx.send(1).await.unwrap() });
             clock::advance(Duration::from_nanos(50));
         });
         assert_eq! {rx.try_next().await.unwrap(), None};

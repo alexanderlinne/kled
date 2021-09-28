@@ -1,5 +1,5 @@
-use crate::{core, Never};
 use crate::observable::Signal;
+use crate::{core, Never};
 use async_trait::async_trait;
 
 #[operator(
@@ -16,8 +16,8 @@ struct MaterializeObserver<Observer> {
 }
 
 #[async_trait]
-impl<Cancellable, Observer, Item, Error>
-    core::Observer<Cancellable, Item, Error> for MaterializeObserver<Observer>
+impl<Cancellable, Observer, Item, Error> core::Observer<Cancellable, Item, Error>
+    for MaterializeObserver<Observer>
 where
     Observer: core::Observer<Never, Signal<Cancellable, Item, Error>, Never> + Send,
     Cancellable: Send + 'static,

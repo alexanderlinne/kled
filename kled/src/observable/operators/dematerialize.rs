@@ -1,5 +1,5 @@
-use crate::{core, Never};
 use crate::observable::Signal;
+use crate::{core, Never};
 use async_trait::async_trait;
 
 #[operator(
@@ -17,7 +17,8 @@ struct DematerializeObserver<Observer> {
 
 #[async_trait]
 impl<Cancellable, Observer, Item, Error>
-    core::Observer<Never, Signal<Cancellable, Item, Error>, Never> for DematerializeObserver<Observer>
+    core::Observer<Never, Signal<Cancellable, Item, Error>, Never>
+    for DematerializeObserver<Observer>
 where
     Observer: core::Observer<Cancellable, Item, Error> + Send,
     Cancellable: Send + 'static,
@@ -34,10 +35,10 @@ where
             }
             Signal::Item(item) => {
                 self.observer.on_next(item).await;
-            },
+            }
             Signal::Error(err) => {
                 self.observer.on_error(err).await;
-            },
+            }
             Signal::Completed => {}
         }
     }

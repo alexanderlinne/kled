@@ -79,11 +79,7 @@ where
     }
 
     async fn on_completed(&mut self) {
-        for o in self.data
-            .lock()
-            .await
-            .emitters
-            .iter_mut() {
+        for o in self.data.lock().await.emitters.iter_mut() {
             o.on_completed().await;
         }
     }
@@ -110,9 +106,7 @@ where
     where
         Observer: core::Observer<ArcCancellable, Item, Error> + Send + 'static,
     {
-        let mut lock = self.data
-            .lock()
-            .await;
+        let mut lock = self.data.lock().await;
         lock.emitters
             .push(observable::BoxEmitter::from(observer).await)
     }

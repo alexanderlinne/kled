@@ -47,7 +47,6 @@ where
 {
 }
 
-
 /// An extension trait for [`Flow`] that provides core operators.
 ///
 /// [`Flow`]: trait.Flow.html
@@ -57,9 +56,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn dematerialize(
-        self,
-    ) -> Dematerialize<Self, Subscription, Item, Error>
+    fn dematerialize(self) -> Dematerialize<Self, Subscription, Item, Error>
     where
         Self: Sized,
     {
@@ -77,9 +74,7 @@ where
         Map::new(self, unary_op)
     }
 
-    fn materialize(
-        self,
-    ) -> Materialize<Self, Subscription, Item, Error>
+    fn materialize(self) -> Materialize<Self, Subscription, Item, Error>
     where
         Self: Sized,
     {

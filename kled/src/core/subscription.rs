@@ -11,14 +11,14 @@ pub trait Subscription {
 #[async_trait]
 impl Subscription for Never {
     async fn cancel(&self) {
-        unreachable!{};
+        unreachable! {};
     }
 
     async fn is_cancelled(&self) -> bool {
-        unreachable!{};
+        unreachable! {};
     }
 
     async fn request(&self, _: usize) {
-        unreachable!{};
+        unreachable! {};
     }
 }

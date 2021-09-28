@@ -1,5 +1,5 @@
-use crate::{core, flow, Never};
 use crate::flow::Signal;
+use crate::{core, flow, Never};
 use async_trait::async_trait;
 
 #[operator(
@@ -16,8 +16,8 @@ struct MaterializeSubscriber<Subscriber> {
 }
 
 #[async_trait]
-impl<Subscription, Subscriber, Item, Error>
-    core::Subscriber<Subscription, Item, Error> for MaterializeSubscriber<Subscriber>
+impl<Subscription, Subscriber, Item, Error> core::Subscriber<Subscription, Item, Error>
+    for MaterializeSubscriber<Subscriber>
 where
     Subscriber: core::Subscriber<Never, Signal<Subscription, Item, Error>, Never> + Send,
     Subscription: Send + 'static,
@@ -25,7 +25,9 @@ where
     Error: Send + 'static,
 {
     async fn on_subscribe(&mut self, subscription: Subscription) {
-        self.subscriber.on_next(Signal::Subscribe(subscription)).await;
+        self.subscriber
+            .on_next(Signal::Subscribe(subscription))
+            .await;
     }
     async fn on_next(&mut self, item: Item) {
         self.subscriber.on_next(Signal::Item(item)).await;

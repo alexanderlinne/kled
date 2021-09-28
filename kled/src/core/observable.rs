@@ -54,9 +54,7 @@ where
     Item: Send + 'static,
     Error: Send + 'static,
 {
-    fn dematerialize(
-        self,
-    ) -> Dematerialize<Self, Cancellable, Item, Error>
+    fn dematerialize(self) -> Dematerialize<Self, Cancellable, Item, Error>
     where
         Self: Sized,
     {
@@ -78,9 +76,7 @@ where
         Map::new(self, unary_op)
     }
 
-    fn materialize(
-        self,
-    ) -> Materialize<Self, Cancellable, Item, Error>
+    fn materialize(self) -> Materialize<Self, Cancellable, Item, Error>
     where
         Self: Sized,
     {

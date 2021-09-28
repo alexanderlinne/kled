@@ -43,7 +43,8 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .subscribe_on(scheduler.clone())
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
         scheduler.join();
         assert_eq!(test_observer.status().await, ObserverStatus::Completed);
         assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);
@@ -56,7 +57,8 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .subscribe_on(scheduler.clone())
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
         scheduler.join();
         assert_eq!(test_observer.status().await, ObserverStatus::Completed);
         assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);

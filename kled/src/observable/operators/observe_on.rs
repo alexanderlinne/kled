@@ -1,7 +1,7 @@
-use crate::{core, Never};
-use crate::observable::operators::{Materialize, Dematerialize};
-use crate::observer::ScheduledObserver;
+use crate::observable::operators::{Dematerialize, Materialize};
 use crate::observable::Signal;
+use crate::observer::ScheduledObserver;
+use crate::{core, Never};
 
 #[operator(
     type = "observable",
@@ -11,7 +11,7 @@ use crate::observable::Signal;
     upstream_error = "Never",
     subscription = "Never",
     item = "Signal<Cancellable, Item, Error>",
-    error = "Never",
+    error = "Never"
 )]
 pub struct ObserveOnRaw<Scheduler>
 where
@@ -20,14 +20,18 @@ where
     scheduler: Scheduler,
 }
 
-pub type ObserveOn<Upstream, Subscription, Item, Error, Scheduler> =
-    Dematerialize<
-        ObserveOnRaw<
-            Materialize<Upstream, Subscription, Item, Error>,
-            Subscription, Item, Error, Scheduler
-        >,
-        Subscription, Item, Error
-    >;
+pub type ObserveOn<Upstream, Subscription, Item, Error, Scheduler> = Dematerialize<
+    ObserveOnRaw<
+        Materialize<Upstream, Subscription, Item, Error>,
+        Subscription,
+        Item,
+        Error,
+        Scheduler,
+    >,
+    Subscription,
+    Item,
+    Error,
+>;
 
 #[cfg(test)]
 mod tests {
@@ -43,7 +47,8 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .observe_on(scheduler.clone())
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
         scheduler.join();
         assert_eq!(test_observer.status().await, ObserverStatus::Completed);
         assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);
@@ -56,7 +61,8 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .observe_on(scheduler.clone())
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
         scheduler.join();
         assert_eq!(test_observer.status().await, ObserverStatus::Completed);
         assert_eq!(test_observer.items().await, vec![0, 1, 2, 3]);
@@ -70,7 +76,8 @@ mod tests {
         test_observable
             .clone()
             .observe_on(scheduler.clone())
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
         test_observable.emit_error(()).await;
         scheduler.join();
         assert_eq!(test_observer.status().await, ObserverStatus::Error);

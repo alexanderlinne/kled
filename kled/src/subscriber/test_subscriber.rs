@@ -157,7 +157,13 @@ where
 
     pub async fn cancel(&mut self) {
         assert!(self.is_subscribed().await);
-        self.subscription.lock().await.as_ref().unwrap().cancel().await;
+        self.subscription
+            .lock()
+            .await
+            .as_ref()
+            .unwrap()
+            .cancel()
+            .await;
     }
 
     pub async fn request_direct(&self, count: usize) {
@@ -226,7 +232,9 @@ where
 {
     async fn on_subscribe(&mut self, subscription: Subscription) {
         assert_eq!(self.status().await, SubscriberStatus::Unsubscribed);
-        subscription.request(self.data.lock().await.request_on_subscribe).await;
+        subscription
+            .request(self.data.lock().await.request_on_subscribe)
+            .await;
         *self.subscription.lock().await = Some(subscription);
     }
 
@@ -242,7 +250,8 @@ where
             .await
             .as_ref()
             .unwrap()
-            .request(data.request_on_next).await;
+            .request(data.request_on_next)
+            .await;
         data.request_on_next = 0;
     }
 

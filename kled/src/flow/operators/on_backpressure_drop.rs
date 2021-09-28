@@ -7,7 +7,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-#[operator(type = "flow", subscription = "OnBackpressureDropSubscription<Subscription>")]
+#[operator(
+    type = "flow",
+    subscription = "OnBackpressureDropSubscription<Subscription>"
+)]
 pub struct OnBackpressureDrop {}
 
 pub struct OnBackpressureDropSubscriber<Subscription, Subscriber, Item, Error> {
@@ -43,7 +46,8 @@ where
         let requested = self.requested.clone();
         subscription.request(usize::MAX).await;
         self.subscriber
-            .on_subscribe(OnBackpressureDropSubscription::new(subscription, requested)).await;
+            .on_subscribe(OnBackpressureDropSubscription::new(subscription, requested))
+            .await;
     }
 
     async fn on_next(&mut self, item: Item) {
@@ -102,7 +106,8 @@ mod tests {
             .and_request(1)
             .expect_next(0)
             .expect_completed()
-            .verify().await;
+            .verify()
+            .await;
     }
 
     #[async_std::test]
@@ -114,11 +119,15 @@ mod tests {
             .clone()
             .on_backpressure_drop()
             .observe_on(scheduler.clone())
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_error(()).await;
         scheduler.join();
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
-        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
+        assert_eq!(
+            test_subscriber.error().await,
+            Some(flow::Error::Upstream(()))
+        );
     }
 }

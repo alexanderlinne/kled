@@ -1,5 +1,5 @@
-use crate::{core, flow, Never};
 use crate::subscription::*;
+use crate::{core, flow, Never};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -120,10 +120,12 @@ mod tests {
     #[async_std::test]
     async fn subscribe_next() {
         let mut expected = 0;
-        vec![0, 1, 2, 3].into_flow().subscribe_next(move |item| {
-            assert_eq!(item, expected);
-            expected += 1;
-        })
-        .await;
+        vec![0, 1, 2, 3]
+            .into_flow()
+            .subscribe_next(move |item| {
+                assert_eq!(item, expected);
+                expected += 1;
+            })
+            .await;
     }
 }

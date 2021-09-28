@@ -43,7 +43,8 @@ mod tests {
             .expect_subscription()
             .expect_all_of(vec![0, 1, 2, 3])
             .expect_completed()
-            .verify().await;
+            .verify()
+            .await;
         scheduler.join();
     }
 }

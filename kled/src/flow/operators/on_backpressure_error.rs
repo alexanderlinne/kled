@@ -7,7 +7,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-#[operator(type = "flow", subscription = "OnBackpressureErrorSubscription<Subscription>")]
+#[operator(
+    type = "flow",
+    subscription = "OnBackpressureErrorSubscription<Subscription>"
+)]
 pub struct OnBackpressureError {}
 
 pub struct OnBackpressureErrorSubscriber<Subscription, Subscriber, Item, Error> {
@@ -47,10 +50,12 @@ where
         let requested = self.requested.clone();
         if let Some(subscriber) = self.subscriber.as_mut() {
             subscription.request(usize::MAX).await;
-            subscriber.on_subscribe(OnBackpressureErrorSubscription::new(
-                subscription,
-                requested,
-            )).await
+            subscriber
+                .on_subscribe(OnBackpressureErrorSubscription::new(
+                    subscription,
+                    requested,
+                ))
+                .await
         };
     }
 
@@ -117,7 +122,8 @@ mod tests {
             .into_step_verifier()
             .expect_subscription()
             .expect_error(flow::Error::MissingBackpressure)
-            .verify().await;
+            .verify()
+            .await;
     }
 
     #[async_std::test]
@@ -127,12 +133,16 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_error(()).await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
         assert_eq!(test_subscriber.items().await, vec![0]);
-        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
+        assert_eq!(
+            test_subscriber.error().await,
+            Some(flow::Error::Upstream(()))
+        );
     }
 
     #[async_std::test]
@@ -145,6 +155,7 @@ mod tests {
             .and_request(1)
             .expect_next(0)
             .expect_completed()
-            .verify().await;
+            .verify()
+            .await;
     }
 }

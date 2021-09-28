@@ -28,8 +28,7 @@ where
 {
     async fn subscribe<Observer>(self, observer: Observer)
     where
-        Observer:
-            core::Observer<ArcCancellable, IntoIter::Item, Never> + Send + 'static,
+        Observer: core::Observer<ArcCancellable, IntoIter::Item, Never> + Send + 'static,
     {
         let mut observer = observable::Emitter::from(observer).await;
         for v in self.iterable.into_iter() {

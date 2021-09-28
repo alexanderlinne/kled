@@ -56,7 +56,8 @@ mod tests {
         vec![0, 1, 2, 3]
             .into_observable()
             .map(|a| a + 1)
-            .subscribe(test_observer.clone()).await;
+            .subscribe(test_observer.clone())
+            .await;
 
         assert_eq!(test_observer.status().await, ObserverStatus::Completed);
         assert_eq!(test_observer.items().await, vec![1, 2, 3, 4]);

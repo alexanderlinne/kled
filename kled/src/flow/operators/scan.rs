@@ -64,6 +64,7 @@ mod tests {
             .expect_subscription()
             .expect_all_of(vec![0, 0, 1, 3, 6])
             .expect_completed()
-            .verify().await;
+            .verify()
+            .await;
     }
 }

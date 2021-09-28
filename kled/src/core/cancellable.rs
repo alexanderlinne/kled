@@ -15,6 +15,6 @@ pub trait Cancellable: Clone {
 #[async_trait]
 impl Cancellable for Never {
     async fn cancel(&self) {
-        unreachable!{};
+        unreachable! {};
     }
 }

@@ -8,7 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::{Arc, Weak};
 
-#[operator(type = "flow", subscription = "OnBackpressureBufferSubscription<Subscription, Item, Error>")]
+#[operator(
+    type = "flow",
+    subscription = "OnBackpressureBufferSubscription<Subscription, Item, Error>"
+)]
 pub struct OnBackpressureBuffer {
     buffer_strategy: flow::BufferStrategy,
     buffer_capacity: usize,
@@ -115,7 +118,9 @@ where
         let data = Arc::downgrade(&self.data);
         if let Some(subscriber) = self.data.subscriber.lock().await.as_mut() {
             subscription.request(usize::MAX).await;
-            subscriber.on_subscribe(OnBackpressureBufferSubscription::new(subscription, data)).await
+            subscriber
+                .on_subscribe(OnBackpressureBufferSubscription::new(subscription, data))
+                .await
         }
     }
 
@@ -201,7 +206,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_buffer_with_capacity(flow::BufferStrategy::Error, 5)
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit(1).await;
         test_subscriber.request_direct(1).await;
@@ -222,7 +228,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_buffer_with_capacity(flow::BufferStrategy::Error, 1)
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_error(()).await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
@@ -236,7 +243,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_buffer_with_capacity(flow::BufferStrategy::Error, 1)
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit(1).await;
         test_subscriber.request_direct(1).await;
@@ -252,7 +260,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_buffer_with_capacity(flow::BufferStrategy::DropOldest, 1)
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit(1).await;
         test_subscriber.request_direct(1).await;
@@ -268,7 +277,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_buffer_with_capacity(flow::BufferStrategy::DropLatest, 1)
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit(1).await;
         test_subscriber.request_direct(1).await;

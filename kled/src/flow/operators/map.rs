@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 #[operator(type = "flow", item = "ItemOut")]
 pub struct Map<ItemOut, UnaryOp>
 where
-    UnaryOp: FnMut(Item) -> ItemOut + Send
+    UnaryOp: FnMut(Item) -> ItemOut + Send,
 {
     unary_op: UnaryOp,
 }
@@ -56,6 +56,7 @@ mod tests {
             .expect_subscription()
             .expect_all_of(vec![1, 2, 3, 4])
             .expect_completed()
-            .verify().await
+            .verify()
+            .await
     }
 }

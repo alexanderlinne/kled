@@ -1,5 +1,5 @@
-use crate::{core, flow, Never};
 use crate::subscription::*;
+use crate::{core, flow, Never};
 use async_trait::async_trait;
 
 #[doc(hidden)]
@@ -17,8 +17,7 @@ where
 }
 
 #[async_trait]
-impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, Never>
-    for IntoIterFlow<IntoIter>
+impl<IntoIter> core::Flow<ArcSubscription, IntoIter::Item, Never> for IntoIterFlow<IntoIter>
 where
     IntoIter: IntoIterator + Send + 'static,
     IntoIter::Item: Send + 'static,
@@ -26,9 +25,7 @@ where
 {
     async fn subscribe<Subscriber>(self, subscriber: Subscriber)
     where
-        Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, Never>
-            + Send
-            + 'static,
+        Subscriber: core::Subscriber<ArcSubscription, IntoIter::Item, Never> + Send + 'static,
     {
         let mut subscriber = flow::Emitter::from(subscriber).await;
         for v in self.iterable.into_iter() {
