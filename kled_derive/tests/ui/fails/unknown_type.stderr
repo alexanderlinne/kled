@@ -1,4 +1,4 @@
-error: Unknown literal value `Fail`
+error: Unknown literal value `Fail` at type
  --> $DIR/unknown_type.rs:4:19
   |
 4 | #[operator(type = "Fail")]
