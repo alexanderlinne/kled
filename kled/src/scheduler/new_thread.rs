@@ -40,7 +40,7 @@ impl core::Scheduler for NewThreadScheduler {
             task::block_on(future);
             data.active_count.fetch_sub(1, Ordering::SeqCst);
             if !data.has_work() {
-                let _ = data.join_mutex.lock();
+                let _lock = data.join_mutex.lock();
                 data.join_cond.notify_all();
             }
         });

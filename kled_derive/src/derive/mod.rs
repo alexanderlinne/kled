@@ -99,7 +99,7 @@ impl Args {
 pub fn derive(args: &Args, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as ItemStruct);
     let mut result = quote! {};
-    result.extend(derive_operator_struct(&args, &item));
+    result.extend(derive_operator_struct(args, &item));
     result.into()
 }
 
@@ -125,7 +125,7 @@ fn derive_operator_struct(args: &Args, item: &ItemStruct) -> proc_macro2::TokenS
     let downstream_params = args.downstream_params();
     let subscriber_ident = args
         .subscriber()
-        .unwrap_or_else(|| args.subscriber_ident(&ident));
+        .unwrap_or_else(|| args.subscriber_ident(ident));
     let field_idents = fields.clone().map(|f| &f.ident);
     quote! {
         #(#attrs)*

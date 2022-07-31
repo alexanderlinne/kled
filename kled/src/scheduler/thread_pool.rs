@@ -67,7 +67,7 @@ impl core::Scheduler for ThreadPoolScheduler {
             let data = DATA.with(|data| unsafe { &*data.get() }.as_ref().unwrap());
             data.job_count.fetch_sub(1, Ordering::SeqCst);
             if !data.has_work() {
-                let _ = data.join_mutex.lock();
+                let _lock = data.join_mutex.lock();
                 data.join_cond.notify_all();
             }
         })

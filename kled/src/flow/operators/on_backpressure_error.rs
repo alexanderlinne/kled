@@ -7,7 +7,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 #[chronobreak]
 use std::sync::Arc;
 
-#[operator(type = "flow", subscription = "OnBackpressureErrorSubscription<Subscription>")]
+#[operator(
+    type = "flow",
+    subscription = "OnBackpressureErrorSubscription<Subscription>"
+)]
 pub struct OnBackpressureError {}
 
 pub struct OnBackpressureErrorSubscriber<Subscription, Subscriber, Item, Error> {
@@ -47,10 +50,12 @@ where
         let requested = self.requested.clone();
         if let Some(subscriber) = self.subscriber.as_mut() {
             subscription.request(usize::MAX).await;
-            subscriber.on_subscribe(OnBackpressureErrorSubscription::new(
-                subscription,
-                requested,
-            )).await
+            subscriber
+                .on_subscribe(OnBackpressureErrorSubscription::new(
+                    subscription,
+                    requested,
+                ))
+                .await
         };
     }
 
@@ -86,7 +91,7 @@ pub struct OnBackpressureErrorSubscription<Upstream> {
 }
 
 #[async_trait]
-impl<'o, Upstream> core::Subscription for OnBackpressureErrorSubscription<Upstream>
+impl<Upstream> core::Subscription for OnBackpressureErrorSubscription<Upstream>
 where
     Upstream: core::Subscription + Send + Sync + 'static,
 {
@@ -115,7 +120,8 @@ mod tests {
         vec![0, 1, 2]
             .into_flow()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
         assert_eq!(test_subscriber.items().await, vec![]);
         matches!(
@@ -131,12 +137,16 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_error(()).await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Error);
         assert_eq!(test_subscriber.items().await, vec![0]);
-        assert_eq!(test_subscriber.error().await, Some(flow::Error::Upstream(())));
+        assert_eq!(
+            test_subscriber.error().await,
+            Some(flow::Error::Upstream(()))
+        );
     }
 
     #[async_std::test]
@@ -146,7 +156,8 @@ mod tests {
         test_flow
             .clone()
             .on_backpressure_error()
-            .subscribe(test_subscriber.clone()).await;
+            .subscribe(test_subscriber.clone())
+            .await;
         test_flow.emit(0).await;
         test_flow.emit_completed().await;
         assert_eq!(test_subscriber.status().await, SubscriberStatus::Completed);
